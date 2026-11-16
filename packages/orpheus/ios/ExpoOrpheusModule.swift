@@ -84,7 +84,6 @@ public class ExpoOrpheusModule: Module {
             "onIsPlayingChanged",
             "onDownloadUpdated",
             "onPlaybackSpeedChanged",
-            "onSpectrumVisualizerError",
             "onSpectrumVisualizerEnabledChanged",
             "onHeadlessEvent",
             "onTrackStarted",
@@ -121,6 +120,10 @@ public class ExpoOrpheusModule: Module {
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.shared.isAutoplayOnStartEnabled }
             .set { GeneralStorage.shared.isAutoplayOnStartEnabled = $0 }
+
+        // 功耗测量开关只在 Android 上有意义
+        Property("testForceMediaCodec").get { false }.set { (_: Bool) in }
+        Property("testForcePcm").get { false }.set { (_: Bool) in }
 
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.shared.isSpectrumVisualizerEnabled }
@@ -418,6 +421,11 @@ public class ExpoOrpheusModule: Module {
 
     AsyncFunction("debugTriggerError") {
         throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
+    }
+
+    // 音频调试页目前只实现了 Android
+    AsyncFunction("getAudioDebugInfo") { () -> [[String: Any]] in
+        return []
     }
 
     Function("updateSpectrumData") { (destination: Float32Array) in

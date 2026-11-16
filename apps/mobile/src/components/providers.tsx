@@ -9,8 +9,9 @@ import { useTanStackQueryDevTools } from '@rozenite/tanstack-query-plugin'
 import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+	AppState,
 	Appearance,
 	Platform,
 	StyleSheet,
@@ -20,6 +21,7 @@ import {
 import { SystemBars } from 'react-native-edge-to-edge'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
+import { useMMKVBoolean } from 'react-native-mmkv'
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import RNShake from 'react-native-shake'
@@ -31,14 +33,15 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import {
 	captureProfiling,
-	isShakeProfilingEnabled,
 	PROFILING_DURATION_MS,
+	SHAKE_PROFILING_KEY,
 } from '@/lib/performance'
 import {
 	buildMaterial3PaperColors,
 	buildPureWhitePaperColors,
 } from '@/lib/theme/material3Colors'
 import { storage } from '@/utils/mmkv'
+import { mmkv } from '@/utils/mmkv-instance'
 
 function DevTools() {
 	useTanStackQueryDevTools(queryClient)
@@ -58,10 +61,27 @@ function DevTools() {
 
 function ShakeProfiler() {
 	const promptVisibleRef = useRef(false)
+	const [enabled] = useMMKVBoolean(SHAKE_PROFILING_KEY, mmkv)
+
+	const [isAppActive, setIsAppActive] = useState(
+		AppState.currentState === 'active',
+	)
 
 	useEffect(() => {
+		const subscription = AppState.addEventListener('change', (state) => {
+			setIsAppActive(state === 'active')
+		})
+
+		return () => subscription.remove()
+	}, [])
+
+	useEffect(() => {
+		// RNShake 只要有监听者就一直持有加速度计，退到后台也不释放，
+		// 会让主线程每秒被唤醒十几次。所以只在开关打开且位于前台时注册。
+		if (!enabled || !isAppActive) return
+
 		const subscription = RNShake.addListener(() => {
-			if (!isShakeProfilingEnabled() || promptVisibleRef.current) return
+			if (promptVisibleRef.current) return
 			promptVisibleRef.current = true
 
 			alert(
@@ -87,7 +107,7 @@ function ShakeProfiler() {
 		})
 
 		return () => subscription.remove()
-	}, [])
+	}, [enabled, isAppActive])
 
 	return null
 }

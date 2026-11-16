@@ -5,6 +5,9 @@ import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.util.GeneralStorage
 
 interface LyricsRuntimeConsumer {
+    /** 当前是否在向用户展示歌词，需要按播放进度高频刷新 */
+    val isActive: Boolean
+
     fun submit(data: LyricsData, timeline: LyricsTimeline)
     fun clear(softHide: Boolean = false)
     fun tick(seconds: Double)
@@ -17,6 +20,8 @@ class DesktopLyricsConsumer(
 ) : LyricsRuntimeConsumer {
     private var timeline: LyricsTimeline? = null
     private var lastLineIndex = UNSET_LINE_INDEX
+
+    override val isActive: Boolean get() = floatingLyricsManager.isShowing
 
     override fun submit(data: LyricsData, timeline: LyricsTimeline) {
         this.timeline = timeline
@@ -60,6 +65,8 @@ class StatusBarLyricsConsumer(
 ) : LyricsRuntimeConsumer {
     private var timeline: LyricsTimeline? = null
     private var lastLineIndex = UNSET_LINE_INDEX
+
+    override val isActive: Boolean get() = statusBarLyricsManager.enabled
 
     override fun submit(data: LyricsData, timeline: LyricsTimeline) {
         this.timeline = timeline
@@ -110,6 +117,8 @@ class CarLyricsConsumer(
 ) : LyricsRuntimeConsumer {
     private var timeline: LyricsTimeline? = null
     private var lastLyricText: String? = null
+
+    override val isActive: Boolean get() = GeneralStorage.isCarLyricsEnabled()
 
     override fun submit(data: LyricsData, timeline: LyricsTimeline) {
         this.timeline = timeline

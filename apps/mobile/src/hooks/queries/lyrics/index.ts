@@ -12,13 +12,9 @@ import lyricService from '@/lib/services/lyricService'
 import type { Track } from '@/types/core/media'
 import type { LyricFileData, LyricSearchResult } from '@/types/player/lyrics'
 
-export const lyricsQueryKeys = {
-	all: ['lyrics'] as const,
-	smartFetchLyrics: (uniqueKey?: string) =>
-		[...lyricsQueryKeys.all, 'smartFetchLyrics', uniqueKey] as const,
-	manualSearch: (uniqueKey?: string, query?: string) =>
-		[...lyricsQueryKeys.all, 'manualSearch', uniqueKey, query] as const,
-}
+import { lyricsQueryKeys } from './keys'
+
+export { lyricsQueryKeys }
 
 export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 	const enabled = !!track && enable

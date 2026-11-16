@@ -23,6 +23,8 @@ import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.facebook.react.bridge.ReactContext
+import com.facebook.react.common.LifecycleState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
@@ -36,7 +38,7 @@ import expo.modules.orpheus.manager.CoverDownloadManager
 import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
-import expo.modules.orpheus.manager.SpectrumManager
+import expo.modules.orpheus.manager.SpectrumAnalyzer
 import expo.modules.orpheus.model.DownloadTaskRecord
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
@@ -82,20 +84,9 @@ class ExpoOrpheusModule : Module() {
 
     private var downloadManager: DownloadManager? = null
 
-    private val spectrumManager = SpectrumManager { audioSessionId, error ->
-        GeneralStorage.setSpectrumVisualizerEnabled(false)
-        sendEvent(
-            "onSpectrumVisualizerEnabledChanged", mapOf(
-                "enabled" to false
-            )
-        )
-        sendEvent(
-            "onSpectrumVisualizerError", mapOf(
-                "audioSessionId" to audioSessionId,
-                "message" to (error.message ?: error.javaClass.simpleName)
-            )
-        )
-    }
+    /** 后台时不向 JS 发送进度事件：JS 端只有界面在用它，发了也只是白白唤醒 JS 线程 */
+    private var isAppInForeground = true
+
     private var tempBuffer: FloatArray? = null
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -162,22 +153,7 @@ class ExpoOrpheusModule : Module() {
                 )
             )
 
-            if (isPlaying) {
-                startSpectrumVisualizerIfEnabled()
-            } else {
-                spectrumManager.stop()
-            }
-
             updateProgressRunnerState()
-        }
-
-        override fun onAudioSessionIdChanged(audioSessionId: Int) {
-            if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
-                spectrumManager.stop()
-                return
-            }
-
-            startSpectrumVisualizerIfEnabled(audioSessionId)
         }
 
         /**
@@ -208,14 +184,13 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
-    private fun startSpectrumVisualizerIfEnabled(
-        audioSessionId: Int = player?.audioSessionId ?: C.AUDIO_SESSION_ID_UNSET
-    ) {
-        if (!GeneralStorage.isSpectrumVisualizerEnabled()) return
-        if (player?.isPlaying != true) return
-        if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) return
-
-        spectrumManager.start(audioSessionId)
+    /**
+     * 频谱开着就一直采集 PCM（包括后台）：写进 AudioTrack 的 PCM 要等已缓冲的数据播完才播出，
+     * 等频谱可见了才开始采集的话，这段时间没有和声音对齐的数据，频谱会空白。
+     * 采集只是在播放线程本来就要写 AudioTrack 时顺手混成单声道，不会多唤醒；FFT 只在 JS 读取时才算
+     */
+    private fun updateSpectrumCapture() {
+        SpectrumAnalyzer.isCapturing = GeneralStorage.isSpectrumVisualizerEnabled()
     }
 
     @OptIn(UnstableApi::class)
@@ -234,7 +209,6 @@ class ExpoOrpheusModule : Module() {
             "onCoverDownloadProgress",
             "onExportProgress",
             "onStatusBarLyricsStatusChanged",
-            "onSpectrumVisualizerError",
             "onSpectrumVisualizerEnabledChanged",
             "onRequestClearLyrics",
             "onQueueChanged"
@@ -247,7 +221,10 @@ class ExpoOrpheusModule : Module() {
         OnCreate {
             val context = appContext.reactContext ?: return@OnCreate
             cachedAppContext = context.applicationContext
+            // 模块可能在 Activity 已经退到后台时才创建，这时不会再补发后台事件
+            isAppInForeground = (context as? ReactContext)?.let { it.lifecycleState == LifecycleState.RESUMED } ?: true
             GeneralStorage.initialize(context)
+            updateSpectrumCapture()
             LoudnessStorage.initialize(context)
             TrackResumeStorage.initialize(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
@@ -268,7 +245,6 @@ class ExpoOrpheusModule : Module() {
                     }
 
                     sendEvent("onQueueChanged", emptyMap<String, Any>())
-                    startSpectrumVisualizerIfEnabled()
 
                     service.statusBarLyricsManager.setStatusChangeListener(object :
                         expo.modules.orpheus.manager.StatusBarLyricsManager.StatusChangeListener {
@@ -318,6 +294,20 @@ class ExpoOrpheusModule : Module() {
             downloadManager?.addListener(downloadListener)
         }
 
+        OnActivityEntersForeground {
+            mainHandler.post {
+                isAppInForeground = true
+                updateProgressRunnerState()
+            }
+        }
+
+        OnActivityEntersBackground {
+            mainHandler.post {
+                isAppInForeground = false
+                mainHandler.removeCallbacks(progressSendEventRunnable)
+            }
+        }
+
         OnDestroy {
             mainHandler.post {
                 mainHandler.removeCallbacks(progressSendEventRunnable)
@@ -328,7 +318,7 @@ class ExpoOrpheusModule : Module() {
                 player?.removeListener(playerListener)
                 OrpheusMusicService.removeOnServiceReadyListener { }
                 player = null
-                spectrumManager.stop()
+                SpectrumAnalyzer.isCapturing = false
                 ioScope.cancel()
                 Log.d("Orpheus", "Destroy media controller")
             }
@@ -369,16 +359,27 @@ class ExpoOrpheusModule : Module() {
             .get { TrackResumeStorage.getStrategy() }
             .set { strategy: Int -> TrackResumeStorage.setStrategy(strategy) }
 
+        // 功耗测量用的开关，重启 App 后生效
+        Property("testForceMediaCodec")
+            .get { GeneralStorage.isTestForceMediaCodec() }
+            .set { enabled: Boolean -> GeneralStorage.setTestForceMediaCodec(enabled) }
+
+        Property("testForcePcm")
+            .get { GeneralStorage.isTestForcePcm() }
+            .set { enabled: Boolean ->
+                GeneralStorage.setTestForcePcm(enabled)
+                // offload 偏好随时可以重新应用，不用等重启
+                mainHandler.post { OrpheusMusicService.refreshAudioOffloadPreferences() }
+            }
+
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.isSpectrumVisualizerEnabled() }
             .set { enabled: Boolean ->
                 GeneralStorage.setSpectrumVisualizerEnabled(enabled)
                 mainHandler.post {
-                    if (enabled) {
-                        startSpectrumVisualizerIfEnabled()
-                    } else {
-                        spectrumManager.stop()
-                    }
+                    updateSpectrumCapture()
+                    // 频谱需要 PCM，开启时不能走 offload。切换会让播放器重建音频输出，短暂停顿一下
+                    OrpheusMusicService.refreshAudioOffloadPreferences()
                     sendEvent(
                         "onSpectrumVisualizerEnabledChanged", mapOf(
                             "enabled" to GeneralStorage.isSpectrumVisualizerEnabled()
@@ -1173,7 +1174,8 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("setPlaybackSpeed") Coroutine { speed: Float ->
-            withPlayerOnMainThread { it.setPlaybackSpeed(speed) }
+            // 由服务处理，保证倍速与 offload 偏好的切换顺序正确
+            withServiceAndPlayerOnMainThread { service, _ -> service.setPlaybackSpeed(speed) }
         }
 
         AsyncFunction("selectDirectory") Coroutine { ->
@@ -1217,13 +1219,21 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
+        /** 音频调试页使用：返回按分组整理好的调试信息（均为可直接展示的字符串） */
+        AsyncFunction("getAudioDebugInfo") Coroutine { ->
+            withServiceAndPlayerOnMainThread { service, _ ->
+                val exoPlayer = service.player ?: return@withServiceAndPlayerOnMainThread emptyList()
+                service.audioDebugTracker?.snapshot(service, exoPlayer) ?: emptyList()
+            }
+        }
+
         Function("updateSpectrumData") { destination: Float32Array ->
             val size = destination.length
             if (tempBuffer == null || tempBuffer!!.size != size) {
                 tempBuffer = FloatArray(size)
             }
             val buffer = tempBuffer!!
-            spectrumManager.getSpectrumData(buffer)
+            SpectrumAnalyzer.getSpectrumData(buffer)
 
             val byteBuffer = destination.toDirectBuffer()
             byteBuffer.order(java.nio.ByteOrder.nativeOrder())
@@ -1375,7 +1385,9 @@ class ExpoOrpheusModule : Module() {
             mainHandler.removeCallbacks(progressSendEventRunnable)
             mainHandler.removeCallbacks(progressSaveRunnable)
             mainHandler.post(progressSaveRunnable)
-            mainHandler.post(progressSendEventRunnable)
+            if (isAppInForeground) {
+                mainHandler.post(progressSendEventRunnable)
+            }
         } else {
             mainHandler.removeCallbacks(progressSendEventRunnable)
             mainHandler.removeCallbacks(progressSaveRunnable)

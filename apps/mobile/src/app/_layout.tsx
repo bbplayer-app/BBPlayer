@@ -40,9 +40,10 @@ import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
+import { runAfterStartup } from '@/lib/performance'
 import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
 import { analyticsService } from '@/lib/services/analyticsService'
-import lyricService from '@/lib/services/lyricService'
+import { getLyricService } from '@/lib/services/getLyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
 import {
 	reportUpdateActivity,
@@ -100,10 +101,9 @@ const checkOverlayPermissionOnStart = async () => {
 	}
 }
 
-function runAppInit() {
+/** 不影响首屏的启动任务，等首屏可交互后再执行 */
+function runDeferredAppInit() {
 	try {
-		useAppStoreObj.getState()
-
 		registerUpdatePrefetch()
 
 		cleanOldLogFiles(7)
@@ -116,7 +116,18 @@ function runAppInit() {
 				logger.warning('清理旧日志失败', { error: e.message })
 			})
 
-		void lyricService.migrateFromOldFormat()
+		void getLyricService().migrateFromOldFormat()
+
+		void checkOverlayPermissionOnStart()
+	} catch (error) {
+		logger.error('延后的初始化任务失败:', error)
+		reportErrorToSentry(error, '延后的初始化任务失败', ProjectScope.UI)
+	}
+}
+
+function runAppInit() {
+	try {
+		useAppStoreObj.getState()
 
 		initPlaybackContextStore()
 		usePlayerStore.getState().initialize()
@@ -124,7 +135,7 @@ function runAppInit() {
 
 		initPlayerQueueStore()
 
-		void checkOverlayPermissionOnStart()
+		runAfterStartup(runDeferredAppInit)
 
 		try {
 			const settings = useAppStoreObj.getState().settings
@@ -200,8 +211,10 @@ function RootLayout() {
 			}
 		}
 
-		void logAppInfo()
-		reportUpdateActivity()
+		runAfterStartup(() => {
+			void logAppInfo()
+			reportUpdateActivity()
+		})
 
 		const subscription = AppState.addEventListener('change', onAppStateChange)
 
@@ -239,10 +252,12 @@ function RootLayout() {
 
 	useEffect(() => {
 		if (isReady && migrationsSuccess) {
-			reportUpdateLaunch()
-			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
-			playlistSyncWorker.recoverStuckRows().catch((error) => {
-				logger.error('恢复同步任务失败:', error)
+			runAfterStartup(() => {
+				reportUpdateLaunch()
+				// 恢复上次被中断的同步任务（syncing → pending），并触发同步
+				playlistSyncWorker.recoverStuckRows().catch((error) => {
+					logger.error('恢复同步任务失败:', error)
+				})
 			})
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
@@ -335,6 +350,11 @@ function RootLayout() {
 
 							<Stack.Screen
 								name='performance'
+								options={{ headerShown: false }}
+							/>
+
+							<Stack.Screen
+								name='audio-debug'
 								options={{ headerShown: false }}
 							/>
 

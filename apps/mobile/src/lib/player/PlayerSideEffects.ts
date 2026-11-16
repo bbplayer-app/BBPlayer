@@ -5,15 +5,14 @@ import {
 } from '@bbplayer/orpheus'
 import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
 import { spanToJSON } from '@sentry/react-native'
-import { PermissionsAndroid, Platform } from 'react-native'
 
-import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
+import { lyricsQueryKeys } from '@/hooks/queries/lyrics/keys'
 import { queryClient } from '@/lib/config/queryClient'
 import {
 	failPendingPlaybackSpan,
 	takePendingPlaybackSpan,
 } from '@/lib/player/playbackSession'
-import lyricService from '@/lib/services/lyricService'
+import { getLyricService } from '@/lib/services/getLyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
 import { finalizeAndRecordCurrentTrack } from '@/utils/player'
@@ -53,7 +52,6 @@ function isUserSidePlaybackErrorCode(errorCode: number): boolean {
 
 class PlayerSideEffects {
 	private initialized = false
-	private isHandlingSpectrumVisualizerError = false
 
 	public initialize() {
 		if (this.initialized) return
@@ -72,7 +70,6 @@ class PlayerSideEffects {
 
 		// 设置播放器错误处理
 		this.setupErrorHandler()
-		this.setupSpectrumVisualizerErrorHandler()
 	}
 
 	/**
@@ -100,7 +97,7 @@ class PlayerSideEffects {
 					}
 				}
 
-				await lyricService.pushLyricsToOverlays(event.trackId)
+				await getLyricService().pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
 				await finalizeAndRecordCurrentTrack(
 					event.trackId,
@@ -110,7 +107,7 @@ class PlayerSideEffects {
 			} else if (event.eventName === 'onRequestClearLyrics') {
 				// 桌面歌词面板「清空歌词」按钮被点击时，标记该曲目跳过歌词
 				logger.info('收到清空歌词请求', { trackId: event.trackId })
-				await lyricService.skipLyric(event.trackId)
+				await getLyricService().skipLyric(event.trackId)
 				// 使 React Query 缓存失效，让歌词面板立即显示跳过提示
 				// 使用 void 是因为软件在后台时不需要这个强制完成，可以等待到前台后再完成
 				void queryClient.invalidateQueries({
@@ -324,38 +321,6 @@ class PlayerSideEffects {
 			} catch (error) {
 				logger.error('处理播放器错误事件失败：', { error, event })
 			}
-		})
-	}
-
-	private setupSpectrumVisualizerErrorHandler() {
-		Orpheus.addListener('onSpectrumVisualizerError', (event) => {
-			if (this.isHandlingSpectrumVisualizerError) return
-
-			void (async () => {
-				this.isHandlingSpectrumVisualizerError = true
-
-				try {
-					const hasPermission =
-						Platform.OS !== 'android' ||
-						(await PermissionsAndroid.check(
-							PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-						))
-
-					if (!hasPermission) {
-						toast.info('未获得麦克风权限，已关闭频谱显示')
-
-						return
-					}
-
-					toast.error('当前设备或音频输出不支持系统频谱分析，已关闭频谱显示', {
-						description: event.message,
-					})
-				} catch (error) {
-					logger.error('处理频谱初始化错误失败', { error, event })
-				} finally {
-					this.isHandlingSpectrumVisualizerError = false
-				}
-			})()
 		})
 	}
 }

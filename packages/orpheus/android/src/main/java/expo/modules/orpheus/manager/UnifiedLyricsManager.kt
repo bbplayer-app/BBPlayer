@@ -80,6 +80,8 @@ class UnifiedLyricsManager(
         }
     }
 
+    fun hasActiveConsumers(): Boolean = consumers.values.any { it.isActive }
+
     fun updateTime(seconds: Double) {
         consumers.values.forEach { it.tick(seconds) }
     }
