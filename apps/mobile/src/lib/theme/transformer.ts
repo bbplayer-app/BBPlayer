@@ -48,11 +48,11 @@ export const transformManifestToInstalledSkin = ({
 	const result = doTransform({ manifest, mapping, rootUri, skinId, source })
 
 	if (result.isErr()) return result
-	log.debug('[transform] built InstalledSkin', {
-		cards: manifest.cards.length,
-		skins: manifest.skins.length,
-		thumbups: manifest.thumbups.length,
-		skinId,
+	log.debug('theme.manifest.transformed', {
+		'theme.cards': manifest.cards.length,
+		'theme.skins': manifest.skins.length,
+		'theme.thumbups': manifest.thumbups.length,
+		'theme.skin_id': skinId,
 	})
 
 	return ok(result.value)

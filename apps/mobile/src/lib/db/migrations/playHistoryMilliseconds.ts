@@ -21,8 +21,8 @@ export function migratePlayHistoryToMs(): void {
 			)
 			migration.markAsApplied()
 		})
-		logger.info('[play_history] 秒级 start_time 已统一转为毫秒级')
+		logger.info('database.play_history_units.migrated')
 	} catch (error) {
-		logger.error('[play_history] 秒级 start_time 转换失败:', error)
+		logger.error('database.play_history_units.failed', {}, error)
 	}
 }

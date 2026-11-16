@@ -262,7 +262,7 @@ const LyricsSelectionModal = () => {
 					}
 				})
 				.catch((e) => {
-					log.error('提取图片主题色失败', e)
+					log.error('lyrics.share.theme_extract_failed', {}, e)
 					reportErrorToSentry(e, '提取图片主题色失败', 'LyricsSelectionModal')
 					setCardColor(theme.colors.elevation.level3)
 				})

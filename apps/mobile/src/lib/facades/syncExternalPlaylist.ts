@@ -154,7 +154,7 @@ export class SyncExternalPlaylistFacade {
 
 				if (addTracksResult.isErr()) throw addTracksResult.error
 
-				logger.info('Save matched playlist success', { playlistId })
+				logger.info('playlist.external.saved', { 'playlist.id': playlistId })
 				void analyticsService.logPlaylistSync(
 					'sync_external',
 					'external',

@@ -88,10 +88,10 @@ async function performRestoreBackup(filePath: string): Promise<void> {
 	}
 
 	restorePlaybackContextState(manifest.mmkv['playback-context-store'])
-	logger.info('MMKV 数据已恢复')
+	logger.info('backup.mmkv.restored')
 
 	Orpheus.importData(manifest.orpheus)
-	logger.info('Orpheus 配置已恢复')
+	logger.info('backup.player.restored')
 }
 
 /** Validate a staged snapshot and atomically copy it into an open database. */
@@ -125,9 +125,9 @@ export async function restoreDatabaseBytes(
 			tempDb.closeSync()
 		}
 
-		logger.info('数据库已恢复，需要重启应用以刷新设置')
+		logger.info('backup.database.restored')
 	} catch (e) {
-		logger.error('数据库恢复失败', e)
+		logger.error('backup.database.restore_failed', {}, e)
 		throw e
 	} finally {
 		for (const suffix of ['', '-wal', '-shm']) {
@@ -136,7 +136,7 @@ export async function restoreDatabaseBytes(
 			try {
 				if (file.exists) file.delete()
 			} catch (error) {
-				logger.warning('清理恢复临时文件失败', error)
+				logger.warning('backup.cleanup.failed', {}, error)
 			}
 		}
 	}

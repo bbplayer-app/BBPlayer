@@ -76,7 +76,7 @@ export const useFastMigrations = (
 				migratePlayHistoryToMs()
 				dispatch({ type: 'migrated', payload: true })
 			} catch (error) {
-				logger.error('迁移失败:', error)
+				logger.error('database.migration.failed', {}, error)
 				dispatch({ type: 'error', payload: error as Error })
 			}
 		}

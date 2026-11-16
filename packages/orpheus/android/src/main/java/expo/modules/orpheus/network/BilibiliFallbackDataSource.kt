@@ -8,7 +8,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
 import expo.modules.orpheus.telemetry.LogTags
-import expo.modules.orpheus.telemetry.NativeLog
+import expo.modules.bbplayernative.telemetry.NativeLog
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
@@ -57,7 +57,7 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
                 val retry = canRetry(error)
                 NativeLog.warning(
                     LogTags.STREAM,
-                    "mirrorOpenFailed",
+                    "stream.mirror.open_failed",
                     failureAttributes(error) + mapOf(
                         "stream.host" to nextSpec.uri.host,
                         "stream.retry" to retry,
@@ -85,7 +85,7 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
                 val retry = canRetry(error)
                 NativeLog.warning(
                     LogTags.STREAM,
-                    "mirrorReadFailed",
+                    "stream.mirror.read_failed",
                     failureAttributes(error) + mapOf(
                         "stream.host" to upstream?.uri?.host,
                         "stream.retry" to retry,
@@ -113,8 +113,8 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
     private fun failureAttributes(error: IOException): Map<String, Any?> = mapOf(
         "stream.mirror_index" to nextCandidate,
         "stream.mirror_count" to candidates.size,
-        "stream.bytes_loaded" to bytesRead,
-        "stream.http_status" to (error as? HttpDataSource.InvalidResponseCodeException)?.responseCode,
+        "stream.bytes_loaded_bytes" to bytesRead,
+        "http.status_code" to (error as? HttpDataSource.InvalidResponseCodeException)?.responseCode,
     )
 
     private fun closeFailedSource(error: IOException) {

@@ -166,7 +166,7 @@ export const useAppStore = create<AppState>()(
 						state.bilibiliCookie = cookieObj
 					})
 					Orpheus.setBilibiliCookie(serializeCookieObject(cookieObj))
-					logger.info('设置 cookie 到 orpheus')
+					logger.info('player.cookie.set')
 
 					return ok(undefined)
 				},
@@ -179,7 +179,7 @@ export const useAppStore = create<AppState>()(
 						state.bilibiliCookie = newCookie
 					})
 					Orpheus.setBilibiliCookie(serializeCookieObject(newCookie))
-					logger.info('更新 cookie 到 orpheus')
+					logger.info('player.cookie.updated')
 
 					return ok(undefined)
 				},
@@ -379,7 +379,7 @@ export const useAppStore = create<AppState>()(
 
 				// Note: Migration logic is kept within merge to handle one-time transfer from old MMKV keys.
 				// This runs only once when app-storage is missing.
-				logger.info('没找到 "app-storage" 存储项. 检查旧的 MMKV 键并尝试迁移')
+				logger.info('settings.migration.started')
 				let hasOldData = false
 				const migratedState = { ...currentState }
 
@@ -403,7 +403,7 @@ export const useAppStore = create<AppState>()(
 						storage.remove('bbplayer_jwt')
 					}
 				} catch (e) {
-					logger.error('解析并迁移旧的 bilibili 数据失败', e)
+					logger.error('settings.migration.account_failed', {}, e)
 				}
 
 				const migratedSettings = { ...currentState.settings }
@@ -458,7 +458,7 @@ export const useAppStore = create<AppState>()(
 						hasOldSettings = true
 					}
 				} catch (e) {
-					logger.error('迁移设置项失败', e)
+					logger.error('settings.migration.failed', {}, e)
 				}
 
 				if (hasOldSettings) {
@@ -467,12 +467,12 @@ export const useAppStore = create<AppState>()(
 				}
 
 				if (!hasOldData) {
-					logger.info('没有旧数据，使用默认值')
+					logger.info('settings.migration.defaults')
 
 					return currentState
 				}
 
-				logger.info('迁移旧数据成功！')
+				logger.info('settings.migration.completed')
 
 				return migratedState
 			},

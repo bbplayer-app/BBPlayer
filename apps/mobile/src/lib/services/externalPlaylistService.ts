@@ -223,12 +223,17 @@ export class ExternalPlaylistService {
 							matchedVideo = this.findBestMatchSimple(decodedResults, song)
 						} else {
 							logger.error(
-								`Search failed for ${song.title}:`,
+								'playlist.external.search_failed',
+								{ 'playlist.song_title': song.title },
 								searchResult.error,
 							)
 						}
 					} catch (e) {
-						logger.error(`Error processing ${song.title}:`, e)
+						logger.error(
+							'playlist.external.process_failed',
+							{ 'playlist.song_title': song.title },
+							e,
+						)
 					}
 
 					if (options?.signal?.aborted) {

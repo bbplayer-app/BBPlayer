@@ -72,9 +72,9 @@ export async function persistFavoriteSync(
 				throw playlistResult.error
 			}
 
-			logger.debug('step 5: 创建 playlist 和其对应的 author 信息完成', {
-				localPlaylistId: playlistResult.value.id,
-				artistId: playlistAuthor.value.id,
+			logger.debug('bilibili.favorite.playlist_created', {
+				'bilibili.local_playlist_id': playlistResult.value.id,
+				'bilibili.artist_id': playlistAuthor.value.id,
 			})
 
 			const uniqueArtistPayloadsMap = new Map<string, CreateArtistPayload>()
@@ -101,8 +101,8 @@ export async function persistFavoriteSync(
 				throw artistsMap.error
 			}
 
-			logger.debug('step 6: 创建 artist 完成', {
-				total: artistsMap.value.size,
+			logger.debug('bilibili.favorite.artists_created', {
+				'bilibili.total': artistsMap.value.size,
 			})
 
 			const trackPayloads = buildFavoriteTrackPayloads(
@@ -135,8 +135,8 @@ export async function persistFavoriteSync(
 				throw createdTracksMapResult.error
 			}
 
-			logger.debug('step 7: 创建或查找 tracks 并获取 uniqueKey->id 映射完成', {
-				total: createdTracksMapResult.value.size,
+			logger.debug('bilibili.favorite.tracks_resolved', {
+				'bilibili.total': createdTracksMapResult.value.size,
 			})
 
 			const orderedUniqueKeysResult = buildFavoriteOrderedUniqueKeys(
@@ -149,12 +149,9 @@ export async function persistFavoriteSync(
 			}
 
 			const orderedUniqueKeys = orderedUniqueKeysResult.value
-			logger.debug(
-				'step 8: 为远程所有 tracks 生成了其对应的 uniqueKey 顺序列表',
-				{
-					total: orderedUniqueKeys.length,
-				},
-			)
+			logger.debug('bilibili.favorite.order_resolved', {
+				'bilibili.total': orderedUniqueKeys.length,
+			})
 
 			const uniqueKeyToIdMapResult =
 				await trackSvc.findTrackIdsByUniqueKeys(orderedUniqueKeys)
@@ -164,8 +161,8 @@ export async function persistFavoriteSync(
 			}
 
 			const uniqueKeyToIdMap = uniqueKeyToIdMapResult.value
-			logger.debug('step 9: 一次性获取所有 uniqueKey 到本地 ID 的映射完成', {
-				total: uniqueKeyToIdMap.size,
+			logger.debug('bilibili.favorite.ids_resolved', {
+				'bilibili.total': uniqueKeyToIdMap.size,
 			})
 
 			const finalOrderedTrackIds = orderedUniqueKeys
@@ -180,8 +177,8 @@ export async function persistFavoriteSync(
 					return id !== undefined
 				})
 
-			logger.debug('step 10: 按 Bilibili 收藏夹顺序重排所有 tracks 完成', {
-				total: finalOrderedTrackIds.length,
+			logger.debug('bilibili.favorite.order_applied', {
+				'bilibili.total': finalOrderedTrackIds.length,
 			})
 
 			const replaceResult = await playlistSvc.replacePlaylistAllTracks(
@@ -193,10 +190,10 @@ export async function persistFavoriteSync(
 				throw replaceResult.error
 			}
 
-			logger.debug('step 11: 替换 playlist 中所有 tracks 完成')
-			logger.info('同步收藏夹完成', {
-				remoteId: favoriteId,
-				playlistId: playlistResult.value.id,
+			logger.debug('bilibili.favorite.tracks_replaced')
+			logger.info('bilibili.favorite.synced', {
+				'bilibili.remote_id': favoriteId,
+				'playlist.id': playlistResult.value.id,
 			})
 
 			onSynced?.(finalOrderedTrackIds.length)

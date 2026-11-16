@@ -109,18 +109,20 @@ function runDeferredAppInit() {
 		cleanOldLogFiles(7)
 			.andTee((deleted) => {
 				if (deleted > 0) {
-					logger.info(`已清理 ${deleted} 个旧日志文件`)
+					logger.info('logs.cleanup.completed', {
+						'logs.deleted_count': deleted,
+					})
 				}
 			})
 			.orTee((e) => {
-				logger.warning('清理旧日志失败', { error: e.message })
+				logger.warning('logs.cleanup.failed', { 'error.message': e.message })
 			})
 
 		void getLyricService().migrateFromOldFormat()
 
 		void checkOverlayPermissionOnStart()
 	} catch (error) {
-		logger.error('延后的初始化任务失败:', error)
+		logger.error('app.deferred_initialize_failed', {}, error)
 		reportErrorToSentry(error, '延后的初始化任务失败', ProjectScope.UI)
 	}
 }
@@ -148,17 +150,17 @@ function runAppInit() {
 			const cookie = useAppStoreObj.getState().bilibiliCookie
 
 			if (cookie) {
-				logger.debug('初始化 orpheus bilibili cookie')
+				logger.debug('player.cookie.initialize')
 				Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
 			} else {
-				logger.info('没有 bilibili cookie，跳过播放器初始化')
+				logger.info('player.initialize.cookie_missing')
 			}
 		} catch (error) {
-			logger.error('播放器初始化失败: ', error)
+			logger.error('player.initialize.failed', {}, error)
 			reportErrorToSentry(error, '播放器初始化失败', ProjectScope.Player)
 		}
 	} catch (error) {
-		logger.error('初始化失败:', error)
+		logger.error('app.initialize.failed', {}, error)
 		reportErrorToSentry(error, '初始化失败', ProjectScope.UI)
 	}
 }
@@ -220,14 +222,16 @@ function RootLayout() {
 			Updates.checkForUpdateAsync()
 				.then((result) => {
 					if (result.isAvailable) {
-						logger.debug('有新的热更新，开始下载', result)
+						logger.debug('update.ota.available', {
+							'update.available': result.isAvailable,
+						})
 						Updates.fetchUpdateAsync().catch((e) => {
-							logger.error('热更新下载失败', e)
+							logger.error('update.ota.download_failed', {}, e)
 						})
 					}
 				})
 				.catch((error: Error) => {
-					logger.error('检查热更新失败', error)
+					logger.error('update.ota.check_failed', {}, error)
 				})
 		})
 
@@ -240,7 +244,7 @@ function RootLayout() {
 				reportUpdateLaunch()
 				// 恢复上次被中断的同步任务（syncing → pending），并触发同步
 				playlistSyncWorker.recoverStuckRows().catch((error) => {
-					logger.error('恢复同步任务失败:', error)
+					logger.error('playlist.sync.restore_failed', {}, error)
 				})
 			})
 
@@ -255,7 +259,7 @@ function RootLayout() {
 	useEffect(() => {
 		if (migrationsError) {
 			void hideBootSplash({ fade: true })
-			logger.error('数据库迁移失败：', migrationsError)
+			logger.error('database.migration.failed', {}, migrationsError)
 		}
 	}, [migrationsError])
 

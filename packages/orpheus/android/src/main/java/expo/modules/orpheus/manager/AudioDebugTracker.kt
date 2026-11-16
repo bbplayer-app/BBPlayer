@@ -6,7 +6,6 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
-import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaLibraryInfo
@@ -23,7 +22,7 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import expo.modules.orpheus.telemetry.LogTags
-import expo.modules.orpheus.telemetry.NativeLog
+import expo.modules.bbplayernative.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.util.GeneralStorage
 import java.util.Locale
@@ -83,9 +82,14 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         decoderInitDurationMs = initializationDurationMs
         decoderInitAtMs = SystemClock.elapsedRealtime()
         audioMediaId = mediaIdOf(eventTime)
-        Log.i(
+        NativeLog.info(
             LogTags.AUDIO,
-            "decoderInitialized mediaId=$audioMediaId name=$decoderName initMs=$initializationDurationMs",
+            "audio.decoder.initialized",
+            mapOf(
+                "track.id" to audioMediaId,
+                "audio.decoder" to decoderName,
+                "audio.initialization_duration_ms" to initializationDurationMs,
+            ),
         )
         OrpheusTelemetry.update("decoder" to decoderName, "audioMediaId" to audioMediaId)
         OrpheusTelemetry.setTag("orpheus.decoder", decoderName)
@@ -98,7 +102,14 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     ) {
         inputFormat = format
         audioMediaId = mediaIdOf(eventTime)
-        Log.i(LogTags.AUDIO, "inputFormatChanged mediaId=$audioMediaId ${Format.toLogString(format)}")
+        NativeLog.info(
+            LogTags.AUDIO,
+            "audio.format.changed",
+            mapOf(
+                "track.id" to audioMediaId,
+                "audio.format" to Format.toLogString(format),
+            ),
+        )
         OrpheusTelemetry.update("inputFormat" to Format.toLogString(format), "audioMediaId" to audioMediaId)
         OrpheusTelemetry.setTag("orpheus.mime", format.sampleMimeType)
     }
@@ -111,10 +122,15 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         audioTrackInitAtMs = SystemClock.elapsedRealtime()
         liveAudioTrackCount++
         val output = outputMode(audioTrackConfig)
-        Log.i(
+        NativeLog.info(
             LogTags.AUDIO,
-            "audioTrackInitialized output=$output encoding=${encodingName(audioTrackConfig.encoding)} " +
-                "sampleRate=${audioTrackConfig.sampleRate} buffer=${formatTrackBuffer(audioTrackConfig)}",
+            "audio.track.initialized",
+            mapOf(
+                "audio.output" to output,
+                "audio.encoding" to encodingName(audioTrackConfig.encoding),
+                "audio.sample_rate_hz" to audioTrackConfig.sampleRate,
+                "audio.buffer_size_bytes" to audioTrackConfig.bufferSize,
+            ),
         )
         OrpheusTelemetry.update(
             "audioTrack" to mapOf(
@@ -133,7 +149,14 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     ) {
         liveAudioTrackCount = maxOf(0, liveAudioTrackCount - 1)
         if (liveAudioTrackCount == 0) this.audioTrackConfig = null
-        Log.d(LogTags.AUDIO, "audioTrackReleased output=${outputMode(audioTrackConfig)} live=$liveAudioTrackCount")
+        NativeLog.debug(
+            LogTags.AUDIO,
+            "audio.track.released",
+            mapOf(
+                "audio.output" to outputMode(audioTrackConfig),
+                "audio.live_track_count" to liveAudioTrackCount,
+            ),
+        )
     }
 
     override fun onAudioUnderrun(
@@ -148,7 +171,7 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         lastUnderrunSinceFeedMs = elapsedSinceLastFeedMs
         NativeLog.warning(
             LogTags.AUDIO,
-            "audioUnderrun",
+            "audio.underrun",
             logAttributes() + mapOf(
                 "audio.error_count" to underrunCount,
                 "audio.buffer_ms" to bufferSizeMs,
@@ -163,8 +186,10 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         lastAudioError = audioSinkError.toString()
         // 可恢复的错误：播放器会重建 AudioTrack 继续播放，致命错误另由 onPlayerError 报告
         NativeLog.warning(
-            LogTags.AUDIO, "audioSinkError",
-            logAttributes() + mapOf("audio.error_count" to sinkErrorCount), audioSinkError,
+            LogTags.AUDIO,
+            "audio.sink.failed",
+            logAttributes() + mapOf("audio.error_count" to sinkErrorCount),
+            audioSinkError,
         )
         OrpheusTelemetry.update("sinkErrorCount" to sinkErrorCount, "lastAudioError" to lastAudioError)
     }
@@ -174,8 +199,10 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         lastAudioError = audioCodecError.toString()
         // 可恢复的错误，但它常常是随后致命错误的真正原因（例如 FLAC 帧超过解码器输入缓冲）
         NativeLog.warning(
-            LogTags.AUDIO, "audioCodecError",
-            logAttributes() + mapOf("audio.error_count" to codecErrorCount), audioCodecError,
+            LogTags.AUDIO,
+            "audio.codec.failed",
+            logAttributes() + mapOf("audio.error_count" to codecErrorCount),
+            audioCodecError,
         )
         OrpheusTelemetry.update("codecErrorCount" to codecErrorCount, "lastAudioError" to lastAudioError)
     }
@@ -219,10 +246,10 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         // 播放器会重试，重试耗尽才会变成 onPlayerError
         NativeLog.warning(
             LogTags.STREAM,
-            "loadError",
+            "stream.load.failed",
             logAttributes() + mapOf(
                 "stream.host" to loadEventInfo.uri.host,
-                "stream.bytes_loaded" to loadEventInfo.bytesLoaded,
+                "stream.bytes_loaded_bytes" to loadEventInfo.bytesLoaded,
                 "stream.canceled" to wasCanceled,
             ),
             error,
@@ -256,10 +283,10 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
 
     /** 显式选择诊断字段，避免把 Format 或播放器对象整体上传。 */
     fun logAttributes(): Map<String, Any?> = mapOf(
-        "audio.media_id" to audioMediaId,
+        "track.id" to audioMediaId,
         "audio.decoder" to decoderName,
         "audio.mime" to inputFormat?.sampleMimeType,
-        "audio.sample_rate" to inputFormat?.sampleRate,
+        "audio.sample_rate_hz" to inputFormat?.sampleRate,
         "audio.channel_count" to inputFormat?.channelCount,
         "audio.output" to audioTrackConfig?.let(::outputMode),
     )

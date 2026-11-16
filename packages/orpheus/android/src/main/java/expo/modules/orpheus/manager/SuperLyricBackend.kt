@@ -1,7 +1,8 @@
 package expo.modules.orpheus.manager
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
-import android.util.Log
 import com.hchen.superlyricapi.SuperLyricData
 import com.hchen.superlyricapi.SuperLyricPush
 import com.hchen.superlyricapi.SuperLyricTool
@@ -50,9 +51,16 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
 
         try {
             SuperLyricPush.onSuperLyric(data)
-            Log.d(TAG, "[SuperLyric][render] text=\"${line.text}\" delay=${frame.delayMs}")
+            NativeLog.debug(
+                TAG,
+                "lyrics.superlyric.rendered",
+                mapOf(
+                    "lyrics.text_length" to line.text.length,
+                    "lyrics.delay_ms" to frame.delayMs,
+                ),
+            )
         } catch (e: Exception) {
-            Log.w(TAG, "[SuperLyric][render] failed", e)
+            NativeLog.warning(TAG, "lyrics.superlyric.render_failed", error = e)
         }
     }
 
@@ -78,7 +86,7 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
         try {
             SuperLyricPush.onStop(SuperLyricData().setPackageName(context.packageName))
         } catch (e: Exception) {
-            Log.w(TAG, "[SuperLyric][onStop] failed", e)
+            NativeLog.warning(TAG, "lyrics.superlyric.stop_failed", error = e)
         }
     }
 }

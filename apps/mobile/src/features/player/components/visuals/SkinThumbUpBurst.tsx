@@ -28,9 +28,9 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 	useEffect(() => {
 		if (!animation || playSignal === 0) return
 
-		log.debug('[thumbUp] svga animation start', {
-			animation,
-			durationMs: playbackDuration,
+		log.debug('theme.animation.started', {
+			'theme.animation': animation,
+			'theme.duration_ms': playbackDuration,
 		})
 
 		const visibleDuration = playbackDuration + 520

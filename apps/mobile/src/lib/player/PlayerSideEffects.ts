@@ -57,7 +57,7 @@ class PlayerSideEffects {
 		if (this.initialized) return
 		this.initialized = true
 
-		logger.info('Initializing PlayerSideEffects')
+		logger.info('player.effects.initialize')
 
 		// 预加载功能完全没必要，当初那个鲨臂让我加的？？？？？
 		// Orpheus.addListener('onTrackStarted', () => {
@@ -106,7 +106,7 @@ class PlayerSideEffects {
 				)
 			} else if (event.eventName === 'onRequestClearLyrics') {
 				// 桌面歌词面板「清空歌词」按钮被点击时，标记该曲目跳过歌词
-				logger.info('收到清空歌词请求', { trackId: event.trackId })
+				logger.info('lyrics.clear_requested', { 'track.id': event.trackId })
 				await getLyricService().skipLyric(event.trackId)
 				// 使 React Query 缓存失效，让歌词面板立即显示跳过提示
 				// 使用 void 是因为软件在后台时不需要这个强制完成，可以等待到前台后再完成
@@ -287,8 +287,18 @@ class PlayerSideEffects {
 	 */
 	private setupErrorHandler() {
 		Orpheus.addListener('onPlayerError', async (event) => {
-			// 直接展开事件：errorCodeName、rootCauseClass 等字段成为可在 Sentry 里筛选的日志属性
-			logger.error('播放器错误事件', event)
+			// 显式选择跨平台诊断字段，不上传整个原生事件或堆栈对象。
+			logger.error('player.error', {
+				'player.platform': event.platform,
+				'error.message': 'message' in event ? event.message : event.error,
+				'error.code': 'errorCode' in event ? event.errorCode : undefined,
+				'error.type':
+					'rootCauseClass' in event ? event.rootCauseClass : undefined,
+				'error.code_name':
+					event.platform === 'android' ? event.errorCodeName : undefined,
+				'error.root_cause_message':
+					event.platform === 'android' ? event.rootCauseMessage : undefined,
+			})
 
 			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败。
 			// 上报时复用同一个 Error 实例，beforeSend 才能把 issue 关联回这条 trace
@@ -305,7 +315,11 @@ class PlayerSideEffects {
 				try {
 					playerErrorInfo = await this.getPlayerErrorInfo(event)
 				} catch (error) {
-					logger.error('解析播放器错误失败：', { error, event })
+					logger.error(
+						'player.error_parse_failed',
+						{ 'player.platform': event.platform },
+						error,
+					)
 				}
 
 				toast.error(playerErrorInfo.message, {
@@ -317,7 +331,11 @@ class PlayerSideEffects {
 					reportErrorToSentry(sentryError, '播放器错误事件', 'Native.Player')
 				}
 			} catch (error) {
-				logger.error('处理播放器错误事件失败：', { error, event })
+				logger.error(
+					'player.error_handle_failed',
+					{ 'player.platform': event.platform },
+					error,
+				)
 			}
 		})
 	}

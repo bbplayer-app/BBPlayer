@@ -186,7 +186,7 @@ export default function PlayerPage() {
 		if (Platform.OS !== 'android') return
 		void Orpheus.setDesktopLyricsSuppressed(suppressDesktopLyrics).catch(
 			(e) => {
-				logger.error('更新桌面歌词临时隐藏状态失败', e)
+				logger.error('lyrics.overlay.hide_failed', {}, e)
 			},
 		)
 	}, [suppressDesktopLyrics])
@@ -195,7 +195,7 @@ export default function PlayerPage() {
 		return () => {
 			if (Platform.OS !== 'android') return
 			void Orpheus.setDesktopLyricsSuppressed(false).catch((e) => {
-				logger.error('恢复桌面歌词显示失败', e)
+				logger.error('lyrics.overlay.restore_failed', {}, e)
 			})
 		}
 	}, [])
@@ -303,7 +303,7 @@ export default function PlayerPage() {
 			})
 			.catch((e) => {
 				if (cancelled) return
-				logger.error('提取封面图片主题色失败', e)
+				logger.error('player.theme.extract_failed', {}, e)
 				reportErrorToSentry(e, '提取封面图片主题色失败', 'App.Player')
 			})
 

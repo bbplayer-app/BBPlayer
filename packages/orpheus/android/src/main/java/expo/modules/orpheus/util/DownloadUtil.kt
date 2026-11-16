@@ -1,7 +1,6 @@
 package expo.modules.orpheus.util
 
 import android.content.Context
-import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
@@ -18,7 +17,7 @@ import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
 import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.telemetry.LogTags
-import expo.modules.orpheus.telemetry.NativeLog
+import expo.modules.bbplayernative.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
@@ -160,7 +159,14 @@ object DownloadUtil {
                     // 在这里保存响度均衡数据，并且直接发一个事件，在 OrpheusMusicService 监听
                     val volume = resolved.volume
                     if (volume !== null) {
-                        Log.d(LogTags.LOUDNESS, "loudnessResolved bvid=$bvid measuredI=${volume.measuredI}")
+                        NativeLog.debug(
+                            LogTags.LOUDNESS,
+                            "audio.loudness.resolved",
+                            mapOf(
+                                "bilibili.bvid" to bvid,
+                                "audio.integrated_loudness_lufs" to volume.measuredI,
+                            ),
+                        )
                         LoudnessStorage.setLoudnessData(dataSpec.uri.toString(), volume.measuredI)
                     }
 
@@ -176,8 +182,12 @@ object DownloadUtil {
                 } catch (e: Exception) {
                     // 播放器会重试，重试耗尽才会变成 onPlayerError
                     NativeLog.warning(
-                        LogTags.STREAM, "resolveAudioFailed",
-                        mapOf("stream.bvid" to uri.getQueryParameter("bvid")), e,
+                        LogTags.STREAM,
+                        "stream.resolve.failed",
+                        mapOf(
+                            "bilibili.bvid" to uri.getQueryParameter("bvid"),
+                        ),
+                        e,
                     )
                     throw IOException("Resolve Url Failed: ${e.message}", e)
                 }

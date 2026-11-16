@@ -1,11 +1,12 @@
 package expo.modules.orpheus.manager
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import expo.modules.orpheus.R
 import expo.modules.orpheus.telemetry.LogTags
 
@@ -61,9 +62,9 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
         try {
             sendLyricBroadcast(text)
             postTickerNotification(text, translation)
-            Log.d(TAG, "[Meizu][render] text=\"$text\"")
+            NativeLog.debug(TAG, "lyrics.meizu.rendered", mapOf("lyrics.text_length" to text.length))
         } catch (e: Exception) {
-            Log.w(TAG, "[Meizu][render] failed", e)
+            NativeLog.warning(TAG, "lyrics.meizu.render_failed", error = e)
         }
     }
 
@@ -77,7 +78,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
                 sendLyricBroadcast(text)
                 postTickerNotification(text, null)
             }.onFailure { e ->
-                Log.w(TAG, "[Meizu][setPlaybackState] failed", e)
+                NativeLog.warning(TAG, "lyrics.meizu.playback_failed", error = e)
             }
         }
     }
@@ -93,7 +94,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
             sendFlymeBroadcast(intent)
             notificationManager.cancel(NOTIFICATION_ID)
         } catch (e: Exception) {
-            Log.w(TAG, "[Meizu][onStop] failed", e)
+            NativeLog.warning(TAG, "lyrics.meizu.stop_failed", error = e)
         }
     }
 
@@ -187,7 +188,14 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
                 field.isAccessible = true
                 field.getInt(null)
             }.getOrElse {
-                Log.w(TAG, "[Meizu] Flyme ticker flag not found: $name, fallback=$fallback")
+                NativeLog.warning(
+                    TAG,
+                    "lyrics.meizu.flag_missing",
+                    mapOf(
+                        "lyrics.flag_name" to name,
+                        "lyrics.flag_fallback" to fallback,
+                    ),
+                )
                 fallback
             }
         }

@@ -648,9 +648,6 @@
     },
     "anti-slop/no-unsafe-dictionary-type": {
       "count": 1
-    },
-    "anti-slop/require-safety-comment-for-type-assertion": {
-      "count": 1
     }
   },
   "apps/mobile/src/utils/lottie.ts": {

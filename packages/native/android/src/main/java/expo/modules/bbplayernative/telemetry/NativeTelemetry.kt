@@ -17,7 +17,7 @@ import java.io.File
  *
  * 原生 SDK 由 JS 的 `Sentry.init` 初始化，JS 传不了回调过来，所以等初始化完成后由 JS 调用 [install]，
  * 直接改写 SDK 正在使用的 options：SDK 每次上报时都会重新读取这些回调。
- * 注意：这里的代码不能调用 `android.util.Log`，Logcat 插桩会把它再转成日志，回到这里形成递归。
+ * 注意：回调内不能再调用 NativeLog 或 Sentry logger，否则会递归进入自身。
  */
 object NativeTelemetry {
     /** 用户的数据采集开关，中途关闭后原生侧立刻停止上报 */
@@ -96,10 +96,14 @@ object NativeTelemetry {
 
         val previousBeforeBreadcrumb = options.beforeBreadcrumb
         options.setBeforeBreadcrumb { breadcrumb, hint ->
-            // Logcat 插桩产生的 breadcrumb 只留警告及以上，其余只进 Logs，避免挤掉 JS 的 breadcrumb
-            if (breadcrumb.category == LOGCAT_CATEGORY) {
+            // 原生结构化日志的 breadcrumb 只留警告及以上，避免挤掉 JS 的 breadcrumb
+            if (breadcrumb.category == NATIVE_LOG_CATEGORY) {
                 if (breadcrumb.level.isBelowWarning()) return@setBeforeBreadcrumb null
-                val dropped = breadcrumbRateLimiter.acquire(breadcrumb.message.orEmpty())
+                val dropped = breadcrumbRateLimiter.acquire(
+                    breadcrumb.message.orEmpty(),
+                    breadcrumb.level?.name.orEmpty(),
+                    breadcrumb.data["log.tag"]?.toString().orEmpty(),
+                )
                     ?: return@setBeforeBreadcrumb null
                 if (dropped > 0) breadcrumb.setData("rate_limited_before", dropped)
             }
@@ -110,7 +114,11 @@ object NativeTelemetry {
         val previousBeforeSendLog = options.logs.beforeSend
         options.logs.setBeforeSend { log ->
             if (!isEnabled) return@setBeforeSend null
-            val dropped = logRateLimiter.acquire(log.body) ?: return@setBeforeSend null
+            val dropped = logRateLimiter.acquire(
+                log.body,
+                log.level.name,
+                log.attributes?.get("log.tag")?.value?.toString().orEmpty(),
+            ) ?: return@setBeforeSend null
             log.body = TelemetryScrubber.scrub(log.body)
             if (dropped > 0) {
                 log.setAttribute(
@@ -132,47 +140,53 @@ object NativeTelemetry {
     private fun SentryLevel?.isBelowWarning() =
         this == null || this == SentryLevel.DEBUG || this == SentryLevel.INFO
 
-    private const val LOGCAT_CATEGORY = "Logcat"
+    private const val NATIVE_LOG_CATEGORY = "native.log"
 
     // 与 io.sentry.android.core.Installation 使用的文件名一致
     private const val INSTALLATION_FILE = "INSTALLATION"
 }
 
 /**
- * 按日志内容的前缀限流，防止某台设备陷入错误循环时刷爆配额。
- * 同一前缀（通常是同一处日志）每分钟最多 [perKeyLimit] 条，全部每分钟最多 [globalLimit] 条。
+ * 按完整事件名、作用域和级别桶限流。info、warning、error 独立计数，
+ * 每桶每分钟最多 [globalLimit] 条，每个事件最多 [perKeyLimit] 条。
  */
 private class LogRateLimiter(private val perKeyLimit: Int, private val globalLimit: Int) {
-    private val counts = HashMap<String, Int>()
-    private val dropped = HashMap<String, Int>()
+    private data class Key(val bucket: String, val scope: String, val event: String)
+    private val counts = HashMap<Key, Int>()
+    private val dropped = HashMap<Key, Int>()
     private var windowStartMs = SystemClock.elapsedRealtime()
-    private var globalCount = 0
+    private val totals = HashMap<String, Int>()
 
     /** 允许发送时返回上个窗口里这类日志被丢掉的条数，不允许时返回 null */
     @Synchronized
-    fun acquire(body: String): Int? {
+    fun acquire(event: String, level: String, scope: String): Int? {
         val now = SystemClock.elapsedRealtime()
         if (now - windowStartMs >= WINDOW_MS) {
             windowStartMs = now
-            globalCount = 0
+            totals.clear()
             counts.clear()
             // 只在下一条同类日志上报告，长期不再出现的就不必记着了
             if (dropped.size > KEY_LIMIT) dropped.clear()
         }
-        val key = body.take(KEY_LENGTH)
+        val bucket = when (level) {
+            "ERROR", "FATAL" -> "error"
+            "WARN", "WARNING" -> "warning"
+            else -> "info"
+        }
+        val key = Key(bucket, scope, event)
         val count = counts[key] ?: 0
-        if (count >= perKeyLimit || globalCount >= globalLimit) {
+        val total = totals[bucket] ?: 0
+        if (count >= perKeyLimit || total >= globalLimit) {
             dropped[key] = (dropped[key] ?: 0) + 1
             return null
         }
         counts[key] = count + 1
-        globalCount++
+        totals[bucket] = total + 1
         return dropped.remove(key) ?: 0
     }
 
     private companion object {
         const val WINDOW_MS = 60_000L
-        const val KEY_LENGTH = 48
         const val KEY_LIMIT = 1000
     }
 }

@@ -2,6 +2,8 @@
 
 package expo.modules.imagethemecolors
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.graphics.Bitmap
 import android.graphics.Bitmap.Config
 import android.graphics.Canvas
@@ -87,7 +89,14 @@ class ExpoImageThemeColorsModule : Module() {
                 imageSource.`is`(toKClass<SharedRef<Bitmap>>()) -> imageSource.get(toKClass<SharedRef<Bitmap>>()).ref
                 else -> drawableToBitmap(imageSource.get(toKClass<SharedRef<Drawable>>()).ref)
             }
-            android.util.Log.d(TAG, "bitmapLoaded size=${bitmap.width}x${bitmap.height}")
+            NativeLog.debug(
+                TAG,
+                "theme.bitmap.loaded",
+                mapOf(
+                    "image.width_px" to bitmap.width,
+                    "image.height_px" to bitmap.height,
+                ),
+            )
 
             val palette = Palette.from(bitmap).generate()
 
@@ -114,7 +123,14 @@ class ExpoImageThemeColorsModule : Module() {
             val url = java.net.URL(urlString)
             return android.graphics.BitmapFactory.decodeStream(url.openStream())
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "loadImage failed host=${android.net.Uri.parse(urlString).host}", e)
+            NativeLog.warning(
+                TAG,
+                "theme.image.load_failed",
+                mapOf(
+                    "http.host" to android.net.Uri.parse(urlString).host,
+                ),
+                e,
+            )
             throw ImageLoadingFailedException(e.toCodedException())
         }
     }
@@ -131,7 +147,7 @@ class ExpoImageThemeColorsModule : Module() {
             drawable.draw(canvas)
             return bitmap
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "drawableToBitmap failed", e)
+            NativeLog.warning(TAG, "theme.bitmap.convert_failed", error = e)
             throw CodedException(
                 message = "Failed to convert drawable to bitmap: ${e.message}",
                 cause = null

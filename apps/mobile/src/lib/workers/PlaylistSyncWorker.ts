@@ -54,12 +54,12 @@ class PlaylistSyncWorker {
 					.update(schema.playlistSyncQueue)
 					.set({ status: 'pending' })
 					.where(eq(schema.playlistSyncQueue.status, 'syncing'))
-				logger.info(
-					`恢复了 ${stuck.length} 条中断的同步记录（syncing → pending）`,
-				)
+				logger.info('playlist.sync.recovered', {
+					'playlist.recovered_count': stuck.length,
+				})
 			}
 		} catch (error) {
-			logger.error('recoverStuckRows 失败', { error })
+			logger.error('playlist.sync.recovery_failed', {}, error)
 		}
 
 		// 无论是否有 syncing 记录，都触发一次以消费所有 pending 行
@@ -68,7 +68,7 @@ class PlaylistSyncWorker {
 
 	private async syncAllPlaylists(): Promise<void> {
 		if (!useAppStore.getState().bbplayerToken) {
-			logger.debug('未登录 BBPlayer 账号，暂停共享歌单同步')
+			logger.debug('playlist.sync.paused')
 
 			return
 		}
@@ -127,10 +127,11 @@ class PlaylistSyncWorker {
 
 		if (playlistRes.isErr()) {
 			// 数据库查询异常（非歌单不存在），保留队列行等待下次重试
-			logger.error('syncSinglePlaylist: 读取歌单失败', {
-				playlistId,
-				error: playlistRes.error,
-			})
+			logger.error(
+				'playlist.sync.read_failed',
+				{ 'playlist.id': playlistId },
+				playlistRes.error,
+			)
 
 			return
 		}
@@ -235,10 +236,11 @@ class PlaylistSyncWorker {
 				}
 			})
 		} catch (error) {
-			logger.error('pushTrackChanges 失败', {
-				playlistId,
+			logger.error(
+				'playlist.sync.tracks_push_failed',
+				{ 'playlist.id': playlistId },
 				error,
-			})
+			)
 			await this.markRows([...validRowIds], 'failed')
 		}
 	}
@@ -417,7 +419,7 @@ class PlaylistSyncWorker {
 				.set({ status: 'done' })
 				.where(inArray(schema.playlistSyncQueue.id, rowIds))
 		} catch (error) {
-			logger.error('pushMetadataChanges 失败', { error })
+			logger.error('playlist.sync.metadata_push_failed', {}, error)
 			await this.markRows(rowIds, 'failed')
 		}
 	}
@@ -494,7 +496,11 @@ class PlaylistSyncWorker {
 			try {
 				return JSON.parse(payload)
 			} catch (e) {
-				logger.error('parsePayload 失败', { payload, error: e })
+				logger.error(
+					'playlist.sync.payload_invalid',
+					{ 'playlist.payload_size_bytes': payload.length },
+					e,
+				)
 
 				return {}
 			}

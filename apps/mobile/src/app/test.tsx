@@ -62,12 +62,12 @@ async function triggerPlayerError() {
 }
 
 function triggerJsLogs() {
-	telemetryLogger.info('测试 JS 日志', {
-		url: 'https://api.bilibili.com/x/v3/fav/folder/created/list-all?up_mid=12345678&type=2',
-		bvid: 'BV1TWBvBMExU',
+	telemetryLogger.info('telemetry.js.info', {
+		'telemetry.sample_id': 'js-info',
+		'bilibili.bvid': 'BV1TWBvBMExU',
 	})
-	telemetryLogger.warning('测试 JS 警告 Cookie: SESSDATA=abc; bili_jct=def', {
-		mid: 12345678,
+	telemetryLogger.warning('telemetry.js.warning', {
+		'telemetry.sample_id': 'js-warning',
 	})
 	toast.success('已输出 JS 日志')
 }
@@ -225,7 +225,7 @@ export default function TestPage() {
 
 						try {
 							await Orpheus.removeAllDownloads()
-							logger.info('清除数据库下载记录及实际文件成功')
+							logger.info('downloads.clear.completed')
 							toast.success('清除下载缓存成功')
 						} catch (error) {
 							toastAndLogError('清除下载缓存失败', error, 'TestPage')
@@ -303,7 +303,9 @@ export default function TestPage() {
 				.from(schema.playlistSyncQueue)
 				.orderBy(asc(schema.playlistSyncQueue.id))
 
-			logger.info('playlist_sync_queue', rows)
+			logger.info('telemetry.sync_queue.inspected', {
+				'telemetry.row_count': rows.length,
+			})
 			toast.success('队列表输出', {
 				description: `rows=${rows.length}（详见日志）`,
 			})
@@ -420,7 +422,10 @@ export default function TestPage() {
 		try {
 			const rows = await queryPlayHistoryByDateRange(startTime, endTime)
 
-			logger.info(`查询 ${queryDate} 的播放历史:`, rows)
+			logger.info('telemetry.play_history.inspected', {
+				'playback.query_date': queryDate,
+				'playback.row_count': rows.length,
+			})
 			toast.success(`查询成功: ${queryDate}`, {
 				description: `共找到 ${rows.length} 条记录（详见日志）`,
 			})

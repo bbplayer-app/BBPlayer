@@ -1,12 +1,13 @@
 package expo.modules.orpheus.manager
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
@@ -103,7 +104,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             GeneralStorage.setDesktopLyricsShown(true)
             syncTrackInfo()
         } catch (e: Exception) {
-            Log.w(LogTags.LYRICS, "[Floating][show] addView failed", e)
+            NativeLog.warning(LogTags.LYRICS, "lyrics.floating.show_failed", error = e)
         }
     }
 
@@ -125,7 +126,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
 
     fun hide() {
         floatingView?.let {
-            try { windowManager.removeView(it) } catch (e: Exception) { Log.w(LogTags.LYRICS, "[Floating] removeView failed", e) }
+            try { windowManager.removeView(it) } catch (e: Exception) { NativeLog.warning(LogTags.LYRICS, "lyrics.floating.remove_failed", error = e) }
             player?.removeListener(playerListener)
             floatingView = null
             lyricView = null
@@ -143,7 +144,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
      */
     fun softHide() {
         floatingView?.let {
-            try { windowManager.removeView(it) } catch (e: Exception) { Log.w(LogTags.LYRICS, "[Floating] removeView failed", e) }
+            try { windowManager.removeView(it) } catch (e: Exception) { NativeLog.warning(LogTags.LYRICS, "lyrics.floating.remove_failed", error = e) }
             player?.removeListener(playerListener)
             floatingView = null
             lyricView = null

@@ -116,10 +116,10 @@ export const installSkin = (
 	options: InstallSkinOptions = {},
 ): ResultAsync<InstalledSkin, ServiceError> => {
 	const skinId = deriveSkinId(item)
-	log.debug('[skin-mgr] install started', {
-		skinId,
-		kind: item.kind,
-		name: item.name,
+	log.debug('theme.install.started', {
+		'theme.skin_id': skinId,
+		'theme.kind': item.kind,
+		'theme.name': item.name,
 	})
 
 	return fetchGarbSkinAssetDeclaration(item, options.signal).andThen(
@@ -186,17 +186,17 @@ export const installSkin = (
 							await tempDir.move(finalDir)
 							useSkinStore.getState().addInstalledSkin(installedSkin)
 
-							log.debug('[skin-mgr] install completed', {
-								skinId,
-								finalDir: finalDir.uri,
+							log.debug('theme.install.completed', {
+								'theme.skin_id': skinId,
+								'theme.final_dir': finalDir.uri,
 							})
 
 							return installedSkin
 						})(),
 						(e) => {
-							log.error('[skin-mgr] install failed', {
-								skinId,
-								error: e instanceof Error ? e.message : String(e),
+							log.error('theme.install.failed', {
+								'theme.skin_id': skinId,
+								'error.message': e instanceof Error ? e.message : String(e),
 							})
 
 							// best-effort cleanup
@@ -238,11 +238,11 @@ export const installSkin = (
 export const uninstallSkin = (
 	skinId: string,
 ): ResultAsync<void, ServiceError> => {
-	log.debug('[skin-mgr] uninstall started', { skinId })
+	log.debug('theme.uninstall.started', { 'theme.skin_id': skinId })
 	const store = useSkinStore.getState()
 
 	if (!store.installedSkins.some((e) => e.id === skinId)) {
-		log.debug('[skin-mgr] uninstall skipped: not installed', { skinId })
+		log.debug('theme.uninstall.skipped', { 'theme.skin_id': skinId })
 
 		return okAsync(undefined)
 	}
@@ -257,7 +257,7 @@ export const uninstallSkin = (
 
 			store.removeInstalledSkin(skinId)
 			storage.remove('boot_splash_preload')
-			log.debug('[skin-mgr] uninstall completed', { skinId })
+			log.debug('theme.uninstall.completed', { 'theme.skin_id': skinId })
 		})(),
 		(e) =>
 			createSkinUninstallFailed(e instanceof Error ? e.message : String(e), e),

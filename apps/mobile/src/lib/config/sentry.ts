@@ -14,6 +14,7 @@ import { Platform } from 'react-native'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { getNativeModuleFingerprint } from '@/lib/config/sentryFingerprint'
 import { configuredChannel } from '@/lib/services/updateTelemetry'
+import { LogRateLimiter } from '@/lib/telemetry/logRateLimiter'
 import { scrubText, scrubValue } from '@/lib/telemetry/scrub'
 import { findErrorSpan } from '@/lib/tracing'
 import log from '@/utils/log'
@@ -124,12 +125,14 @@ export const navigationIntegration = Sentry.reactNavigationIntegration({
 	enableTimeToInitialDisplay: !isRunningInExpoGo(),
 })
 
-logger.info(
-	'Sentry 启用状态为：',
-	!development &&
+logger.info('telemetry.sentry.configured', {
+	'telemetry.enabled':
+		!development &&
 		isOfficialBuild &&
 		useAppStore.getState().settings.enableDataCollection,
-)
+})
+
+const logRateLimiter = new LogRateLimiter()
 
 export function initializeSentry() {
 	// 在 init 之前取得：放进 initialScope，启动阶段的 JS 事件和日志也能带上 user.id
@@ -183,6 +186,27 @@ export function initializeSentry() {
 		},
 		beforeSendLog(sentryLog) {
 			if (!isSentryTelemetryEnabled()) return null
+
+			// 用户可以开启本地 debug 日志，但 debug 不消耗远端 Logs 配额。
+			if (sentryLog.level === 'debug' || sentryLog.level === 'trace')
+				return null
+			const scope = sentryLog.attributes?.['log.scope']
+
+			const dropped = logRateLimiter.acquire(
+				sentryLog.message,
+				sentryLog.level,
+				// oxlint-disable-next-line anti-slop/no-runtime-typeof -- SDK 属性允许多种类型，此处只接受字符串作用域。
+				typeof scope === 'string' ? scope : '',
+			)
+
+			if (dropped === null) return null
+
+			if (dropped > 0) {
+				sentryLog.attributes = {
+					...sentryLog.attributes,
+					'bbplayer.rate_limited_before': dropped,
+				}
+			}
 
 			// 模板参数会出现在 attributes 里，一起脱敏
 			sentryLog.message = scrubText(String(sentryLog.message))

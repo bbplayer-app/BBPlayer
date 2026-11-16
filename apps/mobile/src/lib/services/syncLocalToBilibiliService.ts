@@ -125,7 +125,8 @@ class SyncLocalToBilibiliService {
 					successCount++
 				} else {
 					logger.warning(
-						`Failed to add ${bvid} to folder ${folderId}`,
+						'playlist.bilibili.add_failed',
+						{ 'bilibili.bvid': bvid, 'playlist.folder_id': folderId },
 						res.error,
 					)
 					failCount++
@@ -146,9 +147,10 @@ class SyncLocalToBilibiliService {
 		)
 
 		if (failCount > 0) {
-			logger.warning(
-				`Batch add completed with ${failCount} failures out of ${bvidsToAdd.length}`,
-			)
+			logger.warning('playlist.bilibili.batch_completed', {
+				'playlist.failed_count': failCount,
+				'playlist.total_count': bvidsToAdd.length,
+			})
 		}
 
 		return ok(failCount)

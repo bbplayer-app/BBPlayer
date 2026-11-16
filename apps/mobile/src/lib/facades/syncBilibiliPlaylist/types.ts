@@ -42,12 +42,10 @@ export interface ExpandedTrackData {
 }
 
 /** 结构化的日志接口，便于阶段函数与真实 logger 解耦、也便于测试 */
-export interface SyncLogger {
-	debug: (...args: unknown[]) => void
-	info: (...args: unknown[]) => void
-	warning: (...args: unknown[]) => void
-	error: (...args: unknown[]) => void
-}
+export type SyncLogger = Pick<
+	import('@/utils/log').StructuredLogger,
+	'debug' | 'info' | 'warning' | 'error'
+>
 
 export type FavoriteListInfo = NonNullable<BilibiliFavoriteListContents['info']>
 

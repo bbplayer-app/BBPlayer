@@ -151,9 +151,9 @@ export class KugouApi {
 			if (exactMatch) {
 				bestMatch = exactMatch
 			} else {
-				logger.debug(
-					`No exact duration match found. Using first result: ${bestMatch.title}`,
-				)
+				logger.debug('lyrics.kugou.duration_fallback', {
+					'lyrics.candidate_title': bestMatch.title,
+				})
 			}
 
 			return this.getLyrics(bestMatch.remoteId as string, signal).map(

@@ -1,7 +1,8 @@
 package expo.modules.orpheus.manager
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
-import android.util.Log
 import android.widget.Toast
 import expo.modules.orpheus.model.LyricsData
 import expo.modules.orpheus.telemetry.LogTags
@@ -53,7 +54,7 @@ class StatusBarLyricsManager(private val context: Context) {
             }
             field = value
             value?.onConnectionFailed = { onConnectionFailed(value) }
-            Log.d(TAG, "[StatusBar][backend] switched to ${value?.javaClass?.simpleName}")
+            NativeLog.debug(TAG, "lyrics.backend.changed", mapOf("lyrics.backend" to value?.javaClass?.simpleName))
 
             if (enabled) {
                 value?.setEnabled(true)

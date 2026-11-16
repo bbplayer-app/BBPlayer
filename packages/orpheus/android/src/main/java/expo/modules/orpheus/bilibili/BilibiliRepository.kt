@@ -1,6 +1,7 @@
 package expo.modules.orpheus.bilibili
 
-import android.util.Log
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.net.Uri
 import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.util.GeneralStorage
@@ -43,7 +44,7 @@ object BilibiliRepository {
         if (cachedImgKey != null && cachedSubKey != null && today == cachedDateStr) {
             return cachedImgKey!! to cachedSubKey!!
         }
-        Log.i(LogTags.STREAM, "refreshWbiKeys")
+        NativeLog.info(LogTags.STREAM, "bilibili.wbi.refresh_started")
 
         val response = api.getNavInfo().execute()
         val wbiData = response.body()?.data?.wbiImg
@@ -80,9 +81,16 @@ object BilibiliRepository {
             cidInternal = getFirstCid(bvid, cookie)
         }
 
-        Log.i(
+        NativeLog.info(
             LogTags.STREAM,
-            "resolveAudio bvid=$bvid cid=$cidInternal quality=$audioQuality hires=$enableHiRes dolby=$enableDolby",
+            "bilibili.stream.resolve_started",
+            mapOf(
+                "bilibili.bvid" to bvid,
+                "bilibili.cid" to cidInternal,
+                "stream.requested_quality" to audioQuality,
+                "stream.hires_enabled" to enableHiRes,
+                "stream.dolby_enabled" to enableDolby,
+            ),
         )
 
         val rawParams = mapOf(
@@ -123,7 +131,14 @@ object BilibiliRepository {
             if (durl.isNullOrEmpty()) {
                 throw IOException("AudioStreamError: 请求到的流数据不包含 dash 或 durl 任一字段")
             }
-            Log.i(LogTags.STREAM, "selectStream bvid=$bvid kind=durl")
+            NativeLog.info(
+                LogTags.STREAM,
+                "bilibili.stream.selected",
+                mapOf(
+                    "bilibili.bvid" to bvid,
+                    "stream.kind" to "durl",
+                ),
+            )
             return ResolvedAudio(streamUrls(durl[0].url, durl[0].backupUrl), volume, "durl", null, null, null)
         }
 
@@ -141,9 +156,14 @@ object BilibiliRepository {
 
         val targetAudio = dash.audio.find { it.id == audioQuality }
         if (targetAudio == null) {
-            Log.w(
+            NativeLog.warning(
                 LogTags.STREAM,
-                "requestedQualityUnavailable bvid=$bvid quality=$audioQuality available=${dash.audio.map { it.id }}",
+                "bilibili.stream.quality_unavailable",
+                mapOf(
+                    "bilibili.bvid" to bvid,
+                    "stream.requested_quality" to audioQuality,
+                    "stream.available_qualities" to dash.audio.joinToString { it.id.toString() },
+                ),
             )
         }
         return selected(bvid, "normal", targetAudio ?: dash.audio[0], volume)
@@ -151,10 +171,17 @@ object BilibiliRepository {
 
     private fun selected(bvid: String, kind: String, audio: DashAudioItem, volume: VolumeData?): ResolvedAudio {
         val urls = streamUrls(audio.baseUrl, audio.backupUrl)
-        Log.i(
+        NativeLog.info(
             LogTags.STREAM,
-            "selectStream bvid=$bvid kind=$kind id=${audio.id} codecs=${audio.codecs} " +
-                "bandwidth=${audio.bandwidth} hosts=${urls.map { Uri.parse(it).host }}",
+            "bilibili.stream.selected",
+            mapOf(
+                "bilibili.bvid" to bvid,
+                "stream.kind" to kind,
+                "stream.quality" to audio.id,
+                "audio.codecs" to audio.codecs,
+                "stream.bandwidth_bps" to audio.bandwidth,
+                "stream.hosts" to urls.joinToString { Uri.parse(it).host.orEmpty() },
+            ),
         )
         return ResolvedAudio(urls, volume, kind, audio.id, audio.codecs, audio.bandwidth)
     }

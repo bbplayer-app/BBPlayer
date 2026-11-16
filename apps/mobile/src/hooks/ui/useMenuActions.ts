@@ -39,7 +39,7 @@ function buildActions(entries: MenuEntry[], prefix: string): BuiltActions {
 		const actionId = id ?? `${prefix}${entry.title}`
 
 		if (__DEV__ && handlers.has(actionId)) {
-			logger.warning(`Duplicate action id: "${actionId}"`)
+			logger.warning('menu.action.duplicate')
 		}
 
 		if (onPress) {

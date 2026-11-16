@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
@@ -44,7 +43,7 @@ import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.telemetry.LogTags
-import expo.modules.orpheus.telemetry.NativeLog
+import expo.modules.bbplayernative.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.ExportOptions
@@ -176,10 +175,11 @@ class ExpoOrpheusModule : Module() {
             )
             NativeLog.error(
                 LogTags.PLAYER,
-                "playerError",
+                "player.error",
                 (service?.audioDebugTracker?.logAttributes().orEmpty()) + mapOf(
-                    "player.error_code" to error.errorCodeName,
-                    "player.media_id" to mediaId,
+                    "error.code_name" to error.errorCodeName,
+                    "error.code" to error.errorCode,
+                    "track.id" to mediaId,
                     "player.position_ms" to player?.currentPosition,
                 ),
                 error,
@@ -344,7 +344,7 @@ class ExpoOrpheusModule : Module() {
                 player = null
                 SpectrumAnalyzer.isCapturing = false
                 ioScope.cancel()
-                Log.i(LogTags.PLAYER, "moduleDestroyed")
+                NativeLog.info(LogTags.PLAYER, "player.module.destroyed")
             }
         }
 
@@ -1073,7 +1073,7 @@ class ExpoOrpheusModule : Module() {
                             pendingList.add(PendingCover(trackId, artwork))
                         }
                     } catch (e: Exception) {
-                        Log.w(LogTags.COVER, "missingCover parseTrackFailed trackId=$trackId", e)
+                        NativeLog.warning(LogTags.COVER, "cover.track.parse_failed", mapOf("track.id" to trackId), e)
                     }
                 }
             } finally {
@@ -1090,7 +1090,7 @@ class ExpoOrpheusModule : Module() {
                         CoverDownloadManager.downloadCover(context, item.trackId, item.artworkUrl)
                         "success"
                     } catch (e: Exception) {
-                        Log.w(LogTags.COVER, "missingCover downloadFailed trackId=${item.trackId}", e)
+                        NativeLog.warning(LogTags.COVER, "cover.download.failed", mapOf("track.id" to item.trackId), e)
                         "failed"
                     }
                     sendEvent(
@@ -1212,7 +1212,7 @@ class ExpoOrpheusModule : Module() {
             val uriString = try {
                 directoryPickerLauncher.launch("")
             } catch (e: Exception) {
-                Log.w(LogTags.EXPORT, "directoryPicker launchFailed", e)
+                NativeLog.warning(LogTags.EXPORT, "export.directory_picker.launch_failed", error = e)
                 null
             }
             if (uriString != null) {
@@ -1223,7 +1223,7 @@ class ExpoOrpheusModule : Module() {
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     )
                 } catch (e: Exception) {
-                    Log.w(LogTags.EXPORT, "directoryPicker persistPermissionFailed", e)
+                    NativeLog.warning(LogTags.EXPORT, "export.directory_picker.permission_failed", error = e)
                 }
             }
             uriString
@@ -1244,7 +1244,7 @@ class ExpoOrpheusModule : Module() {
                     expo.modules.orpheus.manager.CachedUriManager.isFullyCached(uri)
                 }
             } catch (e: Exception) {
-                Log.w(LogTags.PLAYER, "getLruCachedUris failed", e)
+                NativeLog.warning(LogTags.PLAYER, "player.cache.list_failed", error = e)
                 emptyList<String>()
             }
         }
@@ -1304,7 +1304,14 @@ class ExpoOrpheusModule : Module() {
             try {
                 record.track = json.decodeFromString<TrackRecord>(trackJson)
             } catch (e: Exception) {
-                Log.w(LogTags.DOWNLOAD, "downloadRecord parseTrackFailed id=${download.request.id}", e)
+                NativeLog.warning(
+                    LogTags.DOWNLOAD,
+                    "download.track.parse_failed",
+                    mapOf(
+                        "download.id" to download.request.id,
+                    ),
+                    e,
+                )
             }
         }
         return record
@@ -1349,13 +1356,20 @@ class ExpoOrpheusModule : Module() {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.w(LogTags.COVER, "downloadCover triggerFailed id=${download.request.id}", e)
+                    NativeLog.warning(
+                        LogTags.COVER,
+                        "cover.download.trigger_failed",
+                        mapOf(
+                            "download.id" to download.request.id,
+                        ),
+                        e,
+                    )
                 }
             }
         }
 
         override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
-            Log.i(LogTags.DOWNLOAD, "downloadRemoved id=${download.request.id}")
+            NativeLog.info(LogTags.DOWNLOAD, "download.removed", mapOf("download.id" to download.request.id))
         }
     }
 
@@ -1371,12 +1385,32 @@ class ExpoOrpheusModule : Module() {
             Download.STATE_RESTARTING -> "RESTARTING"
             else -> download.state.toString()
         }
-        val message = "downloadChanged id=${download.request.id} state=$state " +
-            "bytes=${download.bytesDownloaded}/${download.contentLength} stopReason=${download.stopReason}"
         if (download.state == Download.STATE_FAILED) {
-            Log.e(LogTags.DOWNLOAD, "$message failureReason=${download.failureReason}", finalException)
+            NativeLog.error(
+                LogTags.DOWNLOAD,
+                "download.state.failed",
+                mapOf(
+                    "download.id" to download.request.id,
+                    "download.state" to state,
+                    "download.bytes_downloaded" to download.bytesDownloaded,
+                    "download.content_length_bytes" to download.contentLength,
+                    "download.stop_reason" to download.stopReason,
+                    "download.failure_reason" to download.failureReason,
+                ),
+                finalException,
+            )
         } else {
-            Log.i(LogTags.DOWNLOAD, message)
+            NativeLog.info(
+                LogTags.DOWNLOAD,
+                "download.state.changed",
+                mapOf(
+                    "download.id" to download.request.id,
+                    "download.state" to state,
+                    "download.bytes_downloaded" to download.bytesDownloaded,
+                    "download.content_length_bytes" to download.contentLength,
+                    "download.stop_reason" to download.stopReason,
+                ),
+            )
         }
     }
 
@@ -1458,7 +1492,7 @@ class ExpoOrpheusModule : Module() {
             try {
                 return json.decodeFromString(trackJson)
             } catch (e: Exception) {
-                Log.w(LogTags.PLAYER, "mediaItemToTrackRecord parseFailed mediaId=${item.mediaId}", e)
+                NativeLog.warning(LogTags.PLAYER, "player.track.parse_failed", mapOf("track.id" to item.mediaId), e)
             }
         }
 
@@ -1551,9 +1585,12 @@ class ExpoOrpheusModule : Module() {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e(
+            NativeLog.error(
                 LogTags.LYRICS,
-                "[Module] submitLyrics failed consumers=${consumers.joinToString()} reason=${e.message}",
+                "lyrics.submit.failed",
+                mapOf(
+                    "lyrics.consumers" to consumers.joinToString(),
+                ),
                 e,
             )
         }
@@ -1564,7 +1601,13 @@ class ExpoOrpheusModule : Module() {
 
         val resolved = consumerIds.mapNotNull { LyricsConsumer.fromIdentifier(it) }.toSet()
         if (resolved.isEmpty()) {
-            Log.w(LogTags.LYRICS, "[Module] No valid consumers resolved from $consumerIds")
+            NativeLog.warning(
+                LogTags.LYRICS,
+                "lyrics.consumers.empty",
+                mapOf(
+                    "lyrics.consumers" to consumerIds.joinToString(),
+                ),
+            )
         }
         return resolved
     }

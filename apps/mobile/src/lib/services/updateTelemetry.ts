@@ -123,7 +123,7 @@ export const initializeUpdateRequestHeaders = async (): Promise<void> => {
 
 		await applyUpdateRequestHeaders(channel)
 	} catch (error: unknown) {
-		logger.warning('设置 update request headers 失败', { error })
+		logger.warning('update.headers_failed', {}, error)
 	}
 }
 
@@ -172,7 +172,11 @@ const report = async (eventType: EventType): Promise<void> => {
 
 const reportSafely = (eventType: EventType): void => {
 	void report(eventType).catch((error: unknown) => {
-		logger.warning('上报 OTA 遥测失败', { eventType, error })
+		logger.warning(
+			'update.telemetry_failed',
+			{ 'update.event_type': eventType },
+			error,
+		)
 	})
 }
 

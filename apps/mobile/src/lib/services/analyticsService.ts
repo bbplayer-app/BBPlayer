@@ -26,9 +26,13 @@ class AnalyticsService {
 	private async safeLogEvent(name: string, params?: Record<string, unknown>) {
 		try {
 			logEvent(getAnalytics(), name, params)
-			logger.debug(`[Analytics] Logged event: ${name}`, params)
+			logger.debug('analytics.event_logged', { 'analytics.event_name': name })
 		} catch (error) {
-			logger.warning(`[Analytics] Failed to log event: ${name}`, { error })
+			logger.warning(
+				'analytics.event_failed',
+				{ 'analytics.event_name': name },
+				error,
+			)
 		}
 	}
 
@@ -80,24 +84,29 @@ class AnalyticsService {
 				screen_name: screenName,
 				screen_class: screenclass,
 			})
-			logger.debug(`[Analytics] Logged screen view: ${screenName}`)
-		} catch (error) {
-			logger.warning(`[Analytics] Failed to log screen view: ${screenName}`, {
-				error,
+			logger.debug('analytics.screen_logged', {
+				'analytics.screen_name': screenName,
 			})
+		} catch (error) {
+			logger.warning(
+				'analytics.screen_failed',
+				{ 'analytics.screen_name': screenName },
+				error,
+			)
 		}
 	}
 
 	public async setUserProperty(name: string, value: string) {
 		try {
 			await setUserProperty(getAnalytics(), name, value)
-			logger.debug(`[Analytics] Set user property: ${name}=${value}`)
+			logger.debug('analytics.property_set', {
+				'analytics.property_name': name,
+			})
 		} catch (error) {
 			logger.warning(
-				`[Analytics] Failed to set user property: ${name}=${value}`,
-				{
-					error,
-				},
+				'analytics.property_failed',
+				{ 'analytics.property_name': name },
+				error,
 			)
 		}
 	}
@@ -110,7 +119,9 @@ class AnalyticsService {
 
 	public async setAnalyticsCollectionEnabled(enabled: boolean) {
 		await setAnalyticsCollectionEnabled(getAnalytics(), enabled)
-		logger.debug(`[Analytics] Collection enabled: ${enabled}`)
+		logger.debug('analytics.collection_changed', {
+			'analytics.enabled': enabled,
+		})
 	}
 
 	public async logAppInfo(version: string, buildVersion: string) {

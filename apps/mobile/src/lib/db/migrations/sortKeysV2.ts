@@ -19,7 +19,7 @@ export function migrateSortKeysV2(): void {
 		const hasOrderColumn = tableInfo.some((col) => col.name === 'order')
 
 		if (!hasOrderColumn) {
-			logger.info('[v2] 物理表中已无 order 字段，无需执行数据迁移与删除操作')
+			logger.info('database.sort_keys_v2.skipped')
 			migration.markAsApplied()
 
 			return
@@ -70,14 +70,16 @@ export function migrateSortKeysV2(): void {
 					}
 				}
 
-				logger.info(`[v2] sort_key 数据迁移接力完成，共处理 ${rows.length} 行`)
+				logger.info('database.sort_keys_v2.migrated', {
+					'database.row_count': rows.length,
+				})
 			}
 
 			expoDb.runSync(`ALTER TABLE playlist_tracks DROP COLUMN "order"`)
 			migration.markAsApplied()
-			logger.info('[v2] 已成功从物理表中删除 order 字段')
+			logger.info('database.sort_keys_v2.column_removed')
 		})
 	} catch (error) {
-		logger.error('[v2] 迁移过程中发生错误，事务已回滚:', error)
+		logger.error('database.sort_keys_v2.failed', {}, error)
 	}
 }

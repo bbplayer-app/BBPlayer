@@ -1,7 +1,8 @@
 package expo.modules.orpheus.util
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
-import android.util.Log
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackResumeRecord
 import expo.modules.orpheus.telemetry.LogTags
@@ -38,7 +39,7 @@ object TrackResumeStorage {
         try {
             safeKv.encode(KEY_STRATEGY, strategy)
         } catch (e: Exception) {
-            Log.e(LogTags.STORAGE, "Failed to set resume strategy", e)
+            NativeLog.error(LogTags.STORAGE, "storage.resume_strategy.set_failed", error = e)
         }
     }
 
@@ -61,7 +62,7 @@ object TrackResumeStorage {
             )
             safeKv.encode(KEY_RECORD_PREFIX + id, json.encodeToString(record))
         } catch (e: Exception) {
-            Log.e(LogTags.STORAGE, "Failed to save resume record for $id", e)
+            NativeLog.error(LogTags.STORAGE, "storage.resume.save_failed", mapOf("track.id" to id), e)
         }
     }
 
@@ -75,7 +76,7 @@ object TrackResumeStorage {
             if (record.duration <= 0.0 || record.position >= record.duration) return null
             record
         } catch (e: Exception) {
-            Log.e(LogTags.STORAGE, "Failed to read resume record for $id", e)
+            NativeLog.error(LogTags.STORAGE, "storage.resume.read_failed", mapOf("track.id" to id), e)
             null
         }
     }
@@ -85,7 +86,7 @@ object TrackResumeStorage {
         try {
             kv?.removeValueForKey(KEY_RECORD_PREFIX + id)
         } catch (e: Exception) {
-            Log.e(LogTags.STORAGE, "Failed to clear resume record for $id", e)
+            NativeLog.error(LogTags.STORAGE, "storage.resume.clear_failed", mapOf("track.id" to id), e)
         }
     }
 }

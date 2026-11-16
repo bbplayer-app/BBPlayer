@@ -22,13 +22,15 @@ export function toastAndLogError(
 		// 末尾传入 error：Sentry Logs 会把它记成可筛选的 error.type / error.message 属性
 		log
 			.extend(scope)
-			.error(`${message} -- ${error.type}: ${flatErrorMessage(error)}`, error)
+			.error('ui.operation.failed', { 'operation.message': message }, error)
 	} else if (error instanceof Error) {
 		toast.error(message, {
 			description: flatErrorMessage(error),
 			duration: Number.POSITIVE_INFINITY,
 		})
-		log.extend(scope).error(`${message}: ${flatErrorMessage(error)}`, error)
+		log
+			.extend(scope)
+			.error('ui.operation.failed', { 'operation.message': message }, error)
 	} else if (error === undefined) {
 		toast.error(message, {
 			duration: Number.POSITIVE_INFINITY,
@@ -39,6 +41,8 @@ export function toastAndLogError(
 			description: String(error),
 			duration: Number.POSITIVE_INFINITY,
 		})
-		log.extend(scope).error(message, error)
+		log
+			.extend(scope)
+			.error('ui.operation.failed', { 'operation.message': message }, error)
 	}
 }

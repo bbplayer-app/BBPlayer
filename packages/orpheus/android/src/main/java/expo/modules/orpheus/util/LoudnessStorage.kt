@@ -1,7 +1,8 @@
 package expo.modules.orpheus.util
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
-import android.util.Log
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.telemetry.LogTags
 
@@ -22,19 +23,26 @@ object LoudnessStorage {
 
     fun setLoudnessData(key: String, measuredI: Double) {
         try {
-            Log.d(LogTags.LOUDNESS, "setLoudnessData: $key, $measuredI")
+            NativeLog.debug(
+                LogTags.LOUDNESS,
+                "audio.loudness.stored",
+                mapOf(
+                    "track.id" to key,
+                    "audio.integrated_loudness_lufs" to measuredI,
+                ),
+            )
             safeKv.encode(key, measuredI)
         } catch (e: Exception) {
-            Log.e(LogTags.STORAGE, "Failed to set loudness data", e)
+            NativeLog.error(LogTags.STORAGE, "storage.loudness.write_failed", error = e)
         }
     }
 
     fun getLoudnessData(key: String): Double {
         try {
-            Log.d(LogTags.LOUDNESS, "getLoudnessData: $key")
+            NativeLog.debug(LogTags.LOUDNESS, "audio.loudness.read_started", mapOf("track.id" to key))
             return safeKv.decodeDouble(key)
         } catch (e: Exception) {
-            Log.e(LogTags.STORAGE, "Failed to get loudness data", e)
+            NativeLog.error(LogTags.STORAGE, "storage.loudness.read_failed", error = e)
             return 0.0
         }
     }

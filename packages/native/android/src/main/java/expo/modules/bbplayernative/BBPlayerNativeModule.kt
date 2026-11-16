@@ -1,5 +1,7 @@
 package expo.modules.bbplayernative
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.app.DownloadManager
 import android.content.ContentValues
 import android.content.Context
@@ -13,7 +15,6 @@ import android.os.Process
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.Settings
-import android.util.Log
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -52,7 +53,7 @@ class BBPlayerNativeModule : Module() {
 
         AsyncFunction("clearCacheAsync") Coroutine { ->
             withContext(Dispatchers.IO) { AppStorage.clearCache(requireContext()) }
-            Log.i(LogTags.STORAGE, "cacheCleared")
+            NativeLog.info(LogTags.STORAGE, "storage.cache.cleared")
         }
 
         AsyncFunction("listStorageDirectoryAsync") Coroutine { path: String ->
@@ -71,14 +72,21 @@ class BBPlayerNativeModule : Module() {
             val downloadManager =
                 context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             val downloadId = enqueueApkDownload(context, downloadManager, options)
-            Log.i(LogTags.UPDATE, "apkDownloadEnqueued id=$downloadId host=${Uri.parse(options.url).host}")
+            NativeLog.info(
+                LogTags.UPDATE,
+                "update.apk.download_enqueued",
+                mapOf(
+                    "download.id" to downloadId,
+                    "http.host" to Uri.parse(options.url).host,
+                ),
+            )
             val downloadedUri = try {
                 waitForDownload(downloadManager, downloadId)
             } catch (e: Exception) {
-                Log.e(LogTags.UPDATE, "apkDownloadFailed id=$downloadId", e)
+                NativeLog.error(LogTags.UPDATE, "update.apk.download_failed", mapOf("download.id" to downloadId), e)
                 throw e
             }
-            Log.i(LogTags.UPDATE, "apkDownloaded id=$downloadId")
+            NativeLog.info(LogTags.UPDATE, "update.apk.downloaded", mapOf("download.id" to downloadId))
             withContext(Dispatchers.Main) {
                 openApkInstaller(context, downloadedUri)
             }
@@ -93,9 +101,15 @@ class BBPlayerNativeModule : Module() {
         AsyncFunction("unzipAsync") Coroutine { options: UnzipOptions ->
             withContext(Dispatchers.IO) {
                 try {
-                    unzip(options).also { Log.i(LogTags.STORAGE, "unzipped files=${it.fileCount}") }
+                    unzip(options).also { NativeLog.info(
+                        LogTags.STORAGE,
+                        "storage.unzip.completed",
+                        mapOf(
+                            "storage.file_count" to it.fileCount,
+                        ),
+                    ) }
                 } catch (e: Exception) {
-                    Log.w(LogTags.STORAGE, "unzipFailed", e)
+                    NativeLog.warning(LogTags.STORAGE, "storage.unzip.failed", error = e)
                     throw e
                 }
             }
@@ -115,15 +129,25 @@ class BBPlayerNativeModule : Module() {
             NativeTelemetry.updateEnabled(enabled)
         }
 
-        // 测试页使用：输出几条带敏感字段的原生日志，并由原生 SDK 上报一个异常，
-        // 用来验证 Logcat 插桩、脱敏、限流和 orpheus context 是否生效
+        // 测试页使用：输出几条结构化原生日志，并由原生 SDK 上报一个异常，
+        // 用来验证结构化字段、脱敏、限流和 orpheus context 是否生效
         Function("debugTriggerNativeError") {
-            Log.i(
+            NativeLog.info(LogTags.TELEMETRY, "telemetry.native.info", mapOf("telemetry.sample_id" to "native-info"))
+            NativeLog.warning(
                 LogTags.TELEMETRY,
-                "debugNativeLog info url=https://upos-sz-mirrorali.bilivideo.com/a.m4s?oi=0x2408abcd&mid=12345678&upsig=deadbeef",
+                "telemetry.native.warning",
+                mapOf(
+                    "telemetry.sample_id" to "native-warning",
+                ),
             )
-            Log.w(LogTags.TELEMETRY, "debugNativeLog warning Cookie: SESSDATA=abc; bili_jct=def")
-            Log.e(LogTags.TELEMETRY, "debugNativeLog error", IllegalStateException("测试原生日志异常 mid=12345678"))
+            NativeLog.error(
+                LogTags.TELEMETRY,
+                "telemetry.native.error",
+                mapOf(
+                    "telemetry.sample_id" to "native-error",
+                ),
+                IllegalStateException("测试原生日志异常"),
+            )
             io.sentry.Sentry.captureException(IllegalStateException("BBPlayer 测试原生异常 access_key=abcdef"))
         }
 
@@ -137,7 +161,7 @@ class BBPlayerNativeModule : Module() {
             val uri = android.net.Uri.parse(sourceUri)
             val inputStream = context.contentResolver.openInputStream(uri)
                 ?: run {
-                    Log.w(LogTags.STORAGE, "exportBackup sourceUnreadable")
+                    NativeLog.warning(LogTags.STORAGE, "backup.export.source_unreadable")
                     return@Function null
                 }
 
@@ -150,7 +174,7 @@ class BBPlayerNativeModule : Module() {
                 }
                 val downloadUri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
                     ?: run {
-                        Log.w(LogTags.STORAGE, "exportBackup mediaStoreInsertFailed")
+                        NativeLog.warning(LogTags.STORAGE, "backup.export.insert_failed")
                         return@Function null
                     }
                 context.contentResolver.openOutputStream(downloadUri)?.use { out ->
@@ -211,7 +235,7 @@ class BBPlayerNativeModule : Module() {
                 ?: ""
         }.getOrElse { error ->
             // 取不到时 JS 侧会把它当作非官方构建，Sentry 不会启用
-            Log.w(LogTags.TELEMETRY, "apkSigningCertificate unavailable", error)
+            NativeLog.warning(LogTags.TELEMETRY, "telemetry.signature.unavailable", error = error)
             ""
         }
     }

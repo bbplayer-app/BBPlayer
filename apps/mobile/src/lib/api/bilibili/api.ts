@@ -412,7 +412,7 @@ export class BilibiliApi {
 					)
 				}
 
-				logger.debug('老视频不存在 dash，回退到使用 durl 音频流')
+				logger.debug('bilibili.stream.legacy_selected')
 
 				return okAsync({
 					url: durl[0].url,
@@ -424,7 +424,7 @@ export class BilibiliApi {
 			}
 
 			if (enableDolby && dash?.dolby?.audio && dash.dolby.audio.length > 0) {
-				logger.debug('优先使用 Dolby 音频流')
+				logger.debug('bilibili.stream.dolby_selected')
 
 				return okAsync({
 					url: dash.dolby.audio[0].baseUrl,
@@ -436,7 +436,7 @@ export class BilibiliApi {
 			}
 
 			if (enableHiRes && dash?.flac?.audio) {
-				logger.debug('次级使用 Hi-Res 音频流')
+				logger.debug('bilibili.stream.hires_selected')
 
 				return okAsync({
 					url: dash.flac.audio.baseUrl,
@@ -448,7 +448,10 @@ export class BilibiliApi {
 			}
 
 			if (!dash?.audio || dash.audio.length === 0) {
-				logger.error('未找到有效的音频流数据', { response })
+				logger.error('bilibili.stream.invalid', {
+					'bilibili.has_dash': !!response.dash,
+					'bilibili.has_durl': !!response.durl,
+				})
 
 				return errAsync(
 					new BilibiliApiError({
@@ -475,12 +478,14 @@ export class BilibiliApi {
 					type: 'dash',
 					volume,
 				}
-				logger.debug('找到指定质量音频流', { quality: audioQuality })
+				logger.debug('bilibili.stream.quality_selected', {
+					'bilibili.quality': audioQuality,
+				})
 			} else {
 				// Fallback: 使用最高质量如果未找到指定质量
-				logger.warning('未找到指定质量音频流，使用最高质量', {
-					requestedQuality: audioQuality,
-					availableQualities: dash.audio.map((a) => a.id),
+				logger.warning('bilibili.stream.quality_fallback', {
+					'bilibili.requested_quality': audioQuality,
+					'bilibili.available_qualities': dash.audio.map((a) => a.id),
 				})
 				const highestQualityAudio = dash.audio[0]
 
@@ -496,7 +501,10 @@ export class BilibiliApi {
 			}
 
 			if (!stream) {
-				logger.error('未能确定任何可用的音频流', { response })
+				logger.error('bilibili.stream.unavailable', {
+					'bilibili.has_dash': !!response.dash,
+					'bilibili.has_durl': !!response.durl,
+				})
 
 				return errAsync(
 					new BilibiliApiError({
@@ -1800,7 +1808,11 @@ export class BilibiliApi {
 		pageSize?: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliGarbSearchResponse, BilibiliApiError> {
-		log.debug('searchGarbSkins', { keyword, page, pageSize })
+		log.debug('theme.search.started', {
+			'theme.keyword': keyword,
+			'theme.page': page,
+			'theme.page_size': pageSize,
+		})
 
 		return this.client.get<BilibiliGarbSearchResponse>({
 			endpoint: '/x/garb/v2/mall/home/search',

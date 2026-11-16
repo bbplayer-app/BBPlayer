@@ -47,7 +47,10 @@ export class SyncBilibiliPlaylistFacade {
 		bvid: string,
 		cid?: number,
 	): ResultAsync<Track, BilibiliApiError | DatabaseError | ServiceError> {
-		logger.info('开始添加 Track（Bilibili）', { bvid, cid })
+		logger.info('bilibili.track_add.started', {
+			'bilibili.bvid': bvid,
+			'bilibili.cid': cid,
+		})
 		const apiData = this.bilibiliApi.getVideoDetails({ bvid })
 
 		return apiData.andThen((data) => {
@@ -72,10 +75,10 @@ export class SyncBilibiliPlaylistFacade {
 			return this.trackService
 				.findOrCreateTrack(trackPayload)
 				.andTee((track) => {
-					logger.info('添加 Track 成功', {
-						trackId: track.id,
-						title: track.title,
-						source: track.source,
+					logger.info('bilibili.track_add.completed', {
+						'track.id': track.id,
+						'bilibili.title': track.title,
+						'bilibili.source': track.source,
 					})
 				})
 		})
@@ -209,9 +212,9 @@ export class SyncBilibiliPlaylistFacade {
 		type: 'collection' | 'series',
 		trace: TraceParent,
 	): ResultAsync<number, FacadeError> {
-		logger.info('获取播放列表详情成功', {
-			title: contents.info.title,
-			total: contents.medias?.length ?? 0,
+		logger.info('bilibili.playlist.fetched', {
+			'bilibili.title': contents.info.title,
+			'bilibili.total': contents.medias?.length ?? 0,
 		})
 		const medias = contents.medias ?? []
 		trace?.setAttribute('sync.remote_track_count', medias.length)
@@ -249,8 +252,8 @@ export class SyncBilibiliPlaylistFacade {
 				})
 
 				if (playlistRes.isErr()) throw playlistRes.error
-				logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
-					id: playlistRes.value.id,
+				logger.debug('bilibili.playlist.created', {
+					'bilibili.id': playlistRes.value.id,
 				})
 
 				const uniqueArtists = new Map<number, { name: string }>()
@@ -274,8 +277,8 @@ export class SyncBilibiliPlaylistFacade {
 
 				if (artistRes.isErr()) throw artistRes.error
 				const localArtistIdMap = artistRes.value
-				logger.debug('step 3: 创建 artist 完成', {
-					uniqueCount: uniqueArtists.size,
+				logger.debug('bilibili.playlist.artists_created', {
+					'bilibili.unique_count': uniqueArtists.size,
 				})
 
 				const tracksCreateResult = await trackSvc.findOrCreateManyTracks(
@@ -297,8 +300,8 @@ export class SyncBilibiliPlaylistFacade {
 
 				if (tracksCreateResult.isErr()) throw tracksCreateResult.error
 				const trackIds = Array.from(tracksCreateResult.value.values())
-				logger.debug('step 4: 创建 tracks 完成', {
-					total: trackIds.length,
+				logger.debug('bilibili.playlist.tracks_created', {
+					'bilibili.total': trackIds.length,
 				})
 
 				// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
@@ -311,10 +314,10 @@ export class SyncBilibiliPlaylistFacade {
 					throw replaceResult.error
 				}
 
-				logger.debug('step 5: 替换 playlist 中所有 tracks 完成')
-				logger.info('同步播放列表完成', {
-					remoteId: contents.info.id,
-					playlistId: playlistRes.value.id,
+				logger.debug('bilibili.playlist.tracks_replaced')
+				logger.info('bilibili.playlist.synced', {
+					'bilibili.remote_id': contents.info.id,
+					'playlist.id': playlistRes.value.id,
 				})
 				void analyticsService.logPlaylistSync(
 					'sync_bilibili',
@@ -346,9 +349,9 @@ export class SyncBilibiliPlaylistFacade {
 		const syncKey = `multiPage::${bvid}`
 
 		if (this.syncingIds.has(syncKey)) {
-			logger.info('已有同步任务在进行，跳过', {
-				type: 'multi_page',
-				bvid,
+			logger.info('bilibili.multi_page.sync_skipped', {
+				'bilibili.type': 'multi_page',
+				'bilibili.bvid': bvid,
 			})
 
 			return errAsync(createSyncTaskAlreadyRunningError())
@@ -358,7 +361,7 @@ export class SyncBilibiliPlaylistFacade {
 
 		try {
 			logger = log.extend('[Facade/SyncMultiPageVideo: ' + bvid + ']')
-			logger.info('开始同步多集视频', { bvid })
+			logger.info('bilibili.multi_page.sync_started', { 'bilibili.bvid': bvid })
 
 			// 锁要等异步任务结束才释放，不能放在同步的 finally 里
 			return traceOperationResult(
@@ -385,14 +388,12 @@ export class SyncBilibiliPlaylistFacade {
 		return this.bilibiliApi
 			.withTrace(span)
 			.getVideoDetails({ bvid })
-			.andTee(() =>
-				logger.debug('step 1: 调用 bilibiliapi getVideoDetails 完成'),
-			)
+			.andTee(() => logger.debug('bilibili.multi_page.fetched'))
 			.andThen((data) => {
 				span?.setAttribute('sync.remote_track_count', data.pages.length)
-				logger.info('获取多集视频详情成功', {
-					title: data.title,
-					pages: data.pages.length,
+				logger.info('bilibili.multi_page.details_loaded', {
+					'bilibili.title': data.title,
+					'bilibili.pages': data.pages.length,
 				})
 
 				return ResultAsync.fromPromise(
@@ -423,8 +424,8 @@ export class SyncBilibiliPlaylistFacade {
 						})
 
 						if (playlistRes.isErr()) throw playlistRes.error
-						logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
-							id: playlistRes.value.id,
+						logger.debug('bilibili.multi_page.playlist_created', {
+							'bilibili.id': playlistRes.value.id,
 						})
 
 						const trackCreateResult = await trackSvc.findOrCreateManyTracks(
@@ -447,8 +448,8 @@ export class SyncBilibiliPlaylistFacade {
 
 						if (trackCreateResult.isErr()) throw trackCreateResult.error
 						const trackIds = Array.from(trackCreateResult.value.values())
-						logger.debug('step 3: 创建 tracks 完成', {
-							total: trackIds.length,
+						logger.debug('bilibili.multi_page.tracks_created', {
+							'bilibili.total': trackIds.length,
 						})
 
 						// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
@@ -461,10 +462,10 @@ export class SyncBilibiliPlaylistFacade {
 							throw replaceResult.error
 						}
 
-						logger.debug('step 4: 替换 playlist 中所有 tracks 完成')
-						logger.info('同步合集完成', {
-							remoteId: bv2av(bvid),
-							playlistId: playlistRes.value.id,
+						logger.debug('bilibili.multi_page.tracks_replaced')
+						logger.info('bilibili.multi_page.synced', {
+							'bilibili.remote_id': bv2av(bvid),
+							'playlist.id': playlistRes.value.id,
 						})
 
 						void analyticsService.logPlaylistSync(
@@ -510,8 +511,12 @@ export class SyncBilibiliPlaylistFacade {
 				message: '初始化同步任务...',
 				stage: 'initializing',
 			})
-			scopedLogger.info('开始同步收藏夹', { favoriteId })
-			scopedLogger.debug('syncFavorite', { favoriteId })
+			scopedLogger.info('bilibili.favorite.sync_started', {
+				'bilibili.favorite_id': favoriteId,
+			})
+			scopedLogger.debug('bilibili.favorite.sync_requested', {
+				'bilibili.favorite_id': favoriteId,
+			})
 
 			return await traceOperationResult(
 				{
@@ -532,7 +537,9 @@ export class SyncBilibiliPlaylistFacade {
 								onProgress,
 								onHiddenVideos: (bvids) => {
 									const tip = `Bilibili 隐藏了被 up 设置为仅自己可见的稿件，却没有更新索引，所以你会看到同步到的歌曲数量少于收藏夹实际显示的数量，具体隐藏稿件：${bvids.join(',')}`
-									scopedLogger.warning(tip)
+									scopedLogger.warning('bilibili.favorite.sync_unavailable', {
+										'bilibili.reason': tip,
+									})
 									toast.info(tip)
 								},
 								onSynced: (trackCount) => {

@@ -63,7 +63,10 @@ export class PlaylistFacade {
 	 * @returns 如果成功，则为 local playlist 的 ID
 	 */
 	public async duplicatePlaylist(playlistId: number, name: string) {
-		logger.info('开始复制播放列表', { playlistId, name })
+		logger.info('playlist.copy.started', {
+			'playlist.id': playlistId,
+			'playlist.name': name,
+		})
 
 		return ResultAsync.fromPromise(
 			this.db.transaction(async (tx) => {
@@ -80,7 +83,9 @@ export class PlaylistFacade {
 				if (!playlistMetadata)
 					throw createValidationError(`未找到播放列表：${playlistId}`)
 
-				logger.debug('step1: 获取播放列表', playlistMetadata.id)
+				logger.debug('playlist.copy.source_loaded', {
+					'playlist.id': playlistMetadata.id,
+				})
 
 				const localPlaylistResult = await playlistSvc.createPlaylist({
 					title: name,
@@ -96,9 +101,11 @@ export class PlaylistFacade {
 				}
 
 				const localPlaylist = localPlaylistResult.value
-				logger.debug('step2: 创建本地播放列表', localPlaylist)
-				logger.info('创建本地播放列表成功', {
-					localPlaylistId: localPlaylist.id,
+				logger.debug('playlist.copy.target_created', {
+					'playlist.id': localPlaylist.id,
+				})
+				logger.info('playlist.create.completed', {
+					'playlist.local_playlist_id': localPlaylist.id,
 				})
 
 				const tracksMetadata = await playlistSvc.getPlaylistTracks(playlistId)
@@ -116,9 +123,7 @@ export class PlaylistFacade {
 					})
 					.map((t) => t.id)
 
-				logger.debug(
-					'step3: 获取播放列表中的所有歌曲并清洗完成（对于 bilibili 音频，去除掉失效视频）',
-				)
+				logger.debug('playlist.copy.tracks_resolved')
 
 				const replaceResult = await playlistSvc.replacePlaylistAllTracks(
 					localPlaylist.id,
@@ -129,11 +134,11 @@ export class PlaylistFacade {
 					throw replaceResult.error
 				}
 
-				logger.debug('step4: 替换本地播放列表中的所有歌曲')
-				logger.info('复制播放列表成功', {
-					sourcePlaylistId: playlistId,
-					targetPlaylistId: localPlaylist.id,
-					trackCount: finalIds.length,
+				logger.debug('playlist.copy.tracks_replaced')
+				logger.info('playlist.copy.completed', {
+					'playlist.source_playlist_id': playlistId,
+					'playlist.target_playlist_id': localPlaylist.id,
+					'playlist.track_count': finalIds.length,
 				})
 
 				return localPlaylist.id
@@ -149,7 +154,10 @@ export class PlaylistFacade {
 	 * 创建动态合并歌单，读取时从源歌单实时展开并自动去重。
 	 */
 	public async mergePlaylists(sourcePlaylistIds: number[], title: string) {
-		logger.info('开始创建动态合并播放列表', { sourcePlaylistIds, title })
+		logger.info('playlist.merge.started', {
+			'playlist.source_playlist_ids': sourcePlaylistIds,
+			'playlist.title': title,
+		})
 
 		return ResultAsync.fromPromise(
 			this.db.transaction(async (tx) => {
@@ -196,9 +204,9 @@ export class PlaylistFacade {
 					})),
 				)
 
-				logger.info('创建动态合并播放列表成功', {
-					sourcePlaylistIds: uniqueSourceIds,
-					newPlaylistId: newPlaylist.id,
+				logger.info('playlist.merge.completed', {
+					'playlist.source_playlist_ids': uniqueSourceIds,
+					'playlist.new_playlist_id': newPlaylist.id,
 				})
 
 				return newPlaylist.id
@@ -229,11 +237,11 @@ export class PlaylistFacade {
 			artistPayload,
 		} = params
 
-		logger.info('开始更新 Track 在本地播放列表', {
-			toAdd: toAddPlaylistIds.length,
-			toRemove: toRemovePlaylistIds.length,
-			source: trackPayload.source,
-			title: trackPayload.title,
+		logger.info('playlist.track_update.started', {
+			'playlist.to_add': toAddPlaylistIds.length,
+			'playlist.to_remove': toRemovePlaylistIds.length,
+			'playlist.source': trackPayload.source,
+			'playlist.title': trackPayload.title,
 		})
 
 		return ResultAsync.fromPromise(
@@ -288,7 +296,9 @@ export class PlaylistFacade {
 					finalArtistId = artistIdRes.value.id
 				}
 
-				logger.debug('step1: 解析/创建 Artist 完成', finalArtistId ?? '(无)')
+				logger.debug('playlist.track_update.artist_resolved', {
+					'artist.id': finalArtistId,
+				})
 
 				// step2: 解析/创建 Track
 				const trackRes = await trackSvc.findOrCreateTrack({
@@ -298,7 +308,9 @@ export class PlaylistFacade {
 
 				if (trackRes.isErr()) throw trackRes.error
 				const trackId = trackRes.value.id
-				logger.debug('step2: 解析/创建 Track 完成', trackId)
+				logger.debug('playlist.track_update.track_resolved', {
+					'track.id': trackId,
+				})
 
 				// step3: 执行增删
 				for (const pid of toAddPlaylistIds) {
@@ -342,16 +354,16 @@ export class PlaylistFacade {
 					}
 				}
 
-				logger.debug('step3: 更新本地播放列表完成', {
-					added: toAddPlaylistIds,
-					removed: toRemovePlaylistIds,
+				logger.debug('playlist.track_update.links_updated', {
+					'playlist.added': toAddPlaylistIds,
+					'playlist.removed': toRemovePlaylistIds,
 				})
 
-				logger.debug('更新 Track 在本地播放列表成功')
-				logger.info('更新 Track 在本地播放列表成功', {
-					trackId,
-					added: toAddPlaylistIds.length,
-					removed: toRemovePlaylistIds.length,
+				logger.debug('playlist.track_update.finished')
+				logger.info('playlist.track_update.completed', {
+					'track.id': trackId,
+					'playlist.added': toAddPlaylistIds.length,
+					'playlist.removed': toRemovePlaylistIds.length,
 				})
 
 				return trackId
@@ -379,9 +391,9 @@ export class PlaylistFacade {
 		playlistId: number,
 		payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[],
 	) {
-		logger.info('开始批量添加 tracks 到本地播放列表', {
-			playlistId,
-			count: payloads.length,
+		logger.info('playlist.batch_add.started', {
+			'playlist.id': playlistId,
+			'playlist.count': payloads.length,
 		})
 
 		for (const payload of payloads) {
@@ -426,7 +438,7 @@ export class PlaylistFacade {
 
 				if (artistResult.isErr()) throw artistResult.error
 				const artistMap = artistResult.value
-				logger.debug('step1: 批量创建 artist 完成')
+				logger.debug('playlist.batch_add.artists_created')
 
 				const trackResult = await trackSvc.findOrCreateManyTracks(
 					payloads.map((p) => ({
@@ -438,7 +450,7 @@ export class PlaylistFacade {
 
 				if (trackResult.isErr()) throw trackResult.error
 				const trackIds = Array.from(trackResult.value.values())
-				logger.debug('step2: 批量创建 track 完成')
+				logger.debug('playlist.batch_add.tracks_created')
 
 				const addResult = await playlistSvc.addManyTracksToLocalPlaylist(
 					playlistId,
@@ -446,16 +458,16 @@ export class PlaylistFacade {
 				)
 
 				if (addResult.isErr()) throw addResult.error
-				logger.debug('step3: 批量将 track 添加到本地播放列表完成')
+				logger.debug('playlist.batch_add.links_created')
 
 				// 若为共享歌单（owner/editor），在同一事务内入队
 				if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
 					await this.enqueueSync(tx, playlistId, 'add_tracks', { trackIds })
 				}
 
-				logger.info('批量添加 tracks 到本地播放列表成功', {
-					playlistId,
-					added: trackIds.length,
+				logger.info('playlist.batch_add.completed', {
+					'playlist.id': playlistId,
+					'playlist.added': trackIds.length,
 				})
 
 				return trackIds
@@ -479,9 +491,9 @@ export class PlaylistFacade {
 	 * @param uniqueKeys 队列中的 track uniqueKeys
 	 */
 	public async saveQueueAsPlaylist(name: string, uniqueKeys: string[]) {
-		logger.info('开始将队列保存为播放列表', {
-			name,
-			trackCount: uniqueKeys.length,
+		logger.info('playlist.queue_save.started', {
+			'playlist.name': name,
+			'playlist.track_count': uniqueKeys.length,
 		})
 
 		return ResultAsync.fromPromise(
@@ -515,7 +527,9 @@ export class PlaylistFacade {
 
 					if (id === undefined) {
 						// 理论上不应该发生，因为进入播放队列的歌曲必须在本地 DB 有记录
-						logger.error(`保存队列时发现缺失的 track: ${key}`)
+						logger.error('playlist.queue_save.track_missing', {
+							'track.unique_key': key,
+						})
 						throw createFacadeError(
 							'PlaylistCreateFailed',
 							`无法保存队列，发现未入库的歌曲 (ID: ${key})，请向开发者反馈`,
@@ -799,9 +813,9 @@ export class PlaylistFacade {
 					}
 
 					if (resp.status === 404 || resp.status === 403) {
-						logger.warning('远端歌单已不存在或权限丢失，跳过云端删除', {
-							playlistId,
-							shareId,
+						logger.warning('playlist.remote_delete.skipped', {
+							'playlist.id': playlistId,
+							'playlist.share_id': shareId,
 						})
 					}
 
@@ -827,13 +841,10 @@ export class PlaylistFacade {
 					}
 
 					if (resp.status === 404 || resp.status === 403) {
-						logger.warning(
-							'远端歌单已被删除或已解除成员关系，继续清理本地关联',
-							{
-								playlistId,
-								shareId,
-							},
-						)
+						logger.warning('playlist.remote_disconnect.continued', {
+							'playlist.id': playlistId,
+							'playlist.share_id': shareId,
+						})
 					}
 
 					await this.db.transaction(async (tx) => {
