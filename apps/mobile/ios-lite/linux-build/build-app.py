@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Compile, link and package BBPlayer.app from the pods built by build.py."""
+import hashlib
 import json
 import os
 import plistlib
@@ -237,6 +238,27 @@ def write_info_plist(families):
         plistlib.dump(info, handle)
 
 
+def compile_hermes(hermesc, source, dest):
+    """Hermes bytecode for the JS bundle.
+
+    hermesc gives the same bytes for the same input, so the last result is reused while the
+    bundle, the compiler and the flags are unchanged. A native-only rebuild then skips it.
+    """
+    flags = ['-emit-binary', '-O', '-w']
+    digest = hashlib.sha256(json.dumps(flags).encode())
+    digest.update(hermesc.read_bytes())
+    digest.update(source.read_bytes())
+    cached = b.ROOT / 'hermes' / (digest.hexdigest() + '.hbc')
+    if not cached.exists():
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        for old in cached.parent.iterdir():
+            old.unlink()
+        partial = cached.with_suffix('.partial')
+        subprocess.run([str(hermesc), *flags, '-out', str(partial), str(source)], check=True)
+        partial.rename(cached)
+    shutil.copyfile(cached, dest)
+
+
 def main():
     data = json.loads((b.ROOT / 'manifest.json').read_text())
     target = AppTarget(data['project_settings'])
@@ -264,7 +286,7 @@ def main():
     if expo_plist.exists():
         shutil.copy2(expo_plist, OUT / 'Expo.plist')
     hermesc = Path(b.node_resolve('hermes-compiler', b.node_resolve('react-native'))) / 'hermesc/linux64-bin/hermesc'
-    subprocess.run([str(hermesc), '-emit-binary', '-O', '-w', '-out', str(OUT / 'main.jsbundle'), str(JS / 'main.jsbundle')], check=True)
+    compile_hermes(hermesc, JS / 'main.jsbundle', OUT / 'main.jsbundle')
     # Metro already nests its output under assets/, and the app looks for assets/ next to the bundle.
     if (JS / 'assets' / 'assets').exists():
         b.copy_tree_entry(JS / 'assets' / 'assets', OUT / 'assets')

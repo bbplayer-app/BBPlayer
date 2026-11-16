@@ -528,6 +528,45 @@ def file_stamp(paths):
     return digest.hexdigest()
 
 
+DEP_TOKEN = re.compile(r'(?:\\.|[^\s\\])+')
+DEP_ESCAPE = re.compile(r'\\(.)')
+
+
+def dep_paths(text):
+    """The prerequisites listed in a clang .d file, the same list shlex.split gives but much faster."""
+    body = text.replace('\\\n', ' ').split(':', 1)[1]
+    return [DEP_ESCAPE.sub(r'\1', token) if '\\' in token else token for token in DEP_TOKEN.findall(body)]
+
+
+def snapshot_modulemaps():
+    """Content and timestamps of the module maps under the products folder.
+
+    setup_target and the pods' compatibility-header scripts rewrite them on every run, almost
+    always with the same content. The new timestamp alone made every file that imports one of
+    these modules recompile.
+    """
+    found = {}
+    if PROD.exists():
+        for directory, _, files in os.walk(PROD):
+            for name in files:
+                path = Path(directory) / name
+                if name.endswith('.modulemap') and not path.is_symlink():
+                    stat = path.stat()
+                    found[path] = (path.read_bytes(), stat.st_atime_ns, stat.st_mtime_ns)
+    return found
+
+
+def restore_unchanged(snapshot):
+    """Give the old timestamp back to each file that was rewritten with the same content."""
+    for path, (data, atime, mtime) in snapshot.items():
+        try:
+            if path.is_symlink() or path.stat().st_mtime_ns == mtime or path.read_bytes() != data:
+                continue
+        except OSError:
+            continue
+        os.utime(path, ns=(atime, mtime))
+
+
 class Builder:
     def __init__(self, targets, jobs):
         self.targets = targets
@@ -692,7 +731,8 @@ class Builder:
             path.write_text(text)
         return dict(item, path=str(path)), [f'-iquote{original.parent}']
 
-    def compile_c(self, target, item):
+    def c_job(self, target, item):
+        """The compile command for one C-family file, with its object file and stamp key."""
         item, extra = self.overlay_item(target, item)
         args = self.c_args(target, item) + extra
         src = item['path']
@@ -701,42 +741,73 @@ class Builder:
         dep = obj.with_suffix('.d')
         args = args + ['-MD', '-MF', str(dep), '-c', src, '-o', str(obj)]
         key = hashlib.sha256(json.dumps(args).encode()).hexdigest()
-        stamp = obj.with_suffix('.stamp')
-        if obj.exists() and stamp.exists() and stamp.read_text() == key and dep.exists():
-            try:
-                text = dep.read_text().replace('\\\n', ' ')
-                paths = shlex.split(text.split(':', 1)[1])
-                limit = obj.stat().st_mtime
-                if all(os.path.exists(p) and os.stat(p).st_mtime <= limit for p in paths):
-                    return obj
-            except Exception:
-                pass
+        return {'target': target, 'src': src, 'name': name, 'obj': obj, 'dep': dep, 'args': args, 'key': key}
+
+    @staticmethod
+    def c_up_to_date(job, mtimes):
+        """Whether the stamp matches and nothing the last compile read is newer than the object.
+
+        mtimes is shared across the phase, so each header is stat'ed once, not once per file.
+        """
+        obj = job['obj']
+        try:
+            if obj.with_suffix('.stamp').read_text() != job['key']:
+                return False
+            limit = obj.stat().st_mtime
+            paths = dep_paths(job['dep'].read_text())
+        except Exception:
+            # A missing, empty or unreadable stamp or .d file just means compiling again.
+            return False
+        for path in paths:
+            mtime = mtimes.get(path)
+            if mtime is None:
+                try:
+                    mtime = os.stat(path).st_mtime
+                except OSError:
+                    mtime = float('inf')
+                mtimes[path] = mtime
+            if mtime > limit:
+                return False
+        return True
+
+    def compile_c(self, job):
+        target, args = job['target'], job['args']
         env = dict(os.environ)
         env.pop('SDKROOT', None)
         result = subprocess.run(args, env=env, capture_output=True, text=True, errors='replace')
         if result.returncode:
-            log_path = LOGS / target.name / (name + '.log')
+            log_path = LOGS / target.name / (job['name'] + '.log')
             log_path.parent.mkdir(parents=True, exist_ok=True)
             log_path.write_text(' '.join(shlex.quote(a) for a in args) + '\n\n' + result.stdout + result.stderr)
-            self.record_errors(target, result.stdout + result.stderr, Path(src).name)
+            self.record_errors(target, result.stdout + result.stderr, Path(job['src']).name)
             return None
-        stamp.write_text(key)
-        return obj
+        job['obj'].with_suffix('.stamp').write_text(job['key'])
+        return job['obj']
 
     def c_phase(self, only):
         tasks = []
         for name, target in self.targets.items():
             if (only is None or name in only) and name not in self.skipped and target.c_files:
                 tasks += [(target, item) for item in target.c_files]
-        log(f'  compiling {len(tasks)} C-family files')
+        # Build every command first, which also writes the overlay sources, then check them in one
+        # thread. The check is Python and stat calls, and a thread pool only fights over the GIL.
+        jobs = [self.c_job(target, item) for target, item in tasks]
+        mtimes = {}
         objects = {}
+        stale = []
+        for job in jobs:
+            if self.c_up_to_date(job, mtimes):
+                objects.setdefault(job['target'].name, []).append(job['obj'])
+            else:
+                stale.append(job)
+        log(f'  compiling {len(stale)} of {len(tasks)} C-family files')
         count = 0
         with cf.ThreadPoolExecutor(max_workers=self.jobs) as pool:
-            futures = {pool.submit(self.compile_c, target, item): target.name for target, item in tasks}
+            futures = {pool.submit(self.compile_c, job): job['target'].name for job in stale}
             for future in cf.as_completed(futures):
                 count += 1
                 if count % 200 == 0:
-                    log(f'    {count}/{len(tasks)}')
+                    log(f'    {count}/{len(stale)}')
                 result = future.result()
                 if result is not None:
                     objects.setdefault(futures[future], []).append(result)
@@ -809,6 +880,8 @@ def main():
     if not options.skip_prebuilts and not options.skip_jsi:
         PREBUILTS_DONE.touch()
     log('== target layout')
+    # Before setup_target and the Swift phase rewrite them.
+    modulemaps = snapshot_modulemaps()
     # Stands in for Xcode's all-non-framework-target-headers header map.
     if ALL_HEADERS.exists():
         shutil.rmtree(ALL_HEADERS)
@@ -826,6 +899,7 @@ def main():
     builder = Builder(targets, options.jobs)
     log('== Swift')
     builder.swift_phase(only)
+    restore_unchanged(modulemaps)
     log('== C family')
     objects = builder.c_phase(only)
     log('== archive')
