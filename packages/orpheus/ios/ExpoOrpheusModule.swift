@@ -99,7 +99,6 @@ public class ExpoOrpheusModule: Module {
 
         // 功耗测量开关只在 Android 上有意义
         Property("testForceMediaCodec").get { false }.set { (_: Bool) in }
-        Property("testDefaultPcmBuffer").get { false }.set { (_: Bool) in }
         Property("testForcePcm").get { false }.set { (_: Bool) in }
 
         Property("isSpectrumVisualizerEnabled")

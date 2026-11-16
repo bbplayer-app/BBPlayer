@@ -185,8 +185,8 @@ class ExpoOrpheusModule : Module() {
     }
 
     /**
-     * 频谱开着就一直采集 PCM（包括后台）：写进 AudioTrack 的 PCM 要约 2 秒后才播出，
-     * 等频谱可见了才开始采集的话，前 2 秒没有和声音对齐的数据，频谱会空白。
+     * 频谱开着就一直采集 PCM（包括后台）：写进 AudioTrack 的 PCM 要等已缓冲的数据播完才播出，
+     * 等频谱可见了才开始采集的话，这段时间没有和声音对齐的数据，频谱会空白。
      * 采集只是在播放线程本来就要写 AudioTrack 时顺手混成单声道，不会多唤醒；FFT 只在 JS 读取时才算
      */
     private fun updateSpectrumCapture() {
@@ -363,10 +363,6 @@ class ExpoOrpheusModule : Module() {
         Property("testForceMediaCodec")
             .get { GeneralStorage.isTestForceMediaCodec() }
             .set { enabled: Boolean -> GeneralStorage.setTestForceMediaCodec(enabled) }
-
-        Property("testDefaultPcmBuffer")
-            .get { GeneralStorage.isTestDefaultPcmBuffer() }
-            .set { enabled: Boolean -> GeneralStorage.setTestDefaultPcmBuffer(enabled) }
 
         Property("testForcePcm")
             .get { GeneralStorage.isTestForcePcm() }

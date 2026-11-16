@@ -179,8 +179,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	isSpectrumVisualizerEnabled: boolean
 	/** 功耗测量用（仅 Android，重启 App 后生效）：不用 FFmpeg，PCM 也交给 MediaCodec 解码。 */
 	testForceMediaCodec: boolean
-	/** 功耗测量用（仅 Android，重启 App 后生效）：PCM 的 AudioTrack 缓冲用 Media3 默认值，不用 2 秒。 */
-	testDefaultPcmBuffer: boolean
 	/** 功耗测量用（仅 Android，重启 App 后生效）：不开频谱也不走 offload。 */
 	testForcePcm: boolean
 	/** 原生存储中桌面悬浮歌词窗口当前是否标记为显示。 */

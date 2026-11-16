@@ -27,7 +27,7 @@ import kotlin.math.sin
 object SpectrumAnalyzer {
     const val FFT_SIZE = 1024
 
-    // 环形缓冲至少要装下这么久的 PCM：AudioTrack 缓冲（2 秒）加上输出延迟，再留出 FFT 窗口的余量
+    // 环形缓冲至少要装下这么久的 PCM：AudioTrack 缓冲（Media3 默认最多 750ms）加上输出延迟，再留足余量
     private const val RING_MIN_SECONDS = 4
     private const val ANCHOR_COUNT = 256
 

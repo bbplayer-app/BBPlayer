@@ -24,9 +24,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
-import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider
 import androidx.media3.exoplayer.audio.DefaultAudioSink
-import androidx.media3.exoplayer.audio.DefaultAudioTrackBufferSizeProvider
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
@@ -123,7 +121,6 @@ class OrpheusMusicService : MediaLibraryService() {
 
     companion object {
         private const val RESUME_SAVE_INTERVAL_MS = 5000L
-        private const val PCM_BUFFER_DURATION_US = 2_000_000
 
         var instance: OrpheusMusicService? = null
             private set(value) {
@@ -290,7 +287,6 @@ class OrpheusMusicService : MediaLibraryService() {
 
         // 功耗测量用的开关，只在创建播放器时读取
         val testForceMediaCodec = GeneralStorage.isTestForceMediaCodec()
-        val testDefaultPcmBuffer = GeneralStorage.isTestDefaultPcmBuffer()
 
         val renderersFactory = object : DefaultRenderersFactory(this) {
             private var enableFloatOutput = false
@@ -303,23 +299,10 @@ class OrpheusMusicService : MediaLibraryService() {
             ): AudioSink? {
                 this.enableFloatOutput = enableFloatOutput
                 this.enableAudioOutputPlaybackParams = enableAudioOutputPlaybackParams
-                val builder = DefaultAudioSink.Builder(context)
+                val audioSink = DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                if (!testDefaultPcmBuffer) {
-                    // PCM 模式下加大 AudioTrack 缓冲（默认 250~750ms），播放线程可以一次多写、睡得更久。
-                    // 代价是倍速、响度均衡等 App 内处理的效果要等已缓冲的音频播完才生效
-                    val bufferSizeProvider = DefaultAudioTrackBufferSizeProvider.Builder()
-                        .setMinPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
-                        .setMaxPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
-                        .build()
-                    builder.setAudioOutputProvider(
-                        AudioTrackAudioOutputProvider.Builder(context)
-                            .setAudioTrackBufferSizeProvider(bufferSizeProvider)
-                            .build()
-                    )
-                }
-                val audioSink = builder.build()
+                    .build()
                 // 包一层，让频谱可以直接拿到播放器自己的 PCM
                 return SpectrumCaptureAudioSink(audioSink)
             }

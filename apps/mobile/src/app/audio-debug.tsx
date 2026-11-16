@@ -17,10 +17,7 @@ import toast from '@/utils/toast'
 
 const REFRESH_INTERVAL_MS = 1000
 
-type TestOptionKey =
-	| 'testForceMediaCodec'
-	| 'testDefaultPcmBuffer'
-	| 'testForcePcm'
+type TestOptionKey = 'testForceMediaCodec' | 'testForcePcm'
 
 // 功耗测量时用来切换配置，同一个安装包就能测完所有组合
 const TEST_OPTIONS: {
@@ -34,11 +31,6 @@ const TEST_OPTIONS: {
 		description: 'PCM 也用系统解码器，不用 FFmpeg',
 	},
 	{
-		key: 'testDefaultPcmBuffer',
-		label: '默认 PCM 缓冲',
-		description: 'AudioTrack 缓冲用 Media3 默认值，不用 2 秒',
-	},
-	{
 		key: 'testForcePcm',
 		label: '强制 PCM',
 		description: '不开频谱也不走 offload',
@@ -48,7 +40,6 @@ const TEST_OPTIONS: {
 function readTestOptions(): Record<TestOptionKey, boolean> {
 	return {
 		testForceMediaCodec: Orpheus.testForceMediaCodec,
-		testDefaultPcmBuffer: Orpheus.testDefaultPcmBuffer,
 		testForcePcm: Orpheus.testForcePcm,
 	}
 }

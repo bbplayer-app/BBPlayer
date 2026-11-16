@@ -263,7 +263,6 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
             "频谱开关" to if (GeneralStorage.isSpectrumVisualizerEnabled()) "开（因此禁用 offload）" else "关",
             "测量开关" to listOfNotNull(
                 "强制 MediaCodec".takeIf { GeneralStorage.isTestForceMediaCodec() },
-                "默认 PCM 缓冲".takeIf { GeneralStorage.isTestDefaultPcmBuffer() },
                 "强制 PCM".takeIf { GeneralStorage.isTestForcePcm() },
             ).joinToString("、").ifEmpty { "无" },
             "当前是否 offload" to yesNo(isOffloaded),
