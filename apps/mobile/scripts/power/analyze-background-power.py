@@ -415,6 +415,15 @@ if cond["start"]:
     if any("COMPRESS_OFFLOAD" in t["flags"] for k in paths for t in paths[k]):
         _decoders.append("offload（音频芯片）")
     p(f"- 解码方式：{'、'.join(_decoders) or '未知'}")
+    # 蓝牙编解码器：各厂商 dumpsys 格式不同，挑出提到当前编解码器的行
+    for k in ("start", "end"):
+        _codec = [
+            line.strip()
+            for line in read(f"conditions_{k}_bluetooth.txt").splitlines()
+            if re.search(r"(?i)current codec|codec ?config|mCodecConfig|codecName", line) and not line.strip().startswith("[")
+        ][:3]
+        if _codec:
+            p(f"- 蓝牙编解码器（{'开始' if k == 'start' else '结束'}）：{' / '.join(_codec)[:300]}")
     if meta.get("warmup"):
         p(f"- 拔线后预热：{meta['warmup']}s（预热期间不计入测量）")
     if bat:

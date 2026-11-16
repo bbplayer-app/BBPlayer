@@ -99,6 +99,8 @@ record_conditions() {
 	} > "$1.txt"
 	dumpsys media.audio_flinger > "$1_audio_flinger.txt" 2>&1
 	dumpsys media_session > "$1_media_session.txt" 2>&1
+	# 蓝牙耳机的编解码器（AAC/SBC/LDAC 等）对功耗影响很大
+	dumpsys bluetooth_manager > "$1_bluetooth.txt" 2>&1
 }
 
 {

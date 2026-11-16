@@ -28,6 +28,8 @@ set -euo pipefail
 #   --wait           不拔线，主机端等待结束后自动 collect（只适合无线 adb）
 #   --normalize      统一测试条件：开飞行模式、关 Wi-Fi 和蓝牙、媒体音量设为 0、清理后台进程，
 #                    然后等 30 秒再开始。collect 时恢复原来的设置。歌单需要提前完整缓存
+#   --keep-bt        配合 --normalize：开飞行模式后重新打开蓝牙（测蓝牙耳机），不改音量
+#   --volume <N>     配合 --normalize：媒体音量设为 N，默认 0（--keep-bt 时默认不改）
 #
 # 测量流程和注意事项见同目录的 README.md。设备用 ANDROID_SERIAL 指定。
 
@@ -182,19 +184,31 @@ precheck() {
 
 # 记下原来的设置（存在设备上，换一台电脑也能 restore），再统一成离线、静音的状态
 normalize_conditions() {
+	local keep_bt=$1 volume=$2
 	echo "统一测试条件..."
 	adb_sh "printf 'airplane_mode_on=%s\nwifi_on=%s\nbluetooth_on=%s\nmusic_volume=%s\n' \
 		'$(setting airplane_mode_on)' '$(setting wifi_on)' '$(setting bluetooth_on)' '$(music_volume)' > $DEV_DIR/restore.txt"
 	adb_sh "cmd connectivity airplane-mode enable" >/dev/null || echo "警告: 开启飞行模式失败"
 	# 有些机型会记住"飞行模式下保持 Wi-Fi/蓝牙"，所以再单独关一次
 	adb_sh "cmd wifi set-wifi-enabled disabled" >/dev/null 2>&1 || true
-	adb_sh "cmd bluetooth_manager disable" >/dev/null 2>&1 || true
-	adb_sh "cmd media_session volume --stream 3 --set 0" >/dev/null 2>&1 || true
-	[ "$(music_volume)" = 0 ] || echo "警告: 没能把媒体音量设为 0，请手动调低"
+	if [ "$keep_bt" = 1 ]; then
+		# 飞行模式一般会顺带关蓝牙，测耳机时再打开，等耳机自动重连
+		adb_sh "cmd bluetooth_manager enable" >/dev/null 2>&1 || echo "警告: 打开蓝牙失败"
+	else
+		adb_sh "cmd bluetooth_manager disable" >/dev/null 2>&1 || true
+	fi
+	if [ -n "$volume" ]; then
+		adb_sh "cmd media_session volume --stream 3 --set $volume" >/dev/null 2>&1 || true
+		[ "$(music_volume)" = "$volume" ] || echo "警告: 没能把媒体音量设为 $volume，请手动调整"
+	fi
 	# 只杀后台缓存进程，正在前台服务里播放的 app 不受影响
 	adb_sh "am kill-all" >/dev/null || true
 	echo "等待 30 秒，让无线模块关闭、系统安静下来..."
 	sleep 30
+	if [ "$keep_bt" = 1 ]; then
+		echo "请确认蓝牙耳机已经重新连上、正在从耳机出声（状态栏有耳机图标）"
+		read -r -p "确认后按回车继续 " _
+	fi
 }
 
 restore_conditions() {
@@ -226,7 +240,7 @@ restore_conditions() {
 
 cmd_start() {
 	local minutes=30 interval=10 pkg=com.roitium.bbplayer snaps=3 snapdur=20 screen_off=1 wait=0 normalize=0
-	local warmup=120 wait_unplug=1 label=""
+	local warmup=120 wait_unplug=1 label="" keep_bt=0 volume=unset
 	while [ $# -gt 0 ]; do
 		case "$1" in
 			-m) minutes=$2; shift 2 ;;
@@ -240,6 +254,8 @@ cmd_start() {
 			--keep-screen) screen_off=0; shift ;;
 			--wait) wait=1; shift ;;
 			--normalize) normalize=1; shift ;;
+			--keep-bt) keep_bt=1; shift ;;
+			--volume) volume=$2; shift 2 ;;
 			*) die "未知参数 $1" ;;
 		esac
 	done
@@ -307,7 +323,11 @@ cmd_start() {
 
 	precheck "$pkg"
 	if [ "$normalize" = 1 ]; then
-		normalize_conditions
+		# 外放默认静音；蓝牙耳机默认保持当前音量（有些耳机音量为 0 时会断流或休眠）
+		if [ "$volume" = unset ]; then
+			if [ "$keep_bt" = 1 ]; then volume=""; else volume=0; fi
+		fi
+		normalize_conditions "$keep_bt" "$volume"
 		is_playing "$pkg" || echo "警告: 统一条件后 $pkg 不在播放状态了（歌单是否已完整缓存？），测量会照常开始"
 	fi
 
@@ -444,5 +464,5 @@ case "${1:-}" in
 	collect) shift; cmd_collect "$@" ;;
 	analyze) shift; cmd_analyze "$@" ;;
 	restore) check_device; restore_conditions ;;
-	*) sed -n '3,32p' "$0"; exit 1 ;;
+	*) sed -n '3,34p' "$0"; exit 1 ;;
 esac
