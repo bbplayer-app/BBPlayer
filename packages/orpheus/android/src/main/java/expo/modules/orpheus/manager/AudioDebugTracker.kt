@@ -261,6 +261,11 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
             "音频 offload",
             "偏好" to offloadPreferenceText(preferences),
             "频谱开关" to if (GeneralStorage.isSpectrumVisualizerEnabled()) "开（因此禁用 offload）" else "关",
+            "测量开关" to listOfNotNull(
+                "强制 MediaCodec".takeIf { GeneralStorage.isTestForceMediaCodec() },
+                "默认 PCM 缓冲".takeIf { GeneralStorage.isTestDefaultPcmBuffer() },
+                "强制 PCM".takeIf { GeneralStorage.isTestForcePcm() },
+            ).joinToString("、").ifEmpty { "无" },
             "当前是否 offload" to yesNo(isOffloaded),
             "正在为 offload 休眠" to yesNo(isSleepingForOffload),
             "休眠次数 / 累计时长" to "$offloadSleepCount 次 / ${formatSeconds(sleepingTotalMs)}",

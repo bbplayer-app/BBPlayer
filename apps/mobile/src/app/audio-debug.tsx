@@ -2,13 +2,56 @@ import { Orpheus, type AudioDebugSection } from '@bbplayer/orpheus'
 import * as Clipboard from 'expo-clipboard'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { Button, Divider, Text, useTheme } from 'react-native-paper'
+import {
+	AppState,
+	Platform,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	View,
+} from 'react-native'
+import { Button, Divider, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import toast from '@/utils/toast'
 
 const REFRESH_INTERVAL_MS = 1000
+
+type TestOptionKey =
+	| 'testForceMediaCodec'
+	| 'testDefaultPcmBuffer'
+	| 'testForcePcm'
+
+// 功耗测量时用来切换配置，同一个安装包就能测完所有组合
+const TEST_OPTIONS: {
+	key: TestOptionKey
+	label: string
+	description: string
+}[] = [
+	{
+		key: 'testForceMediaCodec',
+		label: '强制 MediaCodec',
+		description: 'PCM 也用系统解码器，不用 FFmpeg',
+	},
+	{
+		key: 'testDefaultPcmBuffer',
+		label: '默认 PCM 缓冲',
+		description: 'AudioTrack 缓冲用 Media3 默认值，不用 2 秒',
+	},
+	{
+		key: 'testForcePcm',
+		label: '强制 PCM',
+		description: '不开频谱也不走 offload',
+	},
+]
+
+function readTestOptions(): Record<TestOptionKey, boolean> {
+	return {
+		testForceMediaCodec: Orpheus.testForceMediaCodec,
+		testDefaultPcmBuffer: Orpheus.testDefaultPcmBuffer,
+		testForcePcm: Orpheus.testForcePcm,
+	}
+}
 
 function formatSectionsAsText(sections: AudioDebugSection[]): string {
 	return sections
@@ -26,6 +69,13 @@ export default function AudioDebugScreen() {
 	const insets = useSafeAreaInsets()
 	const [sections, setSections] = useState<AudioDebugSection[]>([])
 	const [error, setError] = useState<string | null>(null)
+	const [testOptions, setTestOptions] = useState(readTestOptions)
+
+	const toggleTestOption = useCallback((key: TestOptionKey) => {
+		Orpheus[key] = !Orpheus[key]
+		setTestOptions(readTestOptions())
+		toast.success('已保存，彻底关闭并重新打开 App 后生效')
+	}, [])
 
 	// 只在页面可见且 App 位于前台时轮询
 	useFocusEffect(
@@ -115,6 +165,37 @@ export default function AudioDebugScreen() {
 					>
 						暂无数据（播放器尚未初始化，或当前平台不支持）
 					</Text>
+				) : null}
+
+				{Platform.OS === 'android' ? (
+					<View style={styles.section}>
+						<Text
+							variant='titleSmall'
+							style={[styles.sectionTitle, { color: theme.colors.primary }]}
+						>
+							测量开关（重启 App 后生效）
+						</Text>
+						{TEST_OPTIONS.map((option, index) => (
+							<View key={option.key}>
+								{index > 0 ? <Divider /> : null}
+								<View style={styles.row}>
+									<View style={styles.label}>
+										<Text variant='bodyMedium'>{option.label}</Text>
+										<Text
+											variant='bodySmall'
+											style={{ color: theme.colors.onSurfaceVariant }}
+										>
+											{option.description}
+										</Text>
+									</View>
+									<Switch
+										value={testOptions[option.key]}
+										onValueChange={() => toggleTestOption(option.key)}
+									/>
+								</View>
+							</View>
+						))}
+					</View>
 				) : null}
 
 				{sections.map((section) => (

@@ -177,6 +177,9 @@ p(
 )
 p(f"- 应用：{meta.get('app_version')}")
 p(f"- 采样：{len(samples)} 个，覆盖 {wall / 60:.1f} 分钟，间隔 {meta.get('interval')}s")
+_label = read("label.txt").strip()
+if _label:
+    p(f"- 别名：{_label}")
 if is_emulator:
     p("- **注意：模拟器上的电池与功耗数据是虚拟的，只看 CPU / 线程 / 唤醒部分**")
 restarts = [l for l in events.splitlines() if "APP_PIDS" in l]
@@ -401,6 +404,17 @@ if cond["start"]:
     p("## 0. 测试条件")
     p()
     p(f"- 统一条件（--normalize）：{'是' if normalized else '否'}")
+    # 解码方式从 app 的线程推断：FFmpeg 有 SimpleDecoder 线程，MediaCodec 有 MediaCodec_loop 线程
+    _app_pids = {k[0] for smp in samples for k in smp.pstat}
+    _names = {th["name"] for smp in samples for k, th in smp.threads.items() if k[0] in _app_pids}
+    _decoders = [
+        name
+        for name, prefix in [("FFmpeg", "ExoPlayer:Simpl"), ("MediaCodec", "MediaCodec_loop")]
+        if any(n.startswith(prefix) for n in _names)
+    ]
+    if any("COMPRESS_OFFLOAD" in t["flags"] for k in paths for t in paths[k]):
+        _decoders.append("offload（音频芯片）")
+    p(f"- 解码方式：{'、'.join(_decoders) or '未知'}")
     if meta.get("warmup"):
         p(f"- 拔线后预热：{meta['warmup']}s（预热期间不计入测量）")
     if bat:

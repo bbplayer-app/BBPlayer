@@ -359,6 +359,19 @@ class ExpoOrpheusModule : Module() {
             .get { TrackResumeStorage.getStrategy() }
             .set { strategy: Int -> TrackResumeStorage.setStrategy(strategy) }
 
+        // 功耗测量用的开关，重启 App 后生效
+        Property("testForceMediaCodec")
+            .get { GeneralStorage.isTestForceMediaCodec() }
+            .set { enabled: Boolean -> GeneralStorage.setTestForceMediaCodec(enabled) }
+
+        Property("testDefaultPcmBuffer")
+            .get { GeneralStorage.isTestDefaultPcmBuffer() }
+            .set { enabled: Boolean -> GeneralStorage.setTestDefaultPcmBuffer(enabled) }
+
+        Property("testForcePcm")
+            .get { GeneralStorage.isTestForcePcm() }
+            .set { enabled: Boolean -> GeneralStorage.setTestForcePcm(enabled) }
+
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.isSpectrumVisualizerEnabled() }
             .set { enabled: Boolean ->

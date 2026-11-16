@@ -97,6 +97,11 @@ public class ExpoOrpheusModule: Module {
             .get { GeneralStorage.shared.isAutoplayOnStartEnabled }
             .set { GeneralStorage.shared.isAutoplayOnStartEnabled = $0 }
 
+        // 功耗测量开关只在 Android 上有意义
+        Property("testForceMediaCodec").get { false }.set { (_: Bool) in }
+        Property("testDefaultPcmBuffer").get { false }.set { (_: Bool) in }
+        Property("testForcePcm").get { false }.set { (_: Bool) in }
+
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.shared.isSpectrumVisualizerEnabled }
             .set {

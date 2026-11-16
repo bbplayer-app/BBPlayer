@@ -288,6 +288,10 @@ class OrpheusMusicService : MediaLibraryService() {
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(dataSourceFactory)
 
+        // 功耗测量用的开关，只在创建播放器时读取
+        val testForceMediaCodec = GeneralStorage.isTestForceMediaCodec()
+        val testDefaultPcmBuffer = GeneralStorage.isTestDefaultPcmBuffer()
+
         val renderersFactory = object : DefaultRenderersFactory(this) {
             private var enableFloatOutput = false
             private var enableAudioOutputPlaybackParams = false
@@ -299,21 +303,23 @@ class OrpheusMusicService : MediaLibraryService() {
             ): AudioSink? {
                 this.enableFloatOutput = enableFloatOutput
                 this.enableAudioOutputPlaybackParams = enableAudioOutputPlaybackParams
-                // PCM 模式下加大 AudioTrack 缓冲（默认 250~750ms），播放线程可以一次多写、睡得更久。
-                // 代价是倍速、响度均衡等 App 内处理的效果要等已缓冲的音频播完才生效
-                val bufferSizeProvider = DefaultAudioTrackBufferSizeProvider.Builder()
-                    .setMinPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
-                    .setMaxPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
-                    .build()
-                val audioSink = DefaultAudioSink.Builder(context)
+                val builder = DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                    .setAudioOutputProvider(
+                if (!testDefaultPcmBuffer) {
+                    // PCM 模式下加大 AudioTrack 缓冲（默认 250~750ms），播放线程可以一次多写、睡得更久。
+                    // 代价是倍速、响度均衡等 App 内处理的效果要等已缓冲的音频播完才生效
+                    val bufferSizeProvider = DefaultAudioTrackBufferSizeProvider.Builder()
+                        .setMinPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
+                        .setMaxPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
+                        .build()
+                    builder.setAudioOutputProvider(
                         AudioTrackAudioOutputProvider.Builder(context)
                             .setAudioTrackBufferSizeProvider(bufferSizeProvider)
                             .build()
                     )
-                    .build()
+                }
+                val audioSink = builder.build()
                 // 包一层，让频谱可以直接拿到播放器自己的 PCM
                 return SpectrumCaptureAudioSink(audioSink)
             }
@@ -338,8 +344,9 @@ class OrpheusMusicService : MediaLibraryService() {
                         eventHandler,
                         eventListener,
                         audioSink,
-                    ) { audioOffloadPreferences }
+                    ) { if (testForceMediaCodec) null else audioOffloadPreferences }
                 )
+                if (testForceMediaCodec) return
                 // FFmpeg 渲染器要用单独的 sink：sink 只保存一个 listener，共用的话后构造的 FFmpeg 渲染器
                 // 会顶掉 MediaCodec 渲染器的，offload 的缓冲满/空回调就到不了它那里，播放线程无法为 offload 休眠。
                 // 两个渲染器同一时间只会启用一个，所以也只会有一个 AudioTrack
@@ -953,7 +960,7 @@ class OrpheusMusicService : MediaLibraryService() {
         val player = player ?: return
         // offload（解码交给音频 DSP）时 CPU 可以长时间休眠，但播放器拿不到 PCM，
         // 所以只在频谱关闭时启用
-        val mode = if (!GeneralStorage.isSpectrumVisualizerEnabled()) {
+        val mode = if (!GeneralStorage.isSpectrumVisualizerEnabled() && !GeneralStorage.isTestForcePcm()) {
             AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
         } else {
             AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED

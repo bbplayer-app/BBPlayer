@@ -10,7 +10,7 @@ set -euo pipefail
 # 用法:
 #   ./scripts/power/measure-background-power.sh start   [选项]   开始测量
 #   ./scripts/power/measure-background-power.sh status            查看进度
-#   ./scripts/power/measure-background-power.sh collect           拉取数据并生成报告
+#   ./scripts/power/measure-background-power.sh collect [-l 别名] 拉取数据并生成报告
 #   ./scripts/power/measure-background-power.sh stop              提前结束（之后再 collect）
 #   ./scripts/power/measure-background-power.sh analyze <目录>    对已拉取的数据重新生成报告
 #   ./scripts/power/measure-background-power.sh restore           恢复 --normalize 改过的设置（collect 会自动做）
@@ -22,6 +22,7 @@ set -euo pipefail
 #   -n <个数>        详细 sched trace 快照个数（均匀分布），默认 3，0 关闭
 #   -d <秒>          每个快照时长，默认 20
 #   -w <秒>          拔线后先预热多久再开始测量，默认 120，0 关闭
+#   -l <别名>        给这次测量起个名字，collect 时加在结果目录名后面，如 power_20261116_103000_offload-1
 #   --no-wait-unplug 不等拔线，start 后直接预热（模拟器和 --wait 模式下自动如此）
 #   --keep-screen    不自动回桌面并熄屏
 #   --wait           不拔线，主机端等待结束后自动 collect（只适合无线 adb）
@@ -153,6 +154,11 @@ music_volume() {
 	{ adb_sh "cmd media_session volume --stream 3 --get" 2>/dev/null || true; } | sed -n 's/.*volume is \([0-9]*\).*/\1/p'
 }
 
+# 别名只用作目录名后缀：空白和路径分隔符换成 -
+sanitize_label() {
+	printf '%s' "$1" | tr -s ' \t/\\:' '-'
+}
+
 # 测量前检查会影响结果的条件，只警告不阻止（报告里也会列出）
 precheck() {
 	local pkg=$1 battery level temp speed
@@ -220,7 +226,7 @@ restore_conditions() {
 
 cmd_start() {
 	local minutes=30 interval=10 pkg=com.roitium.bbplayer snaps=3 snapdur=20 screen_off=1 wait=0 normalize=0
-	local warmup=120 wait_unplug=1
+	local warmup=120 wait_unplug=1 label=""
 	while [ $# -gt 0 ]; do
 		case "$1" in
 			-m) minutes=$2; shift 2 ;;
@@ -229,6 +235,7 @@ cmd_start() {
 			-n) snaps=$2; shift 2 ;;
 			-d) snapdur=$2; shift 2 ;;
 			-w) warmup=$2; shift 2 ;;
+			-l) label=$2; shift 2 ;;
 			--no-wait-unplug) wait_unplug=0; shift ;;
 			--keep-screen) screen_off=0; shift ;;
 			--wait) wait=1; shift ;;
@@ -292,6 +299,8 @@ cmd_start() {
 	restore_conditions
 	echo "准备设备..."
 	adb_sh "rm -rf $DEV_DIR; mkdir -p $DEV_DIR; rm -f $TRACE_DIR/bbpower_*.pftrace" >/dev/null
+	# 别名存在设备上，换一台电脑 collect 也能用上
+	[ -n "$label" ] && adb_sh "echo '$(sanitize_label "$label")' > $DEV_DIR/label.txt"
 	adb push "$SCRIPT_DIR/device-sampler.sh" "$tmp/long.cfg" "$tmp/snapshot.cfg.tpl" "$DEV_DIR/" >/dev/null
 	rm -rf "$tmp"
 	adb_sh "chmod 755 $DEV_DIR/device-sampler.sh"
@@ -394,11 +403,20 @@ ensure_perfetto_py() {
 }
 
 cmd_collect() {
+	local label=""
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			-l) label=$2; shift 2 ;;
+			*) die "未知参数 $1" ;;
+		esac
+	done
 	check_device
 	[ -n "$(adb_sh "ls $DEV_DIR/DONE 2>/dev/null")" ] || die "测量还没结束（status 查看进度，或 stop 提前结束）"
 
+	# 没指定就用 start 时的别名
+	[ -n "$label" ] || label=$(adb_sh "cat $DEV_DIR/label.txt 2>/dev/null" | tr -d '\r' || true)
 	local out
-	out="$MOBILE_DIR/metrics_runs/power_$(date +%Y%m%d_%H%M%S)"
+	out="$MOBILE_DIR/metrics_runs/power_$(date +%Y%m%d_%H%M%S)${label:+_$(sanitize_label "$label")}"
 	mkdir -p "$out/traces"
 	adb pull "$DEV_DIR/." "$out/" >/dev/null
 	for f in $(adb_sh "ls $TRACE_DIR/ 2>/dev/null | grep '^bbpower_'"); do
@@ -423,8 +441,8 @@ case "${1:-}" in
 	start) shift; cmd_start "$@" ;;
 	status) cmd_status ;;
 	stop) cmd_stop ;;
-	collect) cmd_collect ;;
+	collect) shift; cmd_collect "$@" ;;
 	analyze) shift; cmd_analyze "$@" ;;
 	restore) check_device; restore_conditions ;;
-	*) sed -n '3,31p' "$0"; exit 1 ;;
+	*) sed -n '3,32p' "$0"; exit 1 ;;
 esac
