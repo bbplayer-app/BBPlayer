@@ -439,13 +439,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	updateSpectrumData(destination: Float32Array): void
 	/**
-	 * 告诉原生端当前是否有可见的频谱组件。
-	 *
-	 * Android 上只有为 `true` 时才会从播放器采集 PCM 并计算频谱，不显示时没有额外开销。
-	 * 组件可见时设为 `true`，卸载或 App 退到后台时设回 `false`。
-	 */
-	setSpectrumCaptureActive(active: boolean): void
-	/**
 	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、offload、网络等），用于调试页展示。
 	 *
 	 * 返回按分组整理好的字符串；iOS 暂未实现，返回空数组。

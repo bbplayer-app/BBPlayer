@@ -13,8 +13,56 @@ interface SpectrumVisualizerProps {
 
 const BAR_COUNT = 60
 const MAX_BAR_HEIGHT = 36
-const SMOOTHING_FACTOR = 0.3
 const GAP = 4
+
+// 圆环左右对称：从正上方往下，频率从低到高
+const HALF_COUNT = BAR_COUNT / 2
+
+// 原生端是 1024 点 FFT，按 48kHz 估算每个 bin 的频率（44.1kHz 时略有偏差，不影响观感）
+const BIN_HZ = 48000 / (SPECTRUM_SIZE * 2)
+const MIN_FREQ = 50
+
+// B 站的 AAC 一般在 16kHz 左右截止，再往上几乎没有能量，分给它的条会一直不动
+const MAX_FREQ = 16000
+
+// 音乐的能量大致按每倍频程 3~6dB 随频率下降，按 1kHz 为基准补偿回来，高频的条才动得起来
+const TILT_DB_PER_OCTAVE = 4.5
+const MIN_DB = -50
+
+// 上升快、回落慢，跟着鼓点跳但不闪
+const ATTACK = 0.6
+const RELEASE = 0.15
+
+// 自动增益：按最近的峰值归一化，安静的歌也能撑满。峰值每帧衰减一点，换歌后几秒内适应
+const AGC_DECAY = 0.99
+const AGC_MIN_PEAK = 0.3
+
+// 每根条对应的 bin 范围：按对数频率均分，低频不足一个 bin 时顺延，保证每根条至少有一个 bin
+const BAND_EDGES = (() => {
+	const edges = new Int32Array(HALF_COUNT + 1)
+
+	for (let i = 0; i <= HALF_COUNT; i++) {
+		const freq = MIN_FREQ * (MAX_FREQ / MIN_FREQ) ** (i / HALF_COUNT)
+		const bin = Math.round(freq / BIN_HZ)
+		edges[i] = Math.min(
+			Math.max(bin, i > 0 ? edges[i - 1] + 1 : 1),
+			SPECTRUM_SIZE,
+		)
+	}
+
+	return edges
+})()
+
+const BAND_TILT_DB = (() => {
+	const tilt = new Float32Array(HALF_COUNT)
+
+	for (let i = 0; i < HALF_COUNT; i++) {
+		const centerHz = ((BAND_EDGES[i] + BAND_EDGES[i + 1]) / 2) * BIN_HZ
+		tilt[i] = TILT_DB_PER_OCTAVE * Math.log2(centerHz / 1000)
+	}
+
+	return tilt
+})()
 
 export const SpectrumVisualizer = ({
 	isPlaying,
@@ -27,6 +75,8 @@ export const SpectrumVisualizer = ({
 
 	const bufferRef = useRef(new Float32Array(SPECTRUM_SIZE))
 	const prevDataRef = useRef(new Float32Array(BAR_COUNT))
+	const bandLevelsRef = useRef(new Float32Array(HALF_COUNT))
+	const agcPeakRef = useRef(AGC_MIN_PEAK)
 
 	const [isAppActive, setIsAppActive] = useState(
 		AppState.currentState === 'active',
@@ -45,17 +95,6 @@ export const SpectrumVisualizer = ({
 			subscription.remove()
 		}
 	}, [])
-
-	// 原生端只在频谱可见时运行 Visualizer：它会持续唤醒主线程，还会阻止音频 offload
-	useEffect(() => {
-		if (!isVisible) return
-
-		Orpheus.setSpectrumCaptureActive(true)
-
-		return () => {
-			Orpheus.setSpectrumCaptureActive(false)
-		}
-	}, [isVisible])
 
 	const geometry = useDerivedValue(() => {
 		const center = size / 2 + MAX_BAR_HEIGHT
@@ -119,54 +158,47 @@ export const SpectrumVisualizer = ({
 
 				if (isPlaying) {
 					Orpheus.updateSpectrumData(rawData)
-					const halfCount = BAR_COUNT / 2
+					const levels = bandLevelsRef.current
+					let framePeak = 0
 
-					for (let i = 0; i < halfCount; i++) {
-						const t = i / (halfCount - 1)
-						const startBin = Math.floor(t * t * (SPECTRUM_SIZE - 1))
-						const tNext = (i + 1) / (halfCount - 1)
-						const endBin = Math.floor(tNext * tNext * (SPECTRUM_SIZE - 1))
-						const actualEndBin = Math.max(endBin, startBin + 1)
+					for (let i = 0; i < HALF_COUNT; i++) {
+						// 取频带内的最大值而不是平均值，宽的高频带不会被平均得一片平
+						let magnitude = 0
 
-						let sum = 0
-						let count = 0
-
-						for (let j = startBin; j < actualEndBin && j < SPECTRUM_SIZE; j++) {
-							sum += rawData[j]
-							count++
+						for (let j = BAND_EDGES[i]; j < BAND_EDGES[i + 1]; j++) {
+							if (rawData[j] > magnitude) magnitude = rawData[j]
 						}
 
-						let val = 0
+						const db = 20 * Math.log10(magnitude + 1e-6) + BAND_TILT_DB[i]
+						const level = Math.min(Math.max((db - MIN_DB) / -MIN_DB, 0), 1)
+						levels[i] = level
 
-						if (count > 0) {
-							const magnitude = sum / count
-							const db = 20 * Math.log10(magnitude + 0.0001)
-							const minDb = -60
-							const maxDb = 0
-							val = (db - minDb) / (maxDb - minDb)
-						}
+						if (level > framePeak) framePeak = level
+					}
 
-						if (val < 0) val = 0
+					const agcPeak = Math.max(
+						framePeak,
+						agcPeakRef.current * AGC_DECAY,
+						AGC_MIN_PEAK,
+					)
 
-						if (val > 1.0) val = 1.0
+					agcPeakRef.current = agcPeak
+
+					for (let i = 0; i < HALF_COUNT; i++) {
+						const target = Math.min(levels[i] / agcPeak, 1)
+						const prev = prevDataRef.current[i]
+
+						const smooth =
+							prev + (target - prev) * (target > prev ? ATTACK : RELEASE)
 
 						const mirrorIdx = BAR_COUNT - 1 - i
 
-						const smoothL =
-							prevDataRef.current[i] * SMOOTHING_FACTOR +
-							val * (1 - SMOOTHING_FACTOR)
+						prevDataRef.current[i] = smooth
+						prevDataRef.current[mirrorIdx] = smooth
+						newData[i] = smooth
+						newData[mirrorIdx] = smooth
 
-						prevDataRef.current[i] = smoothL
-						newData[i] = smoothL
-
-						const smoothR =
-							prevDataRef.current[mirrorIdx] * SMOOTHING_FACTOR +
-							val * (1 - SMOOTHING_FACTOR)
-
-						prevDataRef.current[mirrorIdx] = smoothR
-						newData[mirrorIdx] = smoothR
-
-						if (smoothL > 0.001 || smoothR > 0.001) {
+						if (smooth > 0.001) {
 							hasSignal = true
 						}
 					}

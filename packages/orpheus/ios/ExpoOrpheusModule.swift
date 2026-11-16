@@ -334,9 +334,6 @@ public class ExpoOrpheusModule: Module {
       return []
     }
 
-    // Android 用它控制是否采集 PCM 计算频谱；iOS 的频谱分析不需要
-    Function("setSpectrumCaptureActive") { (_: Bool) in }
-
     Function("updateSpectrumData") { (destination: TypedArray) in
         let count = destination.length
         // Get the unsafe pointer to valid memory

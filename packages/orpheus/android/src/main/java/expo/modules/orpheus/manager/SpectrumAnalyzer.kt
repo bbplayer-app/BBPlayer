@@ -22,7 +22,7 @@ import kotlin.math.sin
  * 取最近 [FFT_SIZE] 个采样做 FFT。PCM 写进 AudioTrack 后要几百毫秒才真正播出，
  * 所以不能直接取最新数据，否则频谱会比声音超前。
  *
- * 只有 [isCapturing] 为 true（频谱可见）时才会写入。offload 时拿不到 PCM，频谱为 0。
+ * 只有 [isCapturing] 为 true（频谱开关打开）时才会写入。offload 时拿不到 PCM，频谱为 0。
  */
 object SpectrumAnalyzer {
     const val FFT_SIZE = 1024

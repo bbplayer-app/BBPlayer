@@ -84,9 +84,6 @@ class ExpoOrpheusModule : Module() {
 
     private var downloadManager: DownloadManager? = null
 
-    /** JS 端是否有正在显示的频谱组件。没有时不采集 PCM、不做 FFT */
-    private var spectrumCaptureActive = false
-
     /** 后台时不向 JS 发送进度事件：JS 端只有界面在用它，发了也只是白白唤醒 JS 线程 */
     private var isAppInForeground = true
 
@@ -187,9 +184,13 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
+    /**
+     * 频谱开着就一直采集 PCM（包括后台）：写进 AudioTrack 的 PCM 要约 2 秒后才播出，
+     * 等频谱可见了才开始采集的话，前 2 秒没有和声音对齐的数据，频谱会空白。
+     * 采集只是在播放线程本来就要写 AudioTrack 时顺手混成单声道，不会多唤醒；FFT 只在 JS 读取时才算
+     */
     private fun updateSpectrumCapture() {
-        SpectrumAnalyzer.isCapturing =
-            spectrumCaptureActive && GeneralStorage.isSpectrumVisualizerEnabled()
+        SpectrumAnalyzer.isCapturing = GeneralStorage.isSpectrumVisualizerEnabled()
     }
 
     @OptIn(UnstableApi::class)
@@ -223,6 +224,7 @@ class ExpoOrpheusModule : Module() {
             // 模块可能在 Activity 已经退到后台时才创建，这时不会再补发后台事件
             isAppInForeground = (context as? ReactContext)?.let { it.lifecycleState == LifecycleState.RESUMED } ?: true
             GeneralStorage.initialize(context)
+            updateSpectrumCapture()
             LoudnessStorage.initialize(context)
             TrackResumeStorage.initialize(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
@@ -1201,17 +1203,6 @@ class ExpoOrpheusModule : Module() {
                 }
             } catch (e: Exception) {
                 emptyList<String>()
-            }
-        }
-
-        /**
-         * 频谱组件挂载/可见时传 true，卸载或 App 退到后台时传 false。
-         * 只有为 true 时播放线程才会采集 PCM，不显示时没有任何额外开销。
-         */
-        Function("setSpectrumCaptureActive") { active: Boolean ->
-            mainHandler.post {
-                spectrumCaptureActive = active
-                updateSpectrumCapture()
             }
         }
 
