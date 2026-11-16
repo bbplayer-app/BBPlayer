@@ -318,6 +318,18 @@ def parse_duration_s(text):
     return total
 
 
+def parse_awake_ratio():
+    """系统没有挂起的时间占比：batterystats 里电池供电期间的 uptime ÷ realtime"""
+    m = re.search(r"Time on battery: (.+?) \([\d.]+%\) realtime, (.+?) \([\d.]+%\) uptime", read("batterystats_full.txt"))
+    if not m:
+        return None
+    real = parse_duration_s(m.group(1))
+    return parse_duration_s(m.group(2)) / real if real else None
+
+
+AWAKE_RATIO = parse_awake_ratio()
+
+
 cond = {"start": kv(read("conditions_start.txt")), "end": kv(read("conditions_end.txt"))}
 if cond["start"]:
     uid_num = meta.get("uid", "")
@@ -431,6 +443,11 @@ if cond["start"]:
             p(f"- 蓝牙编解码器（{'开始' if k == 'start' else '结束'}）：{' / '.join(_codec)[:300]}")
     if meta.get("warmup"):
         p(f"- 拔线后预热：{meta['warmup']}s（预热期间不计入测量）")
+    if AWAKE_RATIO is not None:
+        p(
+            f"- 系统没有挂起的时间占比：{AWAKE_RATIO * 100:.0f}%"
+            + ("（PCM 播放时混音一直在跑，系统不会挂起）" if AWAKE_RATIO > 0.95 else "（其余时间系统处于挂起状态）")
+        )
     if bat:
         p(f"- 起始电量 {level}%，温度 {temp:.1f}°C")
     p()
@@ -539,6 +556,12 @@ if TraceProcessor and os.path.exists(long_trace):
                         + (f"，剔除了 {dropped} 个充电中的点" if dropped else "")
                         + "）"
                     )
+                    if AWAKE_RATIO is not None and AWAKE_RATIO < 0.9:
+                        p(
+                            f"- **注意：系统有 {(1 - AWAKE_RATIO) * 100:.0f}% 的时间处于挂起状态，挂起时读不到电流，"
+                            "上面的统计只覆盖醒着的时刻，明显偏高。整体电流以 charge counter 为准"
+                            "（三星的 charge counter 约 5 mAh 一档，需要测得更久）**"
+                        )
                     if volt_rows:
                         vi = 0
                         pw = []
