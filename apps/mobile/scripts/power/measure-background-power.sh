@@ -319,7 +319,8 @@ cmd_start() {
 	echo "准备设备..."
 	adb_sh "rm -rf $DEV_DIR; mkdir -p $DEV_DIR; rm -f $TRACE_DIR/bbpower_*.pftrace" >/dev/null
 	# 别名存在设备上，换一台电脑 collect 也能用上
-	[ -n "$label" ] && adb_sh "echo '$(sanitize_label "$label")' > $DEV_DIR/label.txt"
+	# 用 printf 而不是 echo：别名是 -n 这类内容时 echo 会把它当成选项
+	[ -n "$label" ] && adb_sh "printf '%s\\n' '$(sanitize_label "$label")' > $DEV_DIR/label.txt"
 	adb push "$SCRIPT_DIR/device-sampler.sh" "$tmp/long.cfg" "$tmp/snapshot.cfg.tpl" "$DEV_DIR/" >/dev/null
 	rm -rf "$tmp"
 	adb_sh "chmod 755 $DEV_DIR/device-sampler.sh"
