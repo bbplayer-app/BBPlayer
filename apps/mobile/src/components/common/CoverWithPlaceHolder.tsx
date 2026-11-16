@@ -83,9 +83,16 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		return cover
 	}, [cover])
 
-	// 记录失败的是哪个 cover，列表复用本组件换了 cover 后自然重置
-	const [failedCover, setFailedCover] = useState<typeof cover>(undefined)
-	const showPlaceholder = !coverSource || failedCover === cover
+	// 加载失败后显示占位符；cover 一变（包括列表复用后换回之前失败过的 cover）就清掉失败状态重新加载
+	const [loadFailed, setLoadFailed] = useState(false)
+	const [prevCover, setPrevCover] = useState(cover)
+
+	if (cover !== prevCover) {
+		setPrevCover(cover)
+		setLoadFailed(false)
+	}
+
+	const showPlaceholder = !coverSource || loadFailed
 
 	const policy =
 		typeof cover === 'string' && cover.startsWith('file://')
@@ -124,7 +131,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 					style={[styles.image, { width: size, height: size }]}
 					transition={0}
 					cachePolicy={policy}
-					onError={() => setFailedCover(cover)}
+					onError={() => setLoadFailed(true)}
 				/>
 			)}
 		</SquircleView>
