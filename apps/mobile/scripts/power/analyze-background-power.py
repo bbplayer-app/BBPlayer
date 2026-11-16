@@ -180,6 +180,11 @@ p(f"- 采样：{len(samples)} 个，覆盖 {wall / 60:.1f} 分钟，间隔 {meta
 _label = read("label.txt").strip()
 if _label:
     p(f"- 别名：{_label}")
+_notes = read("notes.md").strip()
+if _notes:
+    p("- 备注（notes.md）：")
+    for _line in _notes.splitlines():
+        p(f"  {_line}")
 if is_emulator:
     p("- **注意：模拟器上的电池与功耗数据是虚拟的，只看 CPU / 线程 / 唤醒部分**")
 restarts = [l for l in events.splitlines() if "APP_PIDS" in l]
