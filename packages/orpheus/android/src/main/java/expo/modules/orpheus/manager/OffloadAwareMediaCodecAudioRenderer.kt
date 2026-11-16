@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter
+import androidx.media3.exoplayer.mediacodec.MediaCodecInfo
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 
 /**
@@ -53,6 +54,23 @@ class OffloadAwareMediaCodecAudioRenderer(
         return RendererCapabilities.create(C.FORMAT_UNSUPPORTED_SUBTYPE)
     }
 
+    /**
+     * B 站的 FLAC 是分片 MP4，容器里没有最大帧大小，Media3 不设置 KEY_MAX_INPUT_SIZE，
+     * 系统解码器就用默认的 32KB。Hi-Res（96kHz 等）FLAC 的单帧可能超过 32KB，
+     * 读到这样的帧时会抛 InsufficientCapacityException，播放器报 ERROR_CODE_FAILED_RUNTIME_CHECK 停止。
+     */
+    override fun getCodecMaxInputSize(
+        codecInfo: MediaCodecInfo,
+        format: Format,
+        streamFormats: Array<out Format>,
+    ): Int {
+        val maxInputSize = super.getCodecMaxInputSize(codecInfo, format, streamFormats)
+        if (format.sampleMimeType == MimeTypes.AUDIO_FLAC && maxInputSize < FLAC_MIN_INPUT_SIZE) {
+            return FLAC_MIN_INPUT_SIZE
+        }
+        return maxInputSize
+    }
+
     /** 与 DefaultTrackSelector 判断能否 offload 的条件保持一致 */
     private fun willOffload(
         capabilities: Int,
@@ -75,6 +93,9 @@ class OffloadAwareMediaCodecAudioRenderer(
     }
 
     private companion object {
+        // 足够放下常见的高采样率、24 位立体声 FLAC 帧（实测 96kHz 的单帧约 33KB）
+        const val FLAC_MIN_INPUT_SIZE = 256 * 1024
+
         // 只接管系统本来就用软解的常见格式。杜比（AC-3、E-AC-3）等留给 MediaCodec，
         // 设备可能有硬件解码器或支持直通
         val FFMPEG_MIME_TYPES = setOf(
