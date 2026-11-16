@@ -22,32 +22,6 @@ const sentryConfig = getSentryExpoConfig(__dirname, {
 sentryConfig.resolver.unstable_enablePackageExports = true
 sentryConfig.resolver.sourceExts.push('sql')
 
-// Expo CLI 把 RN 的 HMRClient 重定向到 expo/src/async-require/hmr.ts，启动时 setup 的是它；
-// 开了 unstable_enablePackageExports 后，懒加载 bundle 用的 loadBundle 却解析到 expo/build/... 下的另一份 hmr.js，
-// 那一份从未 setup，开发环境打开懒加载的页面会报 "Expected HMRClient.setup() call at startup."。
-// 这里把它指回同一份模块。
-const upstreamResolveRequest = sentryConfig.resolver.resolveRequest
-sentryConfig.resolver.resolveRequest = (context, moduleName, platform) => {
-	const resolution = (upstreamResolveRequest ?? context.resolveRequest)(
-		context,
-		moduleName,
-		platform,
-	)
-	if (
-		resolution.type === 'sourceFile' &&
-		resolution.filePath.endsWith('/expo/build/async-require/hmr.js')
-	) {
-		return {
-			type: 'sourceFile',
-			filePath: resolution.filePath.replace(
-				/build\/async-require\/hmr\.js$/,
-				'src/async-require/hmr.ts',
-			),
-		}
-	}
-	return resolution
-}
-
 const withReanimated = wrapWithReanimatedMetroConfig(sentryConfig)
 
 const withWorklets = getBundleModeMetroConfig(withReanimated)
