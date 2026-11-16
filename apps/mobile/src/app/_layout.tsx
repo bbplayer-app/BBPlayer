@@ -43,7 +43,7 @@ import drizzleDb from '@/lib/db/db'
 import { runAfterStartup } from '@/lib/performance'
 import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
 import { analyticsService } from '@/lib/services/analyticsService'
-import lyricService from '@/lib/services/lyricService'
+import { getLyricService } from '@/lib/services/getLyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
 import {
 	reportUpdateActivity,
@@ -116,7 +116,7 @@ function runDeferredAppInit() {
 				logger.warning('清理旧日志失败', { error: e.message })
 			})
 
-		void lyricService.migrateFromOldFormat()
+		void getLyricService().migrateFromOldFormat()
 
 		void checkOverlayPermissionOnStart()
 	} catch (error) {
