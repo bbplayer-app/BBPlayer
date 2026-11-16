@@ -23,6 +23,9 @@ export function useFeatureTracking() {
 
 		// 用户属性不影响首屏，启动时等首屏可交互后再同步
 		runAfterStartup(() => {
+			// 回调排队期间用户可能关掉了数据收集
+			if (!useAppStore.getState().settings.enableDataCollection) return
+
 			void analyticsService.setUserProperty(
 				'setting_lyric_source',
 				settings.lyricSource,
