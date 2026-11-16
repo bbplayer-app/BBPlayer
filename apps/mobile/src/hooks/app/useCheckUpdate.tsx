@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { runAfterStartup } from '@/lib/performance'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { storage } from '@/utils/mmkv'
 
@@ -33,7 +34,7 @@ export default function useCheckUpdate() {
 			}
 		}
 
-		void run()
+		runAfterStartup(() => void run())
 
 		return () => {
 			isMounted = false
