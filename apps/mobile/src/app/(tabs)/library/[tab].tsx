@@ -88,6 +88,8 @@ function LibraryContent() {
 					style={[styles.tabView, { backgroundColor: 'transparent' }]}
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
+					// 只渲染当前子页，其余子页首次切换过去时才渲染，避免首屏同时挂载 4 个列表
+					lazy
 					renderTabBar={(props) => (
 						<TabBar
 							scrollEnabled={tabWidth * routes.length > width}

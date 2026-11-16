@@ -1,7 +1,7 @@
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, Text, useColorScheme } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
@@ -46,8 +46,8 @@ interface CoverWithPlaceHolderProps {
 
 /**
  * 一个带渐变占位符的封面组件
- * 它会始终显示渐变占位符，如果 cover 存在，
- * 则会将图片淡入显示在占位符之上。
+ * 没有 cover 或图片加载失败时显示渐变和首字母；有 cover 时只渲染图片，加载完成前用渐变的起始色垫底。
+ * 列表里每一行都有一个封面，不常驻占位符能少挂载两个原生视图，冷启动首屏更轻。
  */
 const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	id,
@@ -83,6 +83,17 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		return cover
 	}, [cover])
 
+	// 加载失败后显示占位符；cover 一变（包括列表复用后换回之前失败过的 cover）就清掉失败状态重新加载
+	const [loadFailed, setLoadFailed] = useState(false)
+	const [prevCover, setPrevCover] = useState(cover)
+
+	if (cover !== prevCover) {
+		setPrevCover(cover)
+		setLoadFailed(false)
+	}
+
+	const showPlaceholder = !coverSource || loadFailed
+
 	const policy =
 		typeof cover === 'string' && cover.startsWith('file://')
 			? 'none'
@@ -92,29 +103,37 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		<SquircleView
 			style={[
 				styles.container,
-				{ width: size, height: size, borderRadius: computedBorderRadius },
+				{
+					width: size,
+					height: size,
+					borderRadius: computedBorderRadius,
+					backgroundColor: color1,
+				},
 				style,
 			]}
 			cornerSmoothing={0.6}
 		>
-			<LinearGradient
-				colors={[color1, color2]}
-				style={styles.gradient}
-				start={{ x: 0, y: 0 }}
-				end={{ x: 1, y: 1 }}
-			>
-				<Text style={[styles.placeholderText, { fontSize: size * 0.45 }]}>
-					{firstChar}
-				</Text>
-			</LinearGradient>
-
-			<Image
-				source={coverSource}
-				recyclingKey={String(id)}
-				style={[styles.image, { width: size, height: size }]}
-				transition={0}
-				cachePolicy={policy}
-			/>
+			{showPlaceholder ? (
+				<LinearGradient
+					colors={[color1, color2]}
+					style={styles.gradient}
+					start={{ x: 0, y: 0 }}
+					end={{ x: 1, y: 1 }}
+				>
+					<Text style={[styles.placeholderText, { fontSize: size * 0.45 }]}>
+						{firstChar}
+					</Text>
+				</LinearGradient>
+			) : (
+				<Image
+					source={coverSource}
+					recyclingKey={String(id)}
+					style={[styles.image, { width: size, height: size }]}
+					transition={0}
+					cachePolicy={policy}
+					onError={() => setLoadFailed(true)}
+				/>
+			)}
 		</SquircleView>
 	)
 })

@@ -29,6 +29,7 @@ minimumReleaseAgeExclude:
   - wrangler@4.160.0
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
+  '@nandorojo/galeria@3.1.0': patches/@nandorojo__galeria@3.1.0.patch
   '@react-native-masked-view/masked-view': patches/@react-native-masked-view__masked-view.patch
   expo-updates@58.0.21: patches/expo-updates@58.0.21.patch
   metro-runtime@0.87.1: patches/metro-runtime@0.87.1.patch

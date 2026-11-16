@@ -15,6 +15,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
+import { markPerfSplashHidden } from '@/lib/performance'
 import { storage } from '@/utils/mmkv'
 
 const bootSplashManifest =
@@ -157,6 +158,11 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		ready,
 		videoEnded,
 	])
+
+	// 淡出完成即用户真正看到内容的时刻，作为启动的感知终点打点
+	useEffect(() => {
+		if (!visible) markPerfSplashHidden()
+	}, [visible])
 
 	const logoStyle = useAnimatedStyle(() => ({
 		transform: [
