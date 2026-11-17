@@ -19,6 +19,7 @@ import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.bbplayernative.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
+import expo.modules.orpheus.telemetry.PlaybackTracer
 import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -143,7 +144,8 @@ object DownloadUtil {
                         audioQuality = quality,
                         enableDolby = uri.getQueryParameter("dolby") == "1",
                         enableHiRes = uri.getQueryParameter("hires") == "1",
-                        cookie = OrpheusConfig.bilibiliCookie
+                        cookie = OrpheusConfig.bilibiliCookie,
+                        parent = PlaybackTracer.spanForResolve(uri.toString()),
                     )
                     val urls = resolved.urls
                     OrpheusTelemetry.recordStream(

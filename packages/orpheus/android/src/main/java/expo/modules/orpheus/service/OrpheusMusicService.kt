@@ -53,6 +53,7 @@ import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
+import expo.modules.orpheus.telemetry.PlaybackTracer
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
@@ -463,6 +464,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     override fun onDestroy() {
         NativeLog.info(LogTags.SERVICE, "player.service.destroyed")
+        PlaybackTracer.onServiceDestroyed()
         serviceHandler.removeCallbacks(lyricsUpdateRunnable)
         serviceHandler.removeCallbacks(resumeSaveRunnable)
         saveCurrentResumeRecord()
@@ -740,6 +742,7 @@ class OrpheusMusicService : MediaLibraryService() {
                         "player.suppression_reason" to player?.playbackSuppressionReason,
                     ),
                 )
+                PlaybackTracer.onIsPlayingChanged(isPlaying)
                 lyricsManager.setPlaybackState(isPlaying)
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
@@ -787,6 +790,16 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
                 currentMediaId = mediaId
                 OrpheusTelemetry.onMediaItemChanged(mediaId, mediaItem?.localConfiguration?.uri?.toString())
+                // 单曲循环回到开头不算一次起播
+                if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                    PlaybackTracer.onMediaItemTransition(
+                        mediaId,
+                        mediaItem?.localConfiguration?.uri?.toString(),
+                        reasonStr,
+                        player?.playWhenReady == true,
+                        player?.isPlaying == true,
+                    )
+                }
 
                 // 自然循环到同一音频：清除该音频断点，从头播放
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
@@ -806,6 +819,20 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 val volumeData = LoudnessStorage.getLoudnessData(uri)
                 applyVolumeForCurrentItem(volumeData)
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                val item = player?.currentMediaItem
+                PlaybackTracer.onPlayWhenReadyChanged(
+                    playWhenReady,
+                    player?.isPlaying == true,
+                    item?.mediaId,
+                    item?.localConfiguration?.uri?.toString(),
+                )
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                PlaybackTracer.onPlayerError(error.errorCodeName, error)
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {

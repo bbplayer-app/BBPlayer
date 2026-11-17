@@ -6,6 +6,13 @@ import android.net.Uri
 import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.util.GeneralStorage
 
+import io.sentry.ISpan
+import io.sentry.Sentry
+import io.sentry.SpanStatus
+import io.sentry.TransactionContext
+import io.sentry.TransactionOptions
+import retrofit2.Call
+import retrofit2.Response
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -32,13 +39,74 @@ object BilibiliRepository {
     private var cachedSubKey: String? = null
     private var cachedDateStr: String? = null
 
+    /**
+     * 执行请求并记录一个 http.client span。span 名与属性和 JS 侧 ApiClient 保持一致
+     * （error.type 取 RequestFailed / ResponseFailed），在 Sentry 里能和 JS 的请求一起按接口聚合、告警；
+     * 用 bbplayer.source 区分来源。失败时另打一条结构化日志，方便看错误信息。
+     * 原生 tracing 依赖 Sentry SDK 的内部行为，升级 Sentry 时按 docs/Native-Tracing.md 检查。
+     *
+     * @param codeOf 取出响应体里的业务码；不传表示业务码非 0 也不算失败（如未登录时 nav 返回 -101）
+     * @param parent 所属的起播 span；为空时请求自己成为一个 transaction
+     */
+    private fun <T> execute(call: Call<T>, parent: ISpan?, codeOf: ((T) -> Int)? = null): Response<T> {
+        val request = call.request()
+        val url = request.url
+        val fields = mutableMapOf<String, Any?>(
+            "http.request.method" to request.method,
+            "server.address" to url.host,
+            "url.path" to url.encodedPath,
+            "bbplayer.source" to "native",
+        )
+        val name = "${request.method} ${url.scheme}://${url.host}${url.encodedPath}"
+        // 不绑定到 scope：播放器线程上并发的请求各自独立成 trace
+        val span = parent?.startChild("http.client", name) ?: Sentry.startTransaction(
+            TransactionContext(name, "http.client"),
+            TransactionOptions().apply { isBindToScope = false },
+        )
+
+        fun finish(errorType: String?, error: Throwable? = null) {
+            fields.forEach { (key, value) -> if (value != null) span.setData(key, value) }
+            if (errorType == null) {
+                span.finish(SpanStatus.OK)
+                return
+            }
+            fields["error.type"] = errorType
+            fields["error.message"] = error?.message
+            span.setData("error.type", errorType)
+            span.throwable = error
+            span.finish(SpanStatus.INTERNAL_ERROR)
+            NativeLog.warning(LogTags.STREAM, "bilibili.api.request_failed", fields)
+        }
+
+        val response = try {
+            call.execute()
+        } catch (e: Exception) {
+            // IOException 是网络层失败；其他异常来自 JSON 反序列化
+            finish(if (e is IOException) "RequestFailed" else "ResponseFailed", e)
+            throw e
+        }
+
+        fields["http.response.status_code"] = response.code()
+        val code = response.body()?.let { body -> codeOf?.invoke(body) }
+        fields["bilibili.code"] = code
+
+        finish(
+            when {
+                !response.isSuccessful -> "RequestFailed"
+                codeOf != null && code != 0 -> "ResponseFailed"
+                else -> null
+            },
+        )
+        return response
+    }
+
     private fun getTodayDateStr(): String {
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         return sdf.format(Date())
     }
 
     @Synchronized
-    private fun getWbiKeys(): Pair<String, String> {
+    private fun getWbiKeys(parent: ISpan?): Pair<String, String> {
         val today = getTodayDateStr()
 
         if (cachedImgKey != null && cachedSubKey != null && today == cachedDateStr) {
@@ -46,7 +114,7 @@ object BilibiliRepository {
         }
         NativeLog.info(LogTags.STREAM, "bilibili.wbi.refresh_started")
 
-        val response = api.getNavInfo().execute()
+        val response = execute(api.getNavInfo(), parent)
         val wbiData = response.body()?.data?.wbiImg
 
         if (!response.isSuccessful || wbiData == null) {
@@ -73,12 +141,13 @@ object BilibiliRepository {
         audioQuality: Int,
         enableDolby: Boolean,
         enableHiRes: Boolean,
-        cookie: String?
+        cookie: String?,
+        parent: ISpan? = null,
     ): ResolvedAudio {
         var cidInternal = cid
-        val (imgKey, subKey) = getWbiKeys()
+        val (imgKey, subKey) = getWbiKeys(parent)
         if (cidInternal === null) {
-            cidInternal = getFirstCid(bvid, cookie)
+            cidInternal = getFirstCid(bvid, cookie, parent)
         }
 
         NativeLog.info(
@@ -105,8 +174,7 @@ object BilibiliRepository {
 
         val signedParams = WbiUtil.sign(rawParams, imgKey, subKey)
 
-        val call = api.getPlayUrl(cookie, signedParams)
-        val response = call.execute()
+        val response = execute(api.getPlayUrl(cookie, signedParams), parent) { it.code }
 
         if (!response.isSuccessful) {
             throw IOException("Bilibili API Http Error: ${response.code()}")
@@ -218,9 +286,8 @@ object BilibiliRepository {
                 Regex("""/v\d+/resource(?:/.*)?""").matches(uri.path.orEmpty()))
     }
 
-    fun getFirstCid(bvid: String, cookie: String?): Long {
-        val call = api.getPageList(cookie = cookie, bvid = bvid)
-        val response = call.execute()
+    fun getFirstCid(bvid: String, cookie: String?, parent: ISpan? = null): Long {
+        val response = execute(api.getPageList(cookie = cookie, bvid = bvid), parent) { it.code }
 
         if (!response.isSuccessful) {
             throw IOException("Bilibili API Http Error: ${response.code()}")
