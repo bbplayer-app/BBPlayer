@@ -64,6 +64,14 @@ const FLOW_PERIOD_MASK_MS = 45_000
 const FLOW_WRAP_MS = 180_000
 
 /**
+ * 流动的更新间隔，约每秒 20 次。最快一层 36 秒转一圈，每次只转约 0.5°，看不出卡顿；
+ * 画布只在共享值变化时重画，降频后 Skia 的绘制开销约为每帧更新时的四分之一。
+ * 取 45 而不是 50：60Hz 下三帧约 49.8ms，取 50 会变成每四帧才更新一次。
+ * 配色过渡由各自的共享值驱动，不受影响。
+ */
+const FLOW_UPDATE_INTERVAL_MS = 45
+
+/**
  * 用系统时钟取相位，而不是每个实例从 0 开始。
  * 这样多个背景实例（播放页、歌词页、迷你条）的流动方向始终一致。
  */
@@ -405,6 +413,8 @@ export function FluidBackground({
 	const initialReducedMotion = useReducedMotion()
 	const [reducedMotion, setReducedMotion] = useState(initialReducedMotion)
 	const elapsed = useSharedValue(globalFlowElapsed())
+	// 距上次推进流动累计的时间，攒够一个更新间隔才推进
+	const pendingFlowMs = useSharedValue(0)
 	// 流动速度倍率：暂停时缓动到 0，恢复时缓动到 1。
 	const flowSpeed = useSharedValue(paused ? 0 : 1)
 	const [isFlowEasing, setIsFlowEasing] = useState(false)
@@ -471,11 +481,17 @@ export function FluidBackground({
 	}, [])
 
 	const frame = useFrameCallback(({ timeSincePreviousFrame }) => {
+		const pending = pendingFlowMs.value + (timeSincePreviousFrame ?? 0)
+
+		if (pending < FLOW_UPDATE_INTERVAL_MS) {
+			pendingFlowMs.set(pending)
+
+			return
+		}
+
+		pendingFlowMs.set(0)
 		// 180 秒是三个周期的公倍数，回绕时三层均无视觉跳变。
-		elapsed.set(
-			(elapsed.value + (timeSincePreviousFrame ?? 0) * flowSpeed.value) %
-				FLOW_WRAP_MS,
-		)
+		elapsed.set((elapsed.value + pending * flowSpeed.value) % FLOW_WRAP_MS)
 	}, false)
 
 	useEffect(() => {
