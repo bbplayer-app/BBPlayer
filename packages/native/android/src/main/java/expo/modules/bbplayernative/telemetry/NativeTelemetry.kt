@@ -10,6 +10,7 @@ import io.sentry.SentryLevel
 import io.sentry.SentryLogEventAttributeValue
 import io.sentry.SentryOptions
 import io.sentry.SentryUUID
+import io.sentry.android.core.SentryAndroidOptions
 import java.io.File
 
 /**
@@ -62,6 +63,22 @@ object NativeTelemetry {
             SentryUUID.generateSentryId().also(file::writeText)
         }
     }.getOrNull()
+
+    /**
+     * 开启原生侧 tracing，让原生发起的请求（如播放器解析音频地址）也能产生 span。
+     *
+     * RN SDK 初始化时把原生 tracesSampleRate 置空，避免和 JS 重复采集导航 span。这里在初始化之后再改写：
+     * Activity 生命周期、帧率等自动 tracing 在注册时就判断过 tracing 是否开启，之后再打开不会让它们生效，
+     * 只影响手动创建的 transaction。数据采集开关仍由 beforeSendTransaction 拦截。
+     * 这依赖 SDK 内部行为，升级 Sentry 时按 packages/orpheus/docs/Native-Tracing.md 检查。
+     */
+    fun setTracesSampleRate(rate: Double) {
+        if (!Sentry.isEnabled()) return
+        val options = ScopesAdapter.getInstance().options
+        // 手势 tracing 是每次手势时才判断的，显式关掉，避免和 JS 的点击 transaction 重复
+        (options as? SentryAndroidOptions)?.isEnableUserInteractionTracing = false
+        options.tracesSampleRate = rate
+    }
 
     fun updateEnabled(enabled: Boolean) {
         isEnabled = enabled

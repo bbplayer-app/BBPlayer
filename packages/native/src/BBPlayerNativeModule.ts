@@ -46,6 +46,7 @@ declare class BBPlayerNativeModule extends NativeModule {
 	): string | null
 	getMillisSinceProcessStart(): number
 	installNativeTelemetry(enabled: boolean): string | null
+	setNativeTracesSampleRate(rate: number): void
 	getSentryInstallationId(): string | null
 	setNativeTelemetryEnabled(enabled: boolean): void
 	debugTriggerNativeError(): void
@@ -154,6 +155,20 @@ export const installNativeTelemetry = (enabled: boolean): string | null => {
 	} catch {
 		return null
 	}
+}
+
+/**
+ * 开启原生侧 tracing，采样率应与 JS 的 `tracesSampleRate` 一致。
+ *
+ * 单独成一个函数而不是加进 `installNativeTelemetry` 的参数：热更新的 JS 可能跑在没有这个函数的旧原生包上，
+ * 这时只是原生请求没有 span，不影响脱敏与限流回调的挂接。
+ */
+export const setNativeTracesSampleRate = (rate: number) => {
+	if (Platform.OS !== 'android') return
+
+	try {
+		getNativeModule().setNativeTracesSampleRate(rate)
+	} catch {}
 }
 
 /** 同步数据采集开关：关闭后原生侧立即停止上报事件与日志。 */

@@ -125,6 +125,10 @@ class BBPlayerNativeModule : Module() {
             NativeTelemetry.install(enabled)
         }
 
+        Function("setNativeTracesSampleRate") { rate: Double ->
+            NativeTelemetry.setTracesSampleRate(rate)
+        }
+
         Function("setNativeTelemetryEnabled") { enabled: Boolean ->
             NativeTelemetry.updateEnabled(enabled)
         }
