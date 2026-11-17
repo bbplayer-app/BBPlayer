@@ -44,8 +44,10 @@ NativeLog.info(
 ## 输出与限流
 
 JS 保留文件日志和开发控制台输出；生产环境输出结构化 Sentry Logs 和 breadcrumb。
-Android 统一由 NativeLog 输出 Logcat，并直接调用 Sentry logger；不再自动收集全部
-Logcat，因此第三方库的普通 Logcat 不会进入 Sentry Logs。
+Android 由 NativeLog 输出结构化 Sentry Logs，并为 warning/error 添加 breadcrumb。
+Sentry Gradle 插件另行采集应用和依赖库中 INFO 及以上的 `Log.i/w/e/wtf` 调用，
+同时记录为 Sentry Logs 和 Logcat breadcrumb，沿用原生侧的数据采集开关、正文脱敏和 Logs 限流。
+NativeLog 本地使用 `Log.println`，不在自动插桩范围内，因此不会重复上报。
 
 远端 debug 日志不发送。JS 本地 debug 仍由开发环境或用户的调试日志开关控制；
 Android debug 保留在本地 Logcat。

@@ -135,6 +135,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			'./expo-plugins/withKotlinSerialization',
 			// './expo-plugins/withAndroidPlugin',
 			'./expo-plugins/withAndroidGradleProperties',
+			'./expo-plugins/withSentryLogcat',
 			[
 				'./expo-plugins/withAndroidTv',
 				{ banner: './assets/images/tv-banner.png' },
