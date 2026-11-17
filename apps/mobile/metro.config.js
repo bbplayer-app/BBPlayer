@@ -38,7 +38,6 @@ if (process.env.BBPLAYER_IOS_LITE === '1') {
 	const stubDir = path.join(__dirname, 'ios-lite/stubs')
 	const stubs = {
 		'@sentry/react-native': 'sentry.tsx',
-		'expo-app-metrics': 'app-metrics.ts',
 		'expo-updates': 'updates.ts',
 		'react-native-release-profiler': 'release-profiler.ts',
 	}

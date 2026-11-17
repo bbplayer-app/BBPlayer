@@ -8,7 +8,7 @@
 
 ## 和完整版的区别
 
-构建时设置了 `BBPLAYER_IOS_LITE=1`。Sentry、`expo-updates`、`expo-app-metrics`、`react-native-release-profiler` 和 dev client 都被替换成空实现（见 `../stubs`）或排除在外，所以这个版本没有崩溃上报和热更新。
+构建时设置了 `BBPLAYER_IOS_LITE=1`。Sentry、`expo-updates`、`react-native-release-profiler` 和 dev client 都被替换成空实现（见 `../stubs`）或排除在外，所以这个版本没有崩溃上报和热更新。
 
 ## 准备
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 EXCLUDED_EXPO_MODULES = [
     'expo-dev-client', 'expo-dev-launcher', 'expo-dev-menu', 'expo-dev-menu-interface',
-    'expo-updates', 'expo-app-metrics',
+    'expo-updates',
 ]
 
 
