@@ -87,6 +87,12 @@ jobs:
           # this repository's pnpm allowBuilds configuration.
           packager: npm
 
+      - name: ♻️ Setup Gradle cache
+        if: env.BUILD_TYPE != 'blank-test'
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: false
+
       - name: ⚙️ Prepare Variables
         id: prepare-vars
         run: |

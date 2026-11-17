@@ -1,0 +1,111 @@
+# Temporary: remove after the runner/cache comparison is complete.
+name: Android Build Benchmark
+run-name: Android benchmark (${{ inputs.cache_mode }}, ${{ inputs.arch }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      cache_mode:
+        description: 'cold writes a fresh cache; warm restores that cache'
+        type: choice
+        options: [cold, warm]
+        default: cold
+      arch:
+        description: 'Build one ABI on all three runners'
+        type: choice
+        options: [armeabi-v7a, arm64-v8a]
+        default: armeabi-v7a
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: ${{ matrix.cpu }} vCPU (${{ inputs.cache_mode }})
+    runs-on: blacksmith-${{ matrix.cpu }}vcpu-ubuntu-2404
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        cpu: [2, 4, 8]
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+      ABI_FILTERS: ${{ inputs.arch }}
+      EAS_LOCAL_BUILD_SKIP_CLEANUP: 1
+      # Identical heap and worker limits isolate the effect of runner size.
+      GRADLE_WORKERS: 4
+      GRADLE_XMX: 4g
+      KOTLIN_XMX: 2g
+      CI: 1
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26.x
+
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
+          install: true
+
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ env.EXPO_TOKEN }}
+          packager: npm
+
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ inputs.cache_mode == 'warm' }}
+          cache-write-only: ${{ inputs.cache_mode == 'cold' }}
+          # Do not warm one runner size from another runner's build.
+          gradle-home-cache-strict-match: true
+
+      - name: Prepare measurements
+        run: |
+          echo "VERSION_CODE=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+          echo "EAS_LOCAL_BUILD_WORKINGDIR=$RUNNER_TEMP/eas-local-build" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/benchmark" "$HOME/.gradle/init.d"
+          # Keep the full HTML report; console summaries can omit long tasks.
+          echo 'gradle.startParameter.profile = true' > "$HOME/.gradle/init.d/benchmark-profile.gradle"
+          {
+            git rev-parse HEAD
+            node --version
+            pnpm --version
+            eas --version
+            nproc
+            free -m
+            lscpu
+          } > "$RUNNER_TEMP/benchmark/environment.txt"
+
+      - name: Build APK
+        run: |
+          vmstat -w 5 > "$RUNNER_TEMP/benchmark/vmstat.txt" &
+          MONITOR_PID=$!
+          trap 'kill "$MONITOR_PID" 2>/dev/null || true' EXIT
+          cd apps/mobile
+          /usr/bin/time -v -o "$RUNNER_TEMP/benchmark/build-time.txt" \
+            eas build --platform android --profile prod-ci --local --non-interactive \
+            --output="$RUNNER_TEMP/benchmark/app.apk" \
+            > "$RUNNER_TEMP/benchmark/build.log" 2>&1 &
+          BUILD_PID=$!
+          tail --pid="$BUILD_PID" -f "$RUNNER_TEMP/benchmark/build.log" &
+          wait "$BUILD_PID"
+
+      - name: Upload measurements
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmark-${{ inputs.arch }}-${{ matrix.cpu }}vcpu-${{ inputs.cache_mode }}
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/benchmark/
+            ${{ runner.temp }}/eas-local-build/build/apps/mobile/android/build/reports/profile/

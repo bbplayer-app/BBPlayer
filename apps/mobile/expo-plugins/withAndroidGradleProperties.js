@@ -9,6 +9,7 @@ const WORKERS_MAX =
 const GRADLE_DAEMON = process.env.ORG_GRADLE_DAEMON || 'false'
 
 const newProperties = {
+	'org.gradle.caching': 'true',
 	'org.gradle.jvmargs': `-Xmx${GRADLE_XMX} -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8`,
 	'kotlin.daemon.jvm.args': `-Xmx${KOTLIN_XMX}`,
 	'org.gradle.workers.max': WORKERS_MAX,
