@@ -44,6 +44,7 @@ func registerAdminRoutes(s *Server, r chi.Router) {
 		registerAdminSourceRoutes(s, api)
 		registerAdminInsightsSummaryRoute(s, api)
 		registerAdminInsightRoutes(s, api)
+		registerAdminAudienceRoutes(s, api)
 		registerAdminMetricRoutes(s, api)
 		registerAdminDashboardRoutes(s, api)
 		registerAdminPatchRoutes(s, api)

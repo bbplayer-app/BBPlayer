@@ -207,6 +207,40 @@ export const service = () =>
 		}[]
 	}>('/admin/metrics/service')
 
+export type AudienceTotals = {
+	active_users: number
+	new_users: number
+	active_user_days: number
+}
+
+export type Audience = {
+	start: string
+	end: string
+	previous_start: string
+	data_start: string
+	current: AudienceTotals
+	previous: AudienceTotals
+	today: AudienceTotals
+	series: {
+		day: string
+		dau: number
+		wau: number
+		mau: number
+		new_users: number
+	}[]
+	versions: { client_version: string; users: number; ota_users: number }[]
+	channels: { channel: string; users: number }[]
+	retention: { cohort: string; weeks: number[] }[]
+}
+
+export const audience = (days: number, channelName: string) => {
+	const params = new URLSearchParams({ days: String(days) })
+
+	if (channelName) params.set('channel', channelName)
+
+	return api<Audience>(`/admin/audience?${params}`)
+}
+
 export type PatchEndpoint = {
 	id: number
 	platform: 'android' | 'ios'

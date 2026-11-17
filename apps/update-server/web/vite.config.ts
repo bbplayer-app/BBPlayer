@@ -15,6 +15,7 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				overview: path.resolve(import.meta.dirname, 'index.html'),
+				audience: path.resolve(import.meta.dirname, 'audience/index.html'),
 				channels: path.resolve(import.meta.dirname, 'channels/index.html'),
 				channelDetail: path.resolve(
 					import.meta.dirname,

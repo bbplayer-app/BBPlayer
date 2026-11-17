@@ -1,4 +1,4 @@
-import { Blocks, Boxes, FileDiff, Gauge, RadioTower } from 'lucide-react'
+import { Blocks, Boxes, FileDiff, Gauge, RadioTower, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Separator } from '@/components/ui/separator'
@@ -19,6 +19,7 @@ import {
 
 export type Section =
 	| 'overview'
+	| 'audience'
 	| 'channels'
 	| 'updates'
 	| 'runtimes'
@@ -26,6 +27,12 @@ export type Section =
 
 const primary = [
 	{ id: 'overview' as const, label: 'Overview', href: '/', icon: Gauge },
+	{
+		id: 'audience' as const,
+		label: 'Audience',
+		href: '/audience/',
+		icon: Users,
+	},
 ]
 
 const ota = [
