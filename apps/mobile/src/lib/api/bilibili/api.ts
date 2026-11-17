@@ -1860,8 +1860,9 @@ export class BilibiliApi {
 	}: {
 		itemId: number | string
 		signal?: AbortSignal
-	}): ResultAsync<BilibiliGarbBenefitResponse, BilibiliApiError> {
-		return this.client.get<BilibiliGarbBenefitResponse>({
+	}): ResultAsync<BilibiliGarbBenefitResponse | null, BilibiliApiError> {
+		// 组件已下架或不对当前用户开放时，接口返回成功但 data 为 null
+		return this.client.get<BilibiliGarbBenefitResponse | null>({
 			endpoint: '/x/garb/v2/user/suit/benefit',
 			params: {
 				item_id: String(itemId),
