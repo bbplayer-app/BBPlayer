@@ -173,6 +173,9 @@ export function initializeSentry() {
 		enableNdkScopeSync: true,
 		enableTombstone: true,
 		enableHistoricalTombstoneReporting: true,
+		// ANR 发生期间对主线程采样，能看到卡住之前一直在做什么，而不只是被判定 ANR 那一刻的调用栈。
+		// ANR 很少（每月十几次），全部采样也用不了多少 profiling 额度
+		anrProfilingSampleRate: 1,
 		// 原生事件由原生 SDK 自动带上同一个 ID
 		initialScope: diagnosticId ? { user: { id: diagnosticId } } : undefined,
 		onReady({ didCallNativeInit }) {

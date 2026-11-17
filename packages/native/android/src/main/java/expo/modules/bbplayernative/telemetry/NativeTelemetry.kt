@@ -1,6 +1,7 @@
 package expo.modules.bbplayernative.telemetry
 
 import android.content.Context
+import android.os.Debug
 import android.os.SystemClock
 import io.sentry.Breadcrumb
 import io.sentry.ScopesAdapter
@@ -54,6 +55,8 @@ object NativeTelemetry {
         }
         // 原生日志在回调挂好之后才开启，初始化到现在这段时间的日志不会未经处理就发出去
         options.logs.isEnabled = enabled
+        // 初始化到这里之间用户可能已经关闭了采集，那时 updateEnabled 还拦不住会话
+        suspendSessions(options, !enabled)
         return options.distinctId
     }
 
@@ -124,6 +127,10 @@ object NativeTelemetry {
             }
             event.exceptions?.forEach { it.value = TelemetryScrubber.scrubNullable(it.value) }
             event.breadcrumbs?.forEach(::scrubBreadcrumb)
+            if (event.exceptions?.any { it.type == "OutOfMemoryError" } == true) {
+                // 堆已经耗尽，取快照本身也可能分配失败；失败就不带，不能连事件一起丢掉
+                runCatching { memorySnapshot() }.onSuccess { event.contexts.put(MEMORY_CONTEXT, it) }
+            }
             // orpheus 等自定义 context 是普通 Map（如 lastAudioError 是原始异常文本），Device、OS 这类内置 context 不是
             val contexts = event.contexts
             for ((key, value) in contexts.entrySet().toList()) {
@@ -197,6 +204,19 @@ object NativeTelemetry {
         }
     }
 
+    /**
+     * OOM 当场的内存占用，用来区分是 Java 堆被吃满（堆上限内的泄漏或一次性大分配）还是 native 内存。
+     * 只在本进程抛出的 OOM 上附带：ANR、tombstone 是下次启动才上报的，那时的数字没有意义。
+     */
+    private fun memorySnapshot(): Map<String, Any> {
+        val runtime = Runtime.getRuntime()
+        return mapOf(
+            "java_heap_used_mb" to (runtime.totalMemory() - runtime.freeMemory()) / MB,
+            "java_heap_max_mb" to runtime.maxMemory() / MB,
+            "native_heap_allocated_mb" to Debug.getNativeHeapAllocatedSize() / MB,
+        )
+    }
+
     private fun scrubMap(map: Map<*, *>): Map<String, Any?> = map.entries.associate { (key, value) ->
         key.toString() to when (value) {
             is String -> TelemetryScrubber.scrub(value)
@@ -209,6 +229,8 @@ object NativeTelemetry {
         this == null || this == SentryLevel.DEBUG || this == SentryLevel.INFO
 
     private const val NATIVE_LOG_CATEGORY = "native.log"
+    private const val MEMORY_CONTEXT = "memory"
+    private const val MB = 1024 * 1024
 
     // 与 io.sentry.android.core.Installation 使用的文件名一致
     private const val INSTALLATION_FILE = "INSTALLATION"

@@ -8,6 +8,7 @@ import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -148,6 +149,8 @@ object GeneralStorage {
             val jsonListString = kv?.decodeString(KEY_SAVED_QUEUE)
 
             if (jsonListString.isNullOrEmpty()) return emptyList()
+            // 启动时就 OOM 的情况下，这是 JS 侧日志还没开启前唯一能留下的线索
+            OrpheusTelemetry.update("restoredQueueChars" to jsonListString.length)
 
             val trackJsonList: List<String> = json.decodeFromString(jsonListString)
             lastSavedQueueSnapshot = trackJsonList
