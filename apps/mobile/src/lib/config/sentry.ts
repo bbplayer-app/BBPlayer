@@ -136,7 +136,7 @@ logger.info('telemetry.sentry.configured', {
 const logRateLimiter = new LogRateLimiter()
 
 // 统一采样率；子 span 自动继承 parent 的采样决定，同一条 trace 要么全采要么全不采
-const TRACES_SAMPLE_RATE = 0.5
+const TRACES_SAMPLE_RATE = 1
 
 export function initializeSentry() {
 	// 在 init 之前取得：放进 initialScope，启动阶段的 JS 事件和日志也能带上 user.id
