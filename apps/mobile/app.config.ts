@@ -137,6 +137,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			'./expo-plugins/withAndroidGradleProperties',
 			'./expo-plugins/withSentryLogcat',
 			'./expo-plugins/withSentryAnrThreadDump',
+			// JS 与原生依赖的许可证在构建时合并成一份，显示在「关于 → 第三方组件许可」
+			'react-native-legal',
+			'./expo-plugins/withLicenseOverrides',
 			[
 				'./expo-plugins/withAndroidTv',
 				{ banner: './assets/images/tv-banner.png' },

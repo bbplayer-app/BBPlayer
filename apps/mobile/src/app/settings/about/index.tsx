@@ -187,7 +187,7 @@ export default function AboutSettingsPage() {
 					<Divider />
 					<List.Item
 						title='第三方组件许可'
-						description='FFmpeg（LGPL 2.1+）等'
+						description='应用使用的开源组件及其许可证'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -197,14 +197,10 @@ export default function AboutSettingsPage() {
 						right={(props) => (
 							<List.Icon
 								{...props}
-								icon='open-in-new'
+								icon='chevron-right'
 							/>
 						)}
-						onPress={() =>
-							void openExternalLink(
-								'https://github.com/bbplayer-app/BBPlayer/blob/dev/THIRD_PARTY_NOTICES.md',
-							)
-						}
+						onPress={() => router.push('/settings/about/licenses')}
 					/>
 				</View>
 			</ScrollView>
