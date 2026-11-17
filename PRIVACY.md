@@ -1,76 +1,67 @@
-**Privacy Policy**
+# BBPlayer 隐私政策
 
-This privacy policy applies to the BBPlayer app (hereby referred to as "Application") for mobile devices that was created by Roitium (hereby referred to as "Service Provider") as an Open Source service. This service is intended for use "AS IS".
+生效日期：2026-11-17
 
-**Information Collection and Use**
+BBPlayer 是一个开源的 Bilibili 音乐播放器，所有代码都公开在 [GitHub](https://github.com/bbplayer-app/BBPlayer)，下面描述的每一项数据收集都可以在代码中找到对应的实现。
 
-The Application collects information when you download and use it. This information may include information such as
+## 保存在你设备上的数据
 
-- Your device's Internet Protocol address (e.g. IP address)
-- The pages of the Application that you visit, the time and date of your visit, the time spent on those pages
-- The time spent on the Application
-- The operating system you use on your mobile device
+歌单、播放记录、下载的音频、歌词、设置，以及你登录 Bilibili 后得到的 Cookie，都只保存在你的设备上。Bilibili Cookie 只会在请求 Bilibili 时发送给 Bilibili，不会发送给我们或任何其他服务。
 
-The Application does not gather precise information about the location of your mobile device.
+## 诊断数据
 
-The Application collects your device's location, which helps the Service Provider determine your approximate geographical location and make use of in below ways:
+为了发现和修复问题，官方构建的 BBPlayer 会通过 [Sentry](https://sentry.io/privacy/) 和 [Expo](https://expo.dev/privacy) 上报诊断数据。这些数据**默认开启**，你可以随时在「设置 → 通用设置 → 分享数据（崩溃报告 & 匿名统计）」中关闭，关闭后会立即停止上报。
 
-- Geolocation Services: The Service Provider utilizes location data to provide features such as personalized content, relevant recommendations, and location-based services.
-- Analytics and Improvements: Aggregated and anonymized location data helps the Service Provider to analyze user behavior, identify trends, and improve the overall performance and functionality of the Application.
-- Third-Party Services: Periodically, the Service Provider may transmit anonymized location data to external services. These services assist them in enhancing the Application and optimizing their offerings.
+会上报的内容：
 
-The Service Provider may use the information you provided to contact you from time to time to provide you with important information, required notices and marketing promotions.
+- **崩溃与错误报告**：错误信息与堆栈、设备型号、系统版本、应用版本。
+- **运行日志**：应用与播放器的运行日志，例如正在播放的歌曲标题与 BV 号、音质与解码器、网络错误。
+- **会话**：应用每次进入前台记一次会话，用于统计活跃用户数和崩溃率。
+- **性能数据**：请求 Bilibili 接口的路径、耗时、状态码和返回码，以及开始播放前的等待时长等。Expo 会收集应用启动和页面加载的耗时。
 
-For a better experience, while using the Application, the Service Provider may require you to provide us with certain personally identifiable information. The information that the Service Provider request will be retained by them and used as described in this privacy policy.
+这些数据只关联一个随机生成的诊断 ID（可在「设置 → 关于 BBPlayer」中查看），不关联你的 Bilibili 账号。上报之前，应用会在设备上移除 Bilibili 登录凭据（Cookie、Token 等）、Bilibili 账号 ID（mid）、设备标识，以及音频链接中的签名与 IP 信息。
 
-**Third Party Access**
+如果你从源码自行构建，构建产物默认不包含上报地址，不会上报任何诊断数据。
 
-Only aggregated, anonymized data is periodically transmitted to external services to aid the Service Provider in improving the Application and their service. The Service Provider may share your information with third parties in the ways that are described in this privacy statement.
+## 应用更新
 
-Please note that the Application utilizes third-party services that have their own Privacy Policy about handling data. Below are the links to the Privacy Policy of the third-party service providers used by the Application:
+应用会向 BBPlayer 的更新服务器检查是否有新版本或热更新。启动时，应用还会上报这次启动是否成功，内容包括一个单独生成的随机安装 ID、应用版本、更新渠道和当前更新的 ID，用于在更新出问题时及时发现并回滚。这部分数据不受「分享数据」开关控制。
 
-- [Expo](https://expo.io/privacy)
-- [Sentry](https://sentry.io/privacy/)
-- [Google / Firebase Analytics](https://policies.google.com/privacy)
+## 歌单共享
 
-The Service Provider may disclose User Provided and Automatically Collected Information:
+歌单共享是可选功能，不使用就不会产生任何数据。如果你注册了共享账号，我们会在后端保存：
 
-- as required by law, such as to comply with a subpoena, or similar legal process;
-- when they believe in good faith that disclosure is necessary to protect their rights, protect your safety or some safety of others, investigate fraud, or respond to a government request;
-- with their trusted services providers who work on their behalf, do not have an independent use of the information we disclose to them, and have agreed to adhere to the rules set forth in this privacy statement.
+- 用户名、昵称、头像地址；
+- 密码的哈希值（不保存明文密码）；
+- 你创建、编辑或订阅的共享歌单，以及歌单中歌曲的标题、作者、封面地址、时长和 BV 号。
 
-**In-App Opt-Out**
+## 与 Bilibili 的交互
 
-The Application provides an in-app toggle to stop all anonymous data collection (Crash reports and Analytics). You can find this under "Settings" -> "General" -> "Share Data (Crash Reports & Anonymous Stats)".
+搜索、播放、同步收藏夹等功能会直接请求 Bilibili，这些请求受 [Bilibili 的隐私政策](https://www.bilibili.com/blackboard/privacy-pc.html)约束。如果你在「设置 → Bilibili 账号」中开启了上报播放历史，播放记录会发送给 Bilibili。
 
-**Opt-Out Rights**
+## 第三方服务
 
-You can stop all collection of information by the Application easily by uninstalling it. You may use the standard uninstall processes as may be available as part of your mobile device or via the mobile application marketplace or network.
+| 服务                                                            | 用途                                   |
+| --------------------------------------------------------------- | -------------------------------------- |
+| [Sentry](https://sentry.io/privacy/)                            | 崩溃报告、错误报告、运行日志、性能数据 |
+| [Expo](https://expo.dev/privacy)                                | 应用性能指标                           |
+| [Cloudflare](https://www.cloudflare.com/privacypolicy/)         | 托管后端与更新服务                     |
+| [Bilibili](https://www.bilibili.com/blackboard/privacy-pc.html) | 内容来源                               |
 
-**Data Retention Policy**
+我们不会出售数据，也不会把数据用于广告。
 
-The Service Provider will retain User Provided data for as long as you use the Application and for a reasonable time thereafter. If you'd like them to delete User Provided Data that you have provided via the Application, please contact them at me@roitium.com and they will respond in a reasonable time.
+## 数据保留与删除
 
-**Children**
+诊断数据按服务商的保留期限自动删除。如果你希望删除与你的诊断 ID 相关的数据，或者删除歌单共享账号，请发邮件到 me@roitium.com，并附上你的诊断 ID 或用户名。
 
-The Service Provider does not use the Application to knowingly solicit data from or market to children under the age of 13.
+## 儿童
 
-The Application does not address anyone under the age of 13\. The Service Provider does not knowingly collect personally identifiable information from children under 13 years of age. In the case the Service Provider discover that a child under 13 has provided personal information, the Service Provider will immediately delete this from their servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact the Service Provider (me@roitium.com) so that they will be able to take the necessary actions.
+BBPlayer 不面向 13 岁以下的儿童，也不会有意收集他们的个人信息。如果你发现儿童提供了个人信息，请联系我们删除。
 
-**Security**
+## 变更
 
-The Service Provider is concerned about safeguarding the confidentiality of your information. The Service Provider provides physical, electronic, and procedural safeguards to protect information the Service Provider processes and maintains.
+本政策更新时，会在此页面修改生效日期。
 
-**Changes**
+## 联系
 
-This Privacy Policy may be updated from time to time for any reason. The Service Provider will notify you of any changes to the Privacy Policy by updating this page with the new Privacy Policy. You are advised to consult this Privacy Policy regularly for any changes, as continued use is deemed approval of all changes.
-
-This privacy policy is effective as of 2026-01-25
-
-**Your Consent**
-
-By using the Application, you are consenting to the processing of your information as set forth in this Privacy Policy now and as amended by us.
-
-**Contact Us**
-
-If you have any questions regarding privacy while using the Application, or have questions about the practices, please contact the Service Provider via email at me@roitium.com.
+如对本政策有任何疑问，请联系 me@roitium.com。
