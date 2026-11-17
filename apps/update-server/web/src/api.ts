@@ -1,50 +1,113 @@
 import { getToken, reportUnauthorized } from '@/lib/auth'
 
-export type Group = {
+export type Platform = 'android' | 'ios'
+
+export type FleetRow = {
+	channel: string
+	runtime_version: string
+	platform: Platform
+	app_version: string
+	active_users: number
+	head_mode: '' | 'ota' | 'embedded'
+	head_group_id?: string
+	head_updated_at?: string
+	head_message: string
+	head_created_at?: string
+	head_commit_sha: string
+	head_users: number
+	head_launches: number
+	head_crashes: number
+}
+
+export type HistoryEntry = {
+	id: number
+	channel: string
+	runtime_version: string
+	platform: Platform
+	group_id?: string
+	mode: 'ota' | 'embedded'
+	action: string
+	created_at: string
+	message: string
+	commit_sha: string
+	app_version: string
+}
+
+export type Overview = {
+	fleet: FleetRow[]
+	history: HistoryEntry[]
+	patches: { failed: number; pending: number }
+}
+
+export type Release = {
 	id: string
 	channel: string
 	runtime_version: string
 	app_version: string
 	message: string
 	created_at: string
-	fingerprint_hash?: string
-	republished_from_update_id?: string
-	source: unknown
+	commit_sha: string
+	republished_from_group_id?: string
+	platforms: Platform[]
+	live_platforms: Platform[]
+	launches: number
+	crashes: number
+	active_users: number
+	downloads: number
 }
 
-export type Runtime = {
-	runtime_version: string
-	version: string
-	updated_at: string
-	head_group_id?: string
-	mode: string
-	platforms: string[]
-}
+export type PatchStatus =
+	| 'pending'
+	| 'processing'
+	| 'ready'
+	| 'failed'
+	| 'not_beneficial'
 
-export type Detail = Group & {
-	fingerprint_sources: unknown
-	platforms: {
-		id: string
-		platform: 'android' | 'ios'
-		launch_key: string
-		launch_hash: string
-		launch_size: number
-		full_downloads: number
-		patch_downloads: number
-		known_launches: number
-		known_crashes: number
-		patches: {
-			id: number
-			from_update_id: string
-			from_group_id: string
-			from_message: string
-			status: 'pending' | 'processing' | 'ready' | 'failed' | 'not_beneficial'
-			size_bytes?: number
-			attempts: number
-			error?: string
-			updated_at: string
-		}[]
+export type ReleasePlatform = {
+	id: string
+	platform: Platform
+	launch_key: string
+	launch_hash: string
+	launch_size: number
+	full_downloads: number
+	patch_downloads: number
+	patch_bytes: number
+	patch_target_bytes: number
+	known_launches: number
+	known_crashes: number
+	is_live: boolean
+	patches: {
+		id: number
+		from_update_id: string
+		from_group_id: string
+		from_message: string
+		status: PatchStatus
+		size_bytes?: number
+		attempts: number
+		served_count: number
+		error?: string
+		updated_at: string
 	}[]
+}
+
+export type ReleaseDetail = {
+	id: string
+	channel: string
+	runtime_version: string
+	app_version: string
+	message: string
+	created_at: string
+	source: unknown
+	fingerprint_hash?: string
+	fingerprint_sources: unknown
+	republished_from_group_id?: string
+	previous?: {
+		id: string
+		message: string
+		created_at: string
+		commit_sha: string
+	}
+	platforms: ReleasePlatform[]
 }
 
 export type Asset = {
@@ -57,7 +120,7 @@ export type Asset = {
 
 export type Head = {
 	runtime_version: string
-	platform: 'android' | 'ios'
+	platform: Platform
 	group_id: string
 	mode: 'ota' | 'embedded'
 	updated_at: string
@@ -65,34 +128,14 @@ export type Head = {
 
 const base = import.meta.env.VITE_API_BASE_URL ?? ''
 
-async function api<T>(path: string) {
+async function request(path: string, init?: RequestInit) {
 	const token = getToken()
 
-	const r = await fetch(base + path, {
-		headers: token ? { Authorization: `Bearer ${token}` } : {},
-	})
+	const headers = new Headers(init?.headers)
 
-	if (r.status === 401) {
-		reportUnauthorized()
-		throw new Error('Unauthorized')
-	}
+	if (token) headers.set('Authorization', `Bearer ${token}`)
 
-	if (!r.ok) throw new Error(`Request failed (${r.status})`)
-
-	return r.json() as Promise<T>
-}
-
-async function apiPost(path: string, body: unknown) {
-	const token = getToken()
-
-	const r = await fetch(base + path, {
-		method: 'POST',
-		headers: {
-			...(token ? { Authorization: `Bearer ${token}` } : {}),
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(body),
-	})
+	const r = await fetch(base + path, { ...init, headers })
 
 	if (r.status === 401) {
 		reportUnauthorized()
@@ -111,6 +154,20 @@ async function apiPost(path: string, body: unknown) {
 
 		throw new Error(message)
 	}
+
+	return r
+}
+
+async function api<T>(path: string) {
+	return (await request(path)).json() as Promise<T>
+}
+
+async function apiPost(path: string, body: unknown) {
+	await request(path, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body),
+	})
 }
 
 const zeroUUID = '00000000-0000-0000-0000-000000000000'
@@ -127,53 +184,37 @@ export async function verifyToken(token: string) {
 	return r.ok
 }
 
-export const channels = () =>
-	api<{ channel: string; updated_at: string; runtime_count: number }[]>(
-		'/admin/dashboard/channels',
-	)
+export const overview = () => api<Overview>('/admin/dashboard/overview')
 
-export const channel = (v: string) =>
-	api<{ channel: string; runtimes: Runtime[] }>(
-		`/admin/dashboard/channels/${encodeURIComponent(v)}`,
-	)
+export const history = (channelName: string, limit = 50) => {
+	const params = new URLSearchParams({ limit: String(limit) })
 
-export const activity = (c: string, r: string) =>
-	api<{
-		series: { day: string; group_id?: string; active_installations: number }[]
-	}>(
-		`/admin/dashboard/channels/${encodeURIComponent(c)}/activity?runtime_version=${encodeURIComponent(r)}`,
-	)
+	if (channelName) params.set('channel', channelName)
 
-export const groups = () => api<Group[]>('/admin/updates?limit=100')
-
-export type RuntimeSummary = {
-	runtime_version: string
-	version: string
-	updated_at: string
-	update_count: number
-	channels: string[]
+	return api<HistoryEntry[]>(`/admin/dashboard/history?${params}`)
 }
 
-export const runtimes = () => api<RuntimeSummary[]>('/admin/dashboard/runtimes')
+export const releases = () => api<Release[]>('/admin/dashboard/releases')
 
-export const runtime = (value: string) =>
-	api<{
-		runtime_version: string
-		version: string
-		channels: string[]
-		updates: Group[]
-	}>(`/admin/dashboard/runtimes/${encodeURIComponent(value)}`)
+export const release = (id: string) =>
+	api<ReleaseDetail>(`/admin/dashboard/updates/${encodeURIComponent(id)}`)
 
-export const detail = (id: string) =>
-	api<Detail>(`/admin/dashboard/updates/${id}`)
+export const adoption = (id: string, days: number) =>
+	api<{ day: string; release_users: number; runtime_users: number }[]>(
+		`/admin/dashboard/updates/${encodeURIComponent(id)}/adoption?days=${days}`,
+	)
 
-export const assets = (id: string, p: string) =>
-	api<Asset[]>(`/admin/dashboard/updates/${id}/platforms/${p}/assets`)
+export const assets = (id: string, platform: Platform) =>
+	api<Asset[]>(
+		`/admin/dashboard/updates/${encodeURIComponent(id)}/platforms/${platform}/assets`,
+	)
 
-export const lifecycle = (id: string) =>
+export const lifecycle = (id: string, start: string) =>
 	api<{
 		series: { day: string; known_launches: number; known_crashes: number }[]
-	}>(`/admin/insights/groups/${id}/lifecycle`)
+	}>(
+		`/admin/insights/groups/${encodeURIComponent(id)}/lifecycle?start=${encodeURIComponent(start)}`,
+	)
 
 export const insights = () =>
 	api<{
@@ -241,58 +282,25 @@ export const audience = (days: number, channelName: string) => {
 	return api<Audience>(`/admin/audience?${params}`)
 }
 
-export type PatchEndpoint = {
-	id: number
-	platform: 'android' | 'ios'
-	status: 'pending' | 'processing' | 'ready' | 'failed' | 'not_beneficial'
-	object_key?: string
-	sha256?: string
-	size_bytes?: number
-	attempts: number
-	served_count: number
-	target_size: number
-	error?: string
-	processing_started_at?: string
-	created_at: string
-	updated_at: string
-	from: PatchEndpointRef
-	to: PatchEndpointRef
-}
-
-export type PatchEndpointRef = {
-	update_id: string
-	group_id: string
-	channel: string
-	runtime_version: string
-	message: string
-	version: string
-}
-
-export const patches = () => api<PatchEndpoint[]>('/admin/patches?limit=100')
-
 export const heads = (channelName: string) =>
 	api<Head[]>(`/admin/channels/${encodeURIComponent(channelName)}`)
 
-export type RepublishTarget = {
-	runtime_version: string
-	platform: 'android' | 'ios'
-	group_id: string
-	message: string
-}
-
 export const republishChannel = (
 	channelName: string,
-	target: RepublishTarget,
+	target: {
+		runtime_version: string
+		platform: Platform
+		group_id: string
+		message: string
+	},
 ) =>
 	apiPost(
 		`/admin/channels/${encodeURIComponent(channelName)}/republish`,
 		target,
 	)
 
-export type EmbeddedTarget = Omit<RepublishTarget, 'message'>
-
 export const setChannelEmbedded = (
 	channelName: string,
-	target: EmbeddedTarget,
+	target: { runtime_version: string; platform: Platform; group_id: string },
 ) =>
 	apiPost(`/admin/channels/${encodeURIComponent(channelName)}/embedded`, target)

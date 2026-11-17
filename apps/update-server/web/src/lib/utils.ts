@@ -67,3 +67,65 @@ export function sourceCommitURL(source: unknown) {
 export function queryParam(name: string) {
 	return new URLSearchParams(window.location.search).get(name) ?? ''
 }
+
+const repositoryURL = 'https://github.com/bbplayer-app/BBPlayer'
+
+export function commitURL(sha: string) {
+	return sha ? `${repositoryURL}/commit/${sha}` : ''
+}
+
+export function compareURL(from: string, to: string) {
+	return from && to && from !== to
+		? `${repositoryURL}/compare/${from}...${to}`
+		: ''
+}
+
+const relativeFormat = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+
+const relativeUnits: [Intl.RelativeTimeFormatUnit, number][] = [
+	['year', 365 * 24 * 3600],
+	['month', 30 * 24 * 3600],
+	['week', 7 * 24 * 3600],
+	['day', 24 * 3600],
+	['hour', 3600],
+	['minute', 60],
+]
+
+export function relativeTime(value: string) {
+	const seconds = (new Date(value).getTime() - Date.now()) / 1000
+
+	for (const [unit, size] of relativeUnits) {
+		if (Math.abs(seconds) >= size)
+			return relativeFormat.format(Math.round(seconds / size), unit)
+	}
+
+	return 'just now'
+}
+
+// Telemetry days are UTC calendar days; format them in UTC so they never shift a day.
+const utcDayFormat = new Intl.DateTimeFormat('en', {
+	month: 'short',
+	day: 'numeric',
+	timeZone: 'UTC',
+})
+
+const utcLongDayFormat = new Intl.DateTimeFormat('en', {
+	dateStyle: 'medium',
+	timeZone: 'UTC',
+})
+
+export const dayLabel = (day: string) => utcDayFormat.format(new Date(day))
+
+export const longDayLabel = (day: string) =>
+	utcLongDayFormat.format(new Date(day))
+
+export function addDays(day: string, days: number) {
+	const date = new Date(day)
+	date.setUTCDate(date.getUTCDate() + days)
+
+	return date.toISOString().slice(0, 10)
+}
+
+export function ratio(part: number, whole: number) {
+	return whole > 0 ? part / whole : 0
+}

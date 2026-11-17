@@ -15,20 +15,13 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				overview: path.resolve(import.meta.dirname, 'index.html'),
-				audience: path.resolve(import.meta.dirname, 'audience/index.html'),
+				releases: path.resolve(import.meta.dirname, 'releases/index.html'),
+				releaseDetail: path.resolve(
+					import.meta.dirname,
+					'releases/detail.html',
+				),
 				channels: path.resolve(import.meta.dirname, 'channels/index.html'),
-				channelDetail: path.resolve(
-					import.meta.dirname,
-					'channels/detail.html',
-				),
-				updates: path.resolve(import.meta.dirname, 'updates/index.html'),
-				updateDetail: path.resolve(import.meta.dirname, 'updates/detail.html'),
-				runtimes: path.resolve(import.meta.dirname, 'runtimes/index.html'),
-				runtimeDetail: path.resolve(
-					import.meta.dirname,
-					'runtimes/detail.html',
-				),
-				patches: path.resolve(import.meta.dirname, 'patches/index.html'),
+				audience: path.resolve(import.meta.dirname, 'audience/index.html'),
 			},
 		},
 	},

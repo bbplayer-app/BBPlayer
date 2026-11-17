@@ -1,6 +1,6 @@
 # Update Server Web UI
 
-管理后台是一个 Vite 多页应用。Overview、Channels、Update groups、Runtimes 及其详情视图都是独立的 HTML 入口；导航不依赖客户端路由。
+管理后台是一个 Vite 多页应用。Overview、Releases（含详情）、Channels、Audience 都是独立的 HTML 入口；旧的 Update groups、Runtimes、Patches 地址由 nginx 301 到新页面；导航不依赖客户端路由。
 
 生产环境中，构建产物由 `apps/update-server/docker-compose.yml` 里的 `update-server-web` 服务提供：它是一个 nginx 容器，负责提供静态文件并把 `/admin/*`、`/api/*`、`/health` 代理到 `api` 容器。因此 UI 与 API 共享同一源（`https://updates.bbplayer.roitium.com`），而更新服务器继续从 `https://assets-updates.bbplayer.roitium.com` 提供绑定到 R2 的资源。
 

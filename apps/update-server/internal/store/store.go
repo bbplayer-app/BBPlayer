@@ -22,7 +22,14 @@ type Store struct {
 }
 
 func Open(ctx context.Context, url string) (*Store, error) {
-	p, e := pgxpool.New(ctx, url)
+	config, e := pgxpool.ParseConfig(url)
+	if e != nil {
+		return nil, e
+	}
+	// Dashboard aggregates over these small tables are estimated expensive
+	// enough to trigger JIT, whose ~1s compile time dwarfs the query itself.
+	config.ConnConfig.RuntimeParams["jit"] = "off"
+	p, e := pgxpool.NewWithConfig(ctx, config)
 	if e != nil {
 		return nil, e
 	}

@@ -1,10 +1,22 @@
-import { Blocks, Boxes, FileDiff, Gauge, RadioTower, Users } from 'lucide-react'
+import {
+	BookOpen,
+	Gauge,
+	LogOut,
+	Monitor,
+	Moon,
+	Package,
+	RadioTower,
+	Sun,
+	Users,
+} from 'lucide-react'
+import { useTheme } from 'next-themes'
 import type { ReactNode } from 'react'
 
 import { Separator } from '@/components/ui/separator'
 import {
 	Sidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
@@ -16,51 +28,37 @@ import {
 	SidebarProvider,
 	SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { reportUnauthorized } from '@/lib/auth'
 
-export type Section =
-	| 'overview'
-	| 'audience'
-	| 'channels'
-	| 'updates'
-	| 'runtimes'
-	| 'patches'
+export type Section = 'overview' | 'releases' | 'channels' | 'audience'
 
-const primary = [
-	{ id: 'overview' as const, label: 'Overview', href: '/', icon: Gauge },
+const groups = [
 	{
-		id: 'audience' as const,
-		label: 'Audience',
-		href: '/audience/',
-		icon: Users,
+		label: 'Updates',
+		items: [
+			{ id: 'overview', label: 'Overview', href: '/', icon: Gauge },
+			{ id: 'releases', label: 'Releases', href: '/releases/', icon: Package },
+			{
+				id: 'channels',
+				label: 'Channels',
+				href: '/channels/',
+				icon: RadioTower,
+			},
+		],
 	},
-]
+	{
+		label: 'Insights',
+		items: [
+			{ id: 'audience', label: 'Audience', href: '/audience/', icon: Users },
+		],
+	},
+] as const
 
-const ota = [
-	{
-		id: 'channels' as const,
-		label: 'Channels',
-		href: '/channels/',
-		icon: RadioTower,
-	},
-	{
-		id: 'updates' as const,
-		label: 'Update groups',
-		href: '/updates/',
-		icon: Boxes,
-	},
-	{
-		id: 'runtimes' as const,
-		label: 'Runtimes',
-		href: '/runtimes/',
-		icon: Blocks,
-	},
-	{
-		id: 'patches' as const,
-		label: 'Patches',
-		href: '/patches/',
-		icon: FileDiff,
-	},
-]
+const themes = [
+	{ value: 'light', label: 'Light', icon: Sun },
+	{ value: 'dark', label: 'Dark', icon: Moon },
+	{ value: 'system', label: 'System', icon: Monitor },
+] as const
 
 export function AppShell({
 	active,
@@ -89,40 +87,61 @@ export function AppShell({
 						</span>
 						<div className='min-w-0'>
 							<p className='truncate text-sm font-semibold'>BBPlayer OTA</p>
-							<p className='text-xs text-muted-foreground'>Update operations</p>
+							<p className='text-xs text-muted-foreground'>Update console</p>
 						</div>
 					</a>
 				</SidebarHeader>
-				<Separator />
 				<SidebarContent>
-					<SidebarGroup>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								{primary.map((item) => (
-									<NavItem
-										active={active === item.id}
-										item={item}
-										key={item.id}
-									/>
-								))}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-					<SidebarGroup>
-						<SidebarGroupLabel>Over-the-air updates</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								{ota.map((item) => (
-									<NavItem
-										active={active === item.id}
-										item={item}
-										key={item.id}
-									/>
-								))}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
+					{groups.map((group) => (
+						<SidebarGroup key={group.label}>
+							<SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>
+									{group.items.map((item) => (
+										<SidebarMenuItem key={item.id}>
+											<SidebarMenuButton
+												asChild
+												isActive={active === item.id}
+												tooltip={item.label}
+											>
+												<a
+													aria-current={active === item.id ? 'page' : undefined}
+													href={item.href}
+												>
+													<item.icon />
+													<span>{item.label}</span>
+												</a>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									))}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+					))}
 				</SidebarContent>
+				<SidebarFooter className='gap-3 p-3'>
+					<ThemeSwitch />
+					<SidebarMenu>
+						<SidebarMenuItem>
+							<SidebarMenuButton asChild>
+								<a
+									href='/admin/docs'
+									rel='noreferrer'
+									target='_blank'
+								>
+									<BookOpen />
+									<span>API reference</span>
+								</a>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton onClick={reportUnauthorized}>
+								<LogOut />
+								<span>Sign out</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					</SidebarMenu>
+				</SidebarFooter>
 			</Sidebar>
 			<SidebarInset>
 				<header className='sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden'>
@@ -133,38 +152,37 @@ export function AppShell({
 					/>
 					<span className='text-sm font-medium'>BBPlayer OTA</span>
 				</header>
-				<main className='min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-9'>
-					<div className='mx-auto w-full max-w-7xl'>{children}</div>
-				</main>
+				<div className='min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-9'>
+					<div className='mx-auto w-full max-w-6xl'>{children}</div>
+				</div>
 			</SidebarInset>
 		</SidebarProvider>
 	)
 }
 
-function NavItem({
-	active,
-	item,
-}: {
-	active: boolean
-	item: (typeof primary)[number] | (typeof ota)[number]
-}) {
-	const Icon = item.icon
+function ThemeSwitch() {
+	const { theme = 'system', setTheme } = useTheme()
 
 	return (
-		<SidebarMenuItem>
-			<SidebarMenuButton
-				asChild
-				isActive={active}
-				tooltip={item.label}
-			>
-				<a
-					aria-current={active ? 'page' : undefined}
-					href={item.href}
+		<div
+			aria-label='Color theme'
+			className='grid grid-cols-3 rounded-lg bg-sidebar-accent/60 p-0.5'
+			role='radiogroup'
+		>
+			{themes.map((item) => (
+				<button
+					aria-checked={theme === item.value}
+					aria-label={item.label}
+					className='flex h-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground aria-checked:bg-background aria-checked:text-foreground aria-checked:shadow-sm'
+					key={item.value}
+					onClick={() => setTheme(item.value)}
+					role='radio'
+					title={item.label}
+					type='button'
 				>
-					<Icon />
-					<span>{item.label}</span>
-				</a>
-			</SidebarMenuButton>
-		</SidebarMenuItem>
+					<item.icon className='size-3.5' />
+				</button>
+			))}
+		</div>
 	)
 }

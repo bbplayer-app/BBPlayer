@@ -1,13 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import {
-	ArrowDownRight,
-	ArrowUpRight,
-	CalendarDays,
-	ChevronDown,
-	Repeat,
-	UserPlus,
-	Users,
-} from 'lucide-react'
+import { CalendarDays, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import {
 	Bar,
@@ -23,6 +15,7 @@ import { audience, type Audience } from '@/api'
 import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/query-state'
+import { changeBetween, Stat } from '@/components/stat'
 import { Button } from '@/components/ui/button'
 import {
 	Card,
@@ -55,7 +48,15 @@ import {
 	TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn, number, percent, queryParam } from '@/lib/utils'
+import {
+	addDays,
+	cn,
+	dayLabel,
+	longDayLabel,
+	number,
+	percent,
+	queryParam,
+} from '@/lib/utils'
 
 const ranges = [
 	{ days: 7, label: '7D' },
@@ -65,37 +66,15 @@ const ranges = [
 ]
 
 const activityChart = {
-	mau: { label: '30 days', color: 'var(--chart-2)' },
-	wau: { label: '7 days', color: 'var(--chart-3)' },
-	dau: { label: '1 day', color: 'var(--chart-5)' },
+	mau: { label: '30 days', color: 'var(--chart-1)' },
+	wau: { label: '7 days', color: 'var(--chart-2)' },
+	dau: { label: '1 day', color: 'var(--chart-4)' },
 } satisfies ChartConfig
 
 const newUsersChart = {
-	new_users: { label: 'New', color: 'var(--chart-5)' },
-	returning: { label: 'Returning', color: 'var(--chart-1)' },
+	new_users: { label: 'New', color: 'var(--chart-1)' },
+	returning: { label: 'Returning', color: 'var(--chart-5)' },
 } satisfies ChartConfig
-
-// Audience days are UTC calendar days; format them in UTC so they never shift a day.
-const dayFormat = new Intl.DateTimeFormat('en', {
-	month: 'short',
-	day: 'numeric',
-	timeZone: 'UTC',
-})
-
-const longDayFormat = new Intl.DateTimeFormat('en', {
-	dateStyle: 'medium',
-	timeZone: 'UTC',
-})
-
-const dayLabel = (day: string) => dayFormat.format(new Date(day))
-const longDayLabel = (day: string) => longDayFormat.format(new Date(day))
-
-function addDays(day: string, days: number) {
-	const date = new Date(day)
-	date.setUTCDate(date.getUTCDate() + days)
-
-	return date.toISOString().slice(0, 10)
-}
 
 function initialDays() {
 	const value = Number(queryParam('days'))
@@ -265,43 +244,55 @@ function AudienceContent({ data, days }: { data: Audience; days: number }) {
 					{number(data.today.new_users)} new
 				</span>
 			</div>
-			<div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
-				<Metric
-					icon={Users}
-					label='Active users'
-					value={current.active_users}
-					previous={comparable ? previous.active_users : undefined}
-					hint='Distinct installations in range'
-				/>
-				<Metric
-					icon={UserPlus}
-					label='New users'
-					value={current.new_users}
-					previous={comparable ? previous.new_users : undefined}
-					hint='First seen in range'
-				/>
-				<Metric
-					icon={CalendarDays}
-					label='Avg. daily active users'
-					value={current.active_user_days / observedDays}
-					previous={comparable ? previous.active_user_days / days : undefined}
-					hint={`Stickiness (DAU / MAU): ${percent(stickiness)}`}
-				/>
-				<Metric
-					icon={Repeat}
-					label='Active days per user'
-					value={
-						current.active_users
-							? current.active_user_days / current.active_users
-							: 0
-					}
-					previous={
-						comparable && previous.active_users
-							? previous.active_user_days / previous.active_users
+			<div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
+				<Stat
+					change={
+						comparable
+							? changeBetween(current.active_users, previous.active_users)
 							: undefined
 					}
-					format={(value) => value.toFixed(2)}
+					hint='Distinct devices in range'
+					label='Active users'
+					value={number(current.active_users)}
+				/>
+				<Stat
+					change={
+						comparable
+							? changeBetween(current.new_users, previous.new_users)
+							: undefined
+					}
+					hint='First seen in range'
+					label='New users'
+					value={number(current.new_users)}
+				/>
+				<Stat
+					change={
+						comparable
+							? changeBetween(
+									current.active_user_days / observedDays,
+									previous.active_user_days / days,
+								)
+							: undefined
+					}
+					hint={`Stickiness (DAU / MAU): ${percent(stickiness)}`}
+					label='Avg. daily active users'
+					value={number(Math.round(current.active_user_days / observedDays))}
+				/>
+				<Stat
+					change={
+						comparable && previous.active_users && current.active_users
+							? changeBetween(
+									current.active_user_days / current.active_users,
+									previous.active_user_days / previous.active_users,
+								)
+							: undefined
+					}
 					hint={`Out of ${observedDays} days with data`}
+					label='Active days per user'
+					value={(current.active_users
+						? current.active_user_days / current.active_users
+						: 0
+					).toFixed(2)}
 				/>
 			</div>
 			<ActivityCard
@@ -317,64 +308,6 @@ function AudienceContent({ data, days }: { data: Audience; days: number }) {
 			</div>
 			<RetentionCard data={data} />
 		</>
-	)
-}
-
-const formatCount = (value: number) => number(Math.round(value))
-
-function Metric({
-	icon: Icon,
-	label,
-	value,
-	previous,
-	hint,
-	format = formatCount,
-}: {
-	icon: typeof Users
-	label: string
-	value: number
-	previous?: number
-	hint?: string
-	format?: (value: number) => string
-}) {
-	const change = previous ? (value - previous) / previous : undefined
-
-	return (
-		<Card>
-			<CardContent className='flex items-start justify-between p-5'>
-				<div className='min-w-0'>
-					<p className='text-sm text-muted-foreground'>{label}</p>
-					<div className='mt-2 flex items-baseline gap-2'>
-						<p className='text-2xl font-semibold tabular-nums'>
-							{format(value)}
-						</p>
-						{change !== undefined && <Change value={change} />}
-					</div>
-					{hint && <p className='mt-1 text-xs text-muted-foreground'>{hint}</p>}
-				</div>
-				<div className='rounded-lg bg-muted p-2'>
-					<Icon className='size-4' />
-				</div>
-			</CardContent>
-		</Card>
-	)
-}
-
-function Change({ value }: { value: number }) {
-	const Icon = value >= 0 ? ArrowUpRight : ArrowDownRight
-
-	return (
-		<span
-			className={cn(
-				'inline-flex items-center text-xs font-medium tabular-nums',
-				value >= 0
-					? 'text-emerald-600 dark:text-emerald-400'
-					: 'text-destructive',
-			)}
-		>
-			<Icon className='size-3.5' />
-			{percent(Math.abs(value))}
-		</span>
 	)
 }
 
@@ -563,7 +496,7 @@ function VersionsCard({
 										</div>
 										<div className='mt-1.5 h-1.5 rounded-full bg-muted'>
 											<div
-												className='h-full rounded-full bg-foreground/70'
+												className='h-full rounded-full bg-brand'
 												style={{ width: `${Math.min(share, 1) * 100}%` }}
 											/>
 										</div>
@@ -660,12 +593,12 @@ function RetentionCard({ data }: { data: Audience }) {
 													<td
 														className={cn(
 															'rounded-md px-2 py-1.5 text-center tabular-nums',
-															rate > 0.35 && 'text-background',
+															rate > 0.35 && 'text-brand-foreground',
 															partial && 'opacity-50',
 														)}
 														key={offset}
 														style={{
-															background: `color-mix(in oklch, var(--foreground) ${Math.min(100, Math.round(rate * 160))}%, transparent)`,
+															background: `color-mix(in oklch, var(--brand) ${Math.min(100, Math.round(rate * 160))}%, transparent)`,
 														}}
 														title={`${number(users)} of ${number(row.weeks[0])} users`}
 													>

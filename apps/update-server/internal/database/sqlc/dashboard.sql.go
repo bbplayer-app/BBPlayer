@@ -11,77 +11,130 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const listDashboardActivity = `-- name: ListDashboardActivity :many
-SELECT day, COALESCE(group_id::text,'')::text AS group_id, count(DISTINCT installation_hmac)::bigint AS active_installations FROM installation_activity_days WHERE day >= $1 AND day < $2 AND channel=$3 AND runtime_version=$4 GROUP BY day, group_id ORDER BY day, group_id
+const getDashboardPatchAttention = `-- name: GetDashboardPatchAttention :one
+SELECT count(*) FILTER (WHERE status = 'failed')::bigint AS failed,
+       count(*) FILTER (WHERE status IN ('pending', 'processing'))::bigint AS pending
+FROM patches
 `
 
-type ListDashboardActivityParams struct {
-	Day            pgtype.Date
-	Day_2          pgtype.Date
+type GetDashboardPatchAttentionRow struct {
+	Failed  int64
+	Pending int64
+}
+
+func (q *Queries) GetDashboardPatchAttention(ctx context.Context) (GetDashboardPatchAttentionRow, error) {
+	row := q.db.QueryRow(ctx, getDashboardPatchAttention)
+	var i GetDashboardPatchAttentionRow
+	err := row.Scan(&i.Failed, &i.Pending)
+	return i, err
+}
+
+const getDashboardPreviousRelease = `-- name: GetDashboardPreviousRelease :one
+SELECT p.id, p.message, p.created_at, COALESCE(p.source->>'commit_sha', '')::text AS commit_sha
+FROM update_groups g
+JOIN update_groups p ON p.channel = g.channel AND p.runtime_version = g.runtime_version AND p.created_at < g.created_at
+WHERE g.id = $1
+ORDER BY p.created_at DESC
+LIMIT 1
+`
+
+type GetDashboardPreviousReleaseRow struct {
+	ID        pgtype.UUID
+	Message   string
+	CreatedAt pgtype.Timestamptz
+	CommitSha string
+}
+
+func (q *Queries) GetDashboardPreviousRelease(ctx context.Context, id pgtype.UUID) (GetDashboardPreviousReleaseRow, error) {
+	row := q.db.QueryRow(ctx, getDashboardPreviousRelease, id)
+	var i GetDashboardPreviousReleaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.Message,
+		&i.CreatedAt,
+		&i.CommitSha,
+	)
+	return i, err
+}
+
+const listDashboardFleet = `-- name: ListDashboardFleet :many
+WITH activity AS (
+  SELECT channel, runtime_version, platform,
+         count(DISTINCT installation_hmac) AS active_users,
+         max(client_version) AS client_version
+  FROM installation_activity_days
+  WHERE day > CURRENT_DATE - 7
+  GROUP BY channel, runtime_version, platform
+),
+keys AS (
+  SELECT channel, runtime_version, platform FROM activity
+  UNION
+  SELECT channel, runtime_version, platform FROM channel_heads
+)
+SELECT k.channel, k.runtime_version, k.platform,
+       COALESCE(a.active_users, 0)::bigint AS active_users,
+       COALESCE(g.expo_config->>'version', a.client_version, '')::text AS app_version,
+       COALESCE(h.mode, '')::text AS head_mode,
+       h.group_id AS head_group_id,
+       h.updated_at AS head_updated_at,
+       COALESCE(g.message, '')::text AS head_message,
+       g.created_at AS head_created_at,
+       COALESCE(g.source->>'commit_sha', '')::text AS head_commit_sha,
+       (SELECT count(DISTINCT d.installation_hmac) FROM installation_activity_days d
+         WHERE d.day > CURRENT_DATE - 7 AND d.group_id = h.group_id AND d.channel = k.channel AND d.platform = k.platform)::bigint AS head_users,
+       (SELECT count(*) FROM known_update_launches l WHERE l.group_id = h.group_id AND l.platform = k.platform)::bigint AS head_launches,
+       (SELECT count(*) FROM known_update_crashes c WHERE c.group_id = h.group_id AND c.platform = k.platform)::bigint AS head_crashes
+FROM keys k
+LEFT JOIN activity a ON a.channel = k.channel AND a.runtime_version = k.runtime_version AND a.platform = k.platform
+LEFT JOIN channel_heads h ON h.channel = k.channel AND h.runtime_version = k.runtime_version AND h.platform = k.platform
+LEFT JOIN update_groups g ON g.id = h.group_id AND h.mode = 'ota'
+ORDER BY active_users DESC, k.channel, k.runtime_version DESC, k.platform
+`
+
+type ListDashboardFleetRow struct {
 	Channel        string
 	RuntimeVersion string
+	Platform       string
+	ActiveUsers    int64
+	AppVersion     string
+	HeadMode       string
+	HeadGroupID    pgtype.UUID
+	HeadUpdatedAt  pgtype.Timestamptz
+	HeadMessage    string
+	HeadCreatedAt  pgtype.Timestamptz
+	HeadCommitSha  string
+	HeadUsers      int64
+	HeadLaunches   int64
+	HeadCrashes    int64
 }
 
-type ListDashboardActivityRow struct {
-	Day                 pgtype.Date
-	GroupID             string
-	ActiveInstallations int64
-}
-
-func (q *Queries) ListDashboardActivity(ctx context.Context, arg ListDashboardActivityParams) ([]ListDashboardActivityRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardActivity,
-		arg.Day,
-		arg.Day_2,
-		arg.Channel,
-		arg.RuntimeVersion,
-	)
+// One row per channel/runtime/platform that either has a channel head or had
+// active installations in the last 7 days, so native versions without an OTA
+// update still show up.
+func (q *Queries) ListDashboardFleet(ctx context.Context) ([]ListDashboardFleetRow, error) {
+	rows, err := q.db.Query(ctx, listDashboardFleet)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListDashboardActivityRow
+	var items []ListDashboardFleetRow
 	for rows.Next() {
-		var i ListDashboardActivityRow
-		if err := rows.Scan(&i.Day, &i.GroupID, &i.ActiveInstallations); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listDashboardChannelRuntimes = `-- name: ListDashboardChannelRuntimes :many
-SELECT h.runtime_version, max(h.updated_at)::timestamptz AS updated_at, (array_agg(g.expo_config->>'version' ORDER BY h.updated_at DESC))[1]::text AS version, COALESCE((array_agg(h.group_id ORDER BY h.updated_at DESC))[1]::text,'')::text AS head_group_id, (array_agg(h.mode ORDER BY h.updated_at DESC))[1]::text AS mode, array_agg(h.platform ORDER BY h.platform)::text[] AS platforms FROM channel_heads h LEFT JOIN update_groups g ON g.id=h.group_id WHERE h.channel=$1 GROUP BY h.runtime_version ORDER BY max(h.updated_at) DESC
-`
-
-type ListDashboardChannelRuntimesRow struct {
-	RuntimeVersion string
-	UpdatedAt      pgtype.Timestamptz
-	Version        string
-	HeadGroupID    string
-	Mode           string
-	Platforms      []string
-}
-
-func (q *Queries) ListDashboardChannelRuntimes(ctx context.Context, channel string) ([]ListDashboardChannelRuntimesRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardChannelRuntimes, channel)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListDashboardChannelRuntimesRow
-	for rows.Next() {
-		var i ListDashboardChannelRuntimesRow
+		var i ListDashboardFleetRow
 		if err := rows.Scan(
+			&i.Channel,
 			&i.RuntimeVersion,
-			&i.UpdatedAt,
-			&i.Version,
+			&i.Platform,
+			&i.ActiveUsers,
+			&i.AppVersion,
+			&i.HeadMode,
 			&i.HeadGroupID,
-			&i.Mode,
-			&i.Platforms,
+			&i.HeadUpdatedAt,
+			&i.HeadMessage,
+			&i.HeadCreatedAt,
+			&i.HeadCommitSha,
+			&i.HeadUsers,
+			&i.HeadLaunches,
+			&i.HeadCrashes,
 		); err != nil {
 			return nil, err
 		}
@@ -93,26 +146,59 @@ func (q *Queries) ListDashboardChannelRuntimes(ctx context.Context, channel stri
 	return items, nil
 }
 
-const listDashboardChannels = `-- name: ListDashboardChannels :many
-SELECT channel, max(updated_at)::timestamptz AS updated_at, count(DISTINCT runtime_version) AS runtime_count FROM channel_heads GROUP BY channel ORDER BY channel
+const listDashboardHistory = `-- name: ListDashboardHistory :many
+SELECT h.id, h.channel, h.runtime_version, h.platform, h.group_id, h.mode, h.action, h.created_at,
+       COALESCE(g.message, '')::text AS message,
+       COALESCE(g.source->>'commit_sha', '')::text AS commit_sha,
+       COALESCE(g.expo_config->>'version', h.runtime_version)::text AS app_version
+FROM channel_history h
+LEFT JOIN update_groups g ON g.id = h.group_id
+WHERE ($1::text IS NULL OR h.channel = $1::text)
+ORDER BY h.created_at DESC, h.id DESC
+LIMIT $2
 `
 
-type ListDashboardChannelsRow struct {
-	Channel      string
-	UpdatedAt    pgtype.Timestamptz
-	RuntimeCount int64
+type ListDashboardHistoryParams struct {
+	Channel  pgtype.Text
+	RowLimit int32
 }
 
-func (q *Queries) ListDashboardChannels(ctx context.Context) ([]ListDashboardChannelsRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardChannels)
+type ListDashboardHistoryRow struct {
+	ID             int64
+	Channel        string
+	RuntimeVersion string
+	Platform       string
+	GroupID        pgtype.UUID
+	Mode           string
+	Action         string
+	CreatedAt      pgtype.Timestamptz
+	Message        string
+	CommitSha      string
+	AppVersion     string
+}
+
+func (q *Queries) ListDashboardHistory(ctx context.Context, arg ListDashboardHistoryParams) ([]ListDashboardHistoryRow, error) {
+	rows, err := q.db.Query(ctx, listDashboardHistory, arg.Channel, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListDashboardChannelsRow
+	var items []ListDashboardHistoryRow
 	for rows.Next() {
-		var i ListDashboardChannelsRow
-		if err := rows.Scan(&i.Channel, &i.UpdatedAt, &i.RuntimeCount); err != nil {
+		var i ListDashboardHistoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Channel,
+			&i.RuntimeVersion,
+			&i.Platform,
+			&i.GroupID,
+			&i.Mode,
+			&i.Action,
+			&i.CreatedAt,
+			&i.Message,
+			&i.CommitSha,
+			&i.AppVersion,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -123,30 +209,95 @@ func (q *Queries) ListDashboardChannels(ctx context.Context) ([]ListDashboardCha
 	return items, nil
 }
 
-const listDashboardRuntimeUpdates = `-- name: ListDashboardRuntimeUpdates :many
-SELECT id,channel,runtime_version,COALESCE(expo_config->>'version','')::text AS app_version,message,created_at,source,fingerprint_hash FROM update_groups WHERE runtime_version=$1 ORDER BY created_at DESC
+const listDashboardReleaseAdoption = `-- name: ListDashboardReleaseAdoption :many
+SELECT d.day,
+       count(DISTINCT d.installation_hmac) FILTER (WHERE d.group_id = $1::uuid)::bigint AS release_users,
+       count(DISTINCT d.installation_hmac)::bigint AS runtime_users
+FROM installation_activity_days d
+JOIN update_groups g ON g.id = $1::uuid
+WHERE d.channel = g.channel AND d.runtime_version = g.runtime_version
+  AND d.day >= $2::date AND d.day < $3::date
+GROUP BY d.day
+ORDER BY d.day
 `
 
-type ListDashboardRuntimeUpdatesRow struct {
-	ID              pgtype.UUID
-	Channel         string
-	RuntimeVersion  string
-	AppVersion      string
-	Message         string
-	CreatedAt       pgtype.Timestamptz
-	Source          []byte
-	FingerprintHash pgtype.Text
+type ListDashboardReleaseAdoptionParams struct {
+	GroupID  pgtype.UUID
+	StartDay pgtype.Date
+	EndDay   pgtype.Date
 }
 
-func (q *Queries) ListDashboardRuntimeUpdates(ctx context.Context, runtimeVersion string) ([]ListDashboardRuntimeUpdatesRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardRuntimeUpdates, runtimeVersion)
+type ListDashboardReleaseAdoptionRow struct {
+	Day          pgtype.Date
+	ReleaseUsers int64
+	RuntimeUsers int64
+}
+
+// Installations active each day on the release's channel and runtime, and how
+// many of them ran this release.
+func (q *Queries) ListDashboardReleaseAdoption(ctx context.Context, arg ListDashboardReleaseAdoptionParams) ([]ListDashboardReleaseAdoptionRow, error) {
+	rows, err := q.db.Query(ctx, listDashboardReleaseAdoption, arg.GroupID, arg.StartDay, arg.EndDay)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListDashboardRuntimeUpdatesRow
+	var items []ListDashboardReleaseAdoptionRow
 	for rows.Next() {
-		var i ListDashboardRuntimeUpdatesRow
+		var i ListDashboardReleaseAdoptionRow
+		if err := rows.Scan(&i.Day, &i.ReleaseUsers, &i.RuntimeUsers); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDashboardReleases = `-- name: ListDashboardReleases :many
+SELECT g.id, g.channel, g.runtime_version,
+       COALESCE(g.expo_config->>'version', '')::text AS app_version,
+       g.message, g.created_at,
+       COALESCE(g.source->>'commit_sha', '')::text AS commit_sha,
+       (SELECT ru.group_id FROM updates ru WHERE ru.id = g.republished_from_update_id) AS republished_from_group_id,
+       COALESCE((SELECT array_agg(u.platform ORDER BY u.platform) FROM updates u WHERE u.group_id = g.id), '{}')::text[] AS platforms,
+       COALESCE((SELECT array_agg(h.platform ORDER BY h.platform) FROM channel_heads h WHERE h.group_id = g.id AND h.channel = g.channel AND h.mode = 'ota'), '{}')::text[] AS live_platforms,
+       (SELECT count(*) FROM known_update_launches l WHERE l.group_id = g.id)::bigint AS launches,
+       (SELECT count(*) FROM known_update_crashes c WHERE c.group_id = g.id)::bigint AS crashes,
+       (SELECT count(DISTINCT d.installation_hmac) FROM installation_activity_days d WHERE d.group_id = g.id AND d.day > CURRENT_DATE - 7)::bigint AS active_users,
+       COALESCE((SELECT sum(m.request_count) FROM delivery_metric_minutes m WHERE m.group_id = g.id AND m.outcome = 'served' AND m.kind IN ('launch_bundle', 'patch')), 0)::bigint AS downloads
+FROM update_groups g
+ORDER BY g.created_at DESC
+LIMIT 500
+`
+
+type ListDashboardReleasesRow struct {
+	ID                     pgtype.UUID
+	Channel                string
+	RuntimeVersion         string
+	AppVersion             string
+	Message                string
+	CreatedAt              pgtype.Timestamptz
+	CommitSha              string
+	RepublishedFromGroupID pgtype.UUID
+	Platforms              []string
+	LivePlatforms          []string
+	Launches               int64
+	Crashes                int64
+	ActiveUsers            int64
+	Downloads              int64
+}
+
+func (q *Queries) ListDashboardReleases(ctx context.Context) ([]ListDashboardReleasesRow, error) {
+	rows, err := q.db.Query(ctx, listDashboardReleases)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListDashboardReleasesRow
+	for rows.Next() {
+		var i ListDashboardReleasesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Channel,
@@ -154,46 +305,14 @@ func (q *Queries) ListDashboardRuntimeUpdates(ctx context.Context, runtimeVersio
 			&i.AppVersion,
 			&i.Message,
 			&i.CreatedAt,
-			&i.Source,
-			&i.FingerprintHash,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listDashboardRuntimes = `-- name: ListDashboardRuntimes :many
-SELECT runtime_version, (array_agg(COALESCE(expo_config->>'version','') ORDER BY created_at DESC))[1]::text AS version, max(created_at)::timestamptz AS updated_at, count(*)::bigint AS update_count, array_agg(DISTINCT channel ORDER BY channel)::text[] AS channels FROM update_groups GROUP BY runtime_version ORDER BY max(created_at) DESC
-`
-
-type ListDashboardRuntimesRow struct {
-	RuntimeVersion string
-	Version        string
-	UpdatedAt      pgtype.Timestamptz
-	UpdateCount    int64
-	Channels       []string
-}
-
-func (q *Queries) ListDashboardRuntimes(ctx context.Context) ([]ListDashboardRuntimesRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardRuntimes)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListDashboardRuntimesRow
-	for rows.Next() {
-		var i ListDashboardRuntimesRow
-		if err := rows.Scan(
-			&i.RuntimeVersion,
-			&i.Version,
-			&i.UpdatedAt,
-			&i.UpdateCount,
-			&i.Channels,
+			&i.CommitSha,
+			&i.RepublishedFromGroupID,
+			&i.Platforms,
+			&i.LivePlatforms,
+			&i.Launches,
+			&i.Crashes,
+			&i.ActiveUsers,
+			&i.Downloads,
 		); err != nil {
 			return nil, err
 		}
@@ -249,7 +368,7 @@ func (q *Queries) ListDashboardUpdateAssets(ctx context.Context, arg ListDashboa
 }
 
 const listDashboardUpdatePatches = `-- name: ListDashboardUpdatePatches :many
-SELECT p.id,p.to_update_id,p.from_update_id,p.platform,p.status,p.size_bytes,p.attempts,p.error,p.updated_at,fu.group_id AS from_group_id,fug.message AS from_message
+SELECT p.id,p.to_update_id,p.from_update_id,p.platform,p.status,p.size_bytes,p.attempts,p.served_count,p.error,p.updated_at,fu.group_id AS from_group_id,fug.message AS from_message
 FROM patches p
 JOIN updates tu ON tu.id=p.to_update_id
 JOIN updates fu ON fu.id=p.from_update_id
@@ -266,6 +385,7 @@ type ListDashboardUpdatePatchesRow struct {
 	Status       string
 	SizeBytes    pgtype.Int8
 	Attempts     int32
+	ServedCount  int64
 	Error        pgtype.Text
 	UpdatedAt    pgtype.Timestamptz
 	FromGroupID  pgtype.UUID
@@ -289,6 +409,7 @@ func (q *Queries) ListDashboardUpdatePatches(ctx context.Context, groupID pgtype
 			&i.Status,
 			&i.SizeBytes,
 			&i.Attempts,
+			&i.ServedCount,
 			&i.Error,
 			&i.UpdatedAt,
 			&i.FromGroupID,
@@ -305,19 +426,22 @@ func (q *Queries) ListDashboardUpdatePatches(ctx context.Context, groupID pgtype
 }
 
 const listDashboardUpdatePlatforms = `-- name: ListDashboardUpdatePlatforms :many
-SELECT u.id,u.platform,u.launch_key,u.launch_hash,a.size_bytes,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='launch_bundle') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS full_downloads,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='patch') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS patch_downloads,(SELECT count(*) FROM known_update_launches l WHERE l.group_id=u.group_id AND l.platform=u.platform) AS known_launches,(SELECT count(*) FROM known_update_crashes c WHERE c.group_id=u.group_id AND c.platform=u.platform) AS known_crashes FROM updates u JOIN assets a ON a.update_id=u.id AND a.is_launch WHERE u.group_id=$1 ORDER BY u.platform
+SELECT u.id,u.platform,u.launch_key,u.launch_hash,a.size_bytes,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='launch_bundle') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS full_downloads,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='patch') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS patch_downloads,COALESCE((SELECT sum(m.byte_count) FILTER (WHERE m.kind='patch') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS patch_bytes,COALESCE((SELECT sum(m.target_byte_count) FILTER (WHERE m.kind='patch') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS patch_target_bytes,(SELECT count(*) FROM known_update_launches l WHERE l.group_id=u.group_id AND l.platform=u.platform) AS known_launches,(SELECT count(*) FROM known_update_crashes c WHERE c.group_id=u.group_id AND c.platform=u.platform) AS known_crashes,EXISTS(SELECT 1 FROM channel_heads h JOIN update_groups g ON g.id=u.group_id WHERE h.group_id=u.group_id AND h.channel=g.channel AND h.platform=u.platform AND h.mode='ota') AS is_live FROM updates u JOIN assets a ON a.update_id=u.id AND a.is_launch WHERE u.group_id=$1 ORDER BY u.platform
 `
 
 type ListDashboardUpdatePlatformsRow struct {
-	ID             pgtype.UUID
-	Platform       string
-	LaunchKey      string
-	LaunchHash     string
-	SizeBytes      int64
-	FullDownloads  int64
-	PatchDownloads int64
-	KnownLaunches  int64
-	KnownCrashes   int64
+	ID               pgtype.UUID
+	Platform         string
+	LaunchKey        string
+	LaunchHash       string
+	SizeBytes        int64
+	FullDownloads    int64
+	PatchDownloads   int64
+	PatchBytes       int64
+	PatchTargetBytes int64
+	KnownLaunches    int64
+	KnownCrashes     int64
+	IsLive           bool
 }
 
 func (q *Queries) ListDashboardUpdatePlatforms(ctx context.Context, groupID pgtype.UUID) ([]ListDashboardUpdatePlatformsRow, error) {
@@ -337,8 +461,11 @@ func (q *Queries) ListDashboardUpdatePlatforms(ctx context.Context, groupID pgty
 			&i.SizeBytes,
 			&i.FullDownloads,
 			&i.PatchDownloads,
+			&i.PatchBytes,
+			&i.PatchTargetBytes,
 			&i.KnownLaunches,
 			&i.KnownCrashes,
+			&i.IsLive,
 		); err != nil {
 			return nil, err
 		}

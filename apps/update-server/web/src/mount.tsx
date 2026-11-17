@@ -1,6 +1,7 @@
 import '@/styles.css'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from 'next-themes'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -23,15 +24,22 @@ const client = new QueryClient({
 
 export function mount(page: ReactNode) {
 	createRoot(document.querySelector('#root')!).render(
-		<QueryClientProvider client={client}>
-			<TooltipProvider>
-				<Toaster
-					closeButton
-					position='bottom-right'
-				/>
-				<AuthGate>{page}</AuthGate>
-			</TooltipProvider>
-		</QueryClientProvider>,
+		<ThemeProvider
+			attribute='class'
+			defaultTheme='system'
+			disableTransitionOnChange
+			enableSystem
+		>
+			<QueryClientProvider client={client}>
+				<TooltipProvider>
+					<Toaster
+						closeButton
+						position='bottom-right'
+					/>
+					<AuthGate>{page}</AuthGate>
+				</TooltipProvider>
+			</QueryClientProvider>
+		</ThemeProvider>,
 	)
 }
 
