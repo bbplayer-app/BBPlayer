@@ -32,6 +32,9 @@ object NativeTelemetry {
     @Volatile
     private var enabledSinceSeconds = 0.0
 
+    /** 关闭采集时暂存的 release，见 [updateEnabled] */
+    private var suspendedRelease: String? = null
+
     private val logRateLimiter = LogRateLimiter(perKeyLimit = 30, globalLimit = 600)
 
     // breadcrumb 只有 100 个位置，同一处警告刷屏会把其他记录全挤掉
@@ -84,11 +87,30 @@ object NativeTelemetry {
         options.tracesSampleRate = rate
     }
 
+    @Synchronized
     fun updateEnabled(enabled: Boolean) {
         if (enabled && !isEnabled) enabledSinceSeconds = System.currentTimeMillis() / 1000.0
         isEnabled = enabled
-        if (installed && Sentry.isEnabled()) {
-            ScopesAdapter.getInstance().options.logs.isEnabled = enabled
+        if (!installed || !Sentry.isEnabled()) return
+        val options = ScopesAdapter.getInstance().options
+        options.logs.isEnabled = enabled
+        suspendSessions(options, !enabled)
+    }
+
+    /**
+     * 自动会话由 LifecycleWatcher 直接发送，不经过任何 before* 回调，开关只能在这里拦。
+     * 关闭时丢弃当前会话（不发送结束），并清空 release：没有 release 时 SDK 不会开始新会话。
+     * 这依赖 SDK 内部行为，升级 Sentry 时按 packages/orpheus/docs/Native-Tracing.md 检查。
+     */
+    private fun suspendSessions(options: SentryOptions, suspend: Boolean) {
+        if (suspend) {
+            if (suspendedRelease == null) suspendedRelease = options.release
+            options.release = null
+            Sentry.configureScope { it.clearSession() }
+        } else if (suspendedRelease != null) {
+            options.release = suspendedRelease
+            suspendedRelease = null
+            Sentry.startSession()
         }
     }
 
@@ -125,6 +147,8 @@ object NativeTelemetry {
 
         val previousBeforeBreadcrumb = options.beforeBreadcrumb
         options.setBeforeBreadcrumb { breadcrumb, hint ->
+            // 关闭期间的 breadcrumb 不能留到重新开启后的事件里
+            if (!isEnabled) return@setBeforeBreadcrumb null
             // 原生结构化日志的 breadcrumb 只留警告及以上，避免挤掉 JS 的 breadcrumb
             if (breadcrumb.category == NATIVE_LOG_CATEGORY) {
                 if (breadcrumb.level.isBelowWarning()) return@setBeforeBreadcrumb null

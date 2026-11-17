@@ -69,7 +69,8 @@ CDN span 仅绑定当前等待出声的曲目。暂停、切歌、失败或超�
 
 1. **RN SDK 是否仍然置空原生 `tracesSampleRate`**：看 `@sentry/react-native/android/src/main/java/io/sentry/react/RNSentryStart.java` 里的 `updateWithReactDefaults`。如果它不再置空，或者提供了只开手动 transaction 的正式配置，就可以删掉 `setNativeTracesSampleRate`，改用正式配置。
 2. **上面表格里的判断时机有没有变**：在 sentry-android 对应版本的源码里看 `ActivityLifecycleIntegration.register`、`SpanFrameMetricsCollector` 的构造函数和 `SentryGestureListener`。
-3. **线上实际表现**：新版本发布一段时间后，在 Sentry Explore 的 spans 里查询：
+3. **关闭采集时的会话拦截**：`NativeTelemetry.updateEnabled` 靠清空 `options.release` 阻止新会话、用 `clearSession` 丢弃当前会话。确认 `io.sentry.Scope.startSession` 仍会在 release 为空时不创建会话，且 `LifecycleWatcher` 仍没有其他发送会话的路径。
+4. **线上实际表现**：新版本发布一段时间后，在 Sentry Explore 的 spans 里查询：
    - `transaction:MainActivity` 或 `span.op:ui.load sdk.name:*android*` 应该没有结果，有结果就说明 Activity 自动 tracing 被打开了。
    - `bbplayer.source:native` 应该能查到原生请求，查不到就说明手动 transaction 没有被发送。
 

@@ -159,7 +159,7 @@ export function initializeSentry() {
 		enabled: isSentryTelemetryEnabled(),
 		// enabled=false 只拦得住 JS 事件：只要 enableNative 为 true，原生 SDK 仍会初始化，
 		// NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。所以用户关闭数据采集或非官方签名时，
-		// 把原生 SDK 一并关掉；会话中途关闭由 beforeSend 和原生侧的开关拦截。
+		// 把原生 SDK 一并关掉；会话中途关闭由各个 before* 回调和原生侧的开关拦截（自动会话见 NativeTelemetry.updateEnabled）。
 		enableNative: isSentryTelemetryEnabled(),
 		enableLogs: isSentryTelemetryEnabled(),
 		// 原生日志由 installNativeTelemetry 在挂好脱敏和限流回调后再开启，
@@ -192,7 +192,14 @@ export function initializeSentry() {
 			}
 		},
 		beforeBreadcrumb(breadcrumb) {
+			// 关闭期间的 breadcrumb 不能留到重新开启后的事件里
+			if (!isSentryTelemetryEnabled()) return null
+
 			return scrubValue(breadcrumb)
+		},
+		beforeSendMetric(metric) {
+			// 指标先在 SDK 里缓冲，发送前再查一次开关
+			return isSentryTelemetryEnabled() ? metric : null
 		},
 		beforeSendLog(sentryLog) {
 			if (!isSentryTelemetryEnabled()) return null
