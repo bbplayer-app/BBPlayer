@@ -67,10 +67,10 @@ export function applyResumeStrategy(mode?: PlayerMode | null) {
 /** An unready native service rejects getQueue rather than reporting an empty queue. */
 export async function reconcilePlaybackContext() {
 	assertPlaybackContextAvailable()
-	const tracks = await Orpheus.getQueue()
+	const queueSize = await Orpheus.getQueueSize()
 	assertPlaybackContextAvailable()
 
-	if (!tracks.length) setPlaybackContext(null)
+	if (queueSize === 0) setPlaybackContext(null)
 	else if (!playbackContextStore$.context.peek()) {
 		setPlaybackContext(
 			createPlaybackContext(useAppStore.getState().settings.defaultPlayerMode),

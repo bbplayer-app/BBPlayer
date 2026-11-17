@@ -754,25 +754,19 @@ class LyricService {
 	 */
 	public async preloadNextTrackLyrics() {
 		try {
-			const [currentIndex, queue] = await Promise.all([
-				Orpheus.getCurrentIndex(),
-				Orpheus.getQueue(),
-			])
+			// 原生按随机播放与循环模式算出真正的下一首，不必读回整个队列
+			const { next: nextOrpheusTrack } = await Orpheus.getAdjacentTracks()
 
-			if (currentIndex !== -1 && currentIndex + 1 < queue.length) {
-				const nextOrpheusTrack = queue[currentIndex + 1]
+			if (nextOrpheusTrack?.id) {
+				const nextTrackResult = await trackService.getTrackByUniqueKey(
+					nextOrpheusTrack.id,
+				)
 
-				if (nextOrpheusTrack?.id) {
-					const nextTrackResult = await trackService.getTrackByUniqueKey(
-						nextOrpheusTrack.id,
-					)
-
-					if (nextTrackResult.isOk() && nextTrackResult.value) {
-						logger.debug('lyrics.preload.started', {
-							'lyrics.title': nextTrackResult.value.title,
-						})
-						void this.smartFetchLyrics(nextTrackResult.value)
-					}
+				if (nextTrackResult.isOk() && nextTrackResult.value) {
+					logger.debug('lyrics.preload.started', {
+						'lyrics.title': nextTrackResult.value.title,
+					})
+					void this.smartFetchLyrics(nextTrackResult.value)
 				}
 			}
 		} catch (e) {

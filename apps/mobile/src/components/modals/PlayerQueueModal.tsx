@@ -29,11 +29,10 @@ import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
 import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
-import { useShuffleMode } from '@/hooks/queries/orpheus'
+import { usePlayerQueue, useShuffleMode } from '@/hooks/queries/orpheus'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
-import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { clearPlaybackQueue } from '@/lib/player/playbackSession'
@@ -162,6 +161,8 @@ const TrackItem = memo(
 
 TrackItem.displayName = 'TrackItem'
 
+const EMPTY_QUEUE: OrpheusTrack[] = []
+
 interface PlayerQueueModalProps extends TrueSheetProps {
 	sheetRef?: RefObject<TrueSheet | null>
 }
@@ -242,7 +243,9 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 
 	useEffect(() => stopAutoScroll, [stopAutoScroll])
 
-	const queue = usePlayerQueueStore((state) => state.tracks)
+	// 弹窗常驻挂载，只在展开期间启用查询；收起时队列变化只标记过期，不读原生队列
+	const [queueActive, setQueueActive] = useState(false)
+	const { data: queue = EMPTY_QUEUE } = usePlayerQueue(queueActive)
 	const queueRef = useRef(queue)
 	useEffect(() => {
 		queueRef.current = queue
@@ -474,6 +477,9 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			style={{ flex: 1 }}
 			scrollableRef={flatListRef}
 			onMount={scrollToCurrent}
+			onWillPresent={() => {
+				setQueueActive(true)
+			}}
 			onDidPresent={() => {
 				usePlayerQueueSheetStore.getState().setOpen(true)
 			}}
@@ -482,6 +488,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 				dragRef.current = null
 				setDrag(null)
 				usePlayerQueueSheetStore.getState().setOpen(false)
+				setQueueActive(false)
 				setDidInitialScroll(false)
 				runPendingAction()
 			}}

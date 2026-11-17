@@ -28,6 +28,7 @@ import AppProviders from '@/components/providers'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useDataCollectionSync } from '@/hooks/app/useDataCollectionSync'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
+import { listenPlayerQueueChanges } from '@/hooks/queries/orpheus'
 import {
 	nowPlayingBarStore$,
 	shouldHideNowPlayingBar,
@@ -35,7 +36,6 @@ import {
 import { initPlaybackContextStore } from '@/hooks/stores/playbackContextStore'
 import { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import useAppStoreObj from '@/hooks/stores/useAppStore'
-import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
@@ -134,7 +134,7 @@ function runAppInit() {
 		usePlayerStore.getState().initialize()
 		playerSideEffects.initialize()
 
-		initPlayerQueueStore()
+		listenPlayerQueueChanges()
 
 		runAfterStartup(runDeferredAppInit)
 

@@ -68,18 +68,41 @@ export function useCompletedDownloads() {
 	})
 }
 
+/**
+ * 播放队列。大队列时读一次开销不小，调用方应只在真正展示队列时启用。
+ */
 export function usePlayerQueue(enabled: boolean = true) {
 	return useTracedQuery<OrpheusTrack[]>({
 		span: { name: 'player.queue' },
 		queryKey: orpheusQueryKeys.playerQueue(),
-		queryFn: async () => {
-			const q = await Orpheus.getQueue()
-
-			return q
-		},
+		queryFn: () => Orpheus.getQueue(),
 		staleTime: 0,
 		enabled,
 		gcTime: 0,
+	})
+}
+
+let playerQueueListening = false
+let invalidateTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 队列变化时让播放队列查询失效：没有启用中的查询时只标记过期，不读取原生队列。
+ *
+ * 一次队列操作会连续触发多个 onQueueChanged，而原生调用无法真正取消，
+ * 所以先防抖合并，避免排起一串重复读取。
+ */
+export function listenPlayerQueueChanges() {
+	if (playerQueueListening) return
+	playerQueueListening = true
+
+	Orpheus.addListener('onQueueChanged', () => {
+		if (invalidateTimer) clearTimeout(invalidateTimer)
+		invalidateTimer = setTimeout(() => {
+			invalidateTimer = null
+			void queryClient.invalidateQueries({
+				queryKey: orpheusQueryKeys.playerQueue(),
+			})
+		}, 100)
 	})
 }
 

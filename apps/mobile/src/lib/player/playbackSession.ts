@@ -1,5 +1,6 @@
 import { Orpheus, type Track } from '@bbplayer/orpheus'
 
+import { orpheusQueryKeys } from '@/hooks/queries/orpheus'
 import {
 	applyResumeStrategy,
 	createPlaybackContext,
@@ -9,8 +10,8 @@ import {
 	assertPlaybackContextAvailable,
 } from '@/hooks/stores/playbackContextStore'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import usePlayerStore from '@/hooks/stores/usePlayerStore'
+import { queryClient } from '@/lib/config/queryClient'
 import { playlistService } from '@/lib/services/playlistService'
 import { traceOperation, traceSpan, type TraceParent } from '@/lib/tracing'
 import type { PlayerMode } from '@/types/core/playback'
@@ -104,11 +105,11 @@ async function submitTracksImpl(
 	}
 
 	assertPlaybackContextAvailable()
-	const queue = await Orpheus.getQueue()
+	const queueEmpty = (await Orpheus.getQueueSize()) === 0
 	const previous = playbackContextStore$.context.peek()
 
 	const context =
-		replace || !queue.length
+		replace || queueEmpty
 			? createPlaybackContext(
 					await traceSpan(
 						span,
@@ -124,11 +125,7 @@ async function submitTracksImpl(
 	const willPlay =
 		options.playNow && (options.playNext || !options.startFromKey)
 
-	const startingTrackId = resolveStartingTrackId(
-		options,
-		replace,
-		!queue.length,
-	)
+	const startingTrackId = resolveStartingTrackId(options, replace, queueEmpty)
 
 	span?.setAttribute('playback.mode', context.mode)
 
@@ -182,8 +179,6 @@ export async function clearPlaybackQueue() {
 	await Orpheus.cancelSleepTimer()
 	await Orpheus.clear()
 	setPlaybackContext(null)
-	await Promise.all([
-		usePlayerQueueStore.getState().sync(),
-		usePlayerStore.getState().sync(),
-	])
+	queryClient.setQueryData<Track[]>(orpheusQueryKeys.playerQueue(), [])
+	await usePlayerStore.getState().sync()
 }
