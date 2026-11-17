@@ -28,6 +28,10 @@ object NativeTelemetry {
     @Volatile
     private var installed = false
 
+    /** 最近一次开启采集的时间（秒），跨过关闭期间的 transaction 一律丢弃 */
+    @Volatile
+    private var enabledSinceSeconds = 0.0
+
     private val logRateLimiter = LogRateLimiter(perKeyLimit = 30, globalLimit = 600)
 
     // breadcrumb 只有 100 个位置，同一处警告刷屏会把其他记录全挤掉
@@ -81,6 +85,7 @@ object NativeTelemetry {
     }
 
     fun updateEnabled(enabled: Boolean) {
+        if (enabled && !isEnabled) enabledSinceSeconds = System.currentTimeMillis() / 1000.0
         isEnabled = enabled
         if (installed && Sentry.isEnabled()) {
             ScopesAdapter.getInstance().options.logs.isEnabled = enabled
@@ -97,6 +102,11 @@ object NativeTelemetry {
             }
             event.exceptions?.forEach { it.value = TelemetryScrubber.scrubNullable(it.value) }
             event.breadcrumbs?.forEach(::scrubBreadcrumb)
+            // orpheus 等自定义 context 是普通 Map（如 lastAudioError 是原始异常文本），Device、OS 这类内置 context 不是
+            val contexts = event.contexts
+            for ((key, value) in contexts.entrySet().toList()) {
+                if (value is Map<*, *>) contexts.put(key, scrubMap(value))
+            }
             // 原回调返回 null 表示丢弃，不能用 ?: 退回原事件
             if (previousBeforeSend != null) previousBeforeSend.execute(event, hint) else event
         }
@@ -104,6 +114,8 @@ object NativeTelemetry {
         val previousBeforeSendTransaction = options.beforeSendTransaction
         options.setBeforeSendTransaction { transaction, hint ->
             if (!isEnabled) return@setBeforeSendTransaction null
+            // 关闭期间开始、重新开启后才结束的 transaction 带着关闭期间的数据
+            if ((transaction.startTimestamp ?: 0.0) < enabledSinceSeconds) return@setBeforeSendTransaction null
             if (previousBeforeSendTransaction != null) {
                 previousBeforeSendTransaction.execute(transaction, hint)
             } else {
@@ -137,6 +149,13 @@ object NativeTelemetry {
                 log.attributes?.get("log.tag")?.value?.toString().orEmpty(),
             ) ?: return@setBeforeSend null
             log.body = TelemetryScrubber.scrub(log.body)
+            // error.message 等属性由 NativeLog 自动附带，调用方控制不了内容
+            log.attributes?.entries?.toList()?.forEach { (key, attribute) ->
+                val value = attribute.value
+                if (value is String) {
+                    log.setAttribute(key, SentryLogEventAttributeValue(attribute.type, TelemetryScrubber.scrub(value)))
+                }
+            }
             if (dropped > 0) {
                 log.setAttribute(
                     "bbplayer.rate_limited_before",
@@ -151,6 +170,14 @@ object NativeTelemetry {
         breadcrumb.message = TelemetryScrubber.scrubNullable(breadcrumb.message)
         for ((key, value) in breadcrumb.data.entries.toList()) {
             if (value is String) breadcrumb.setData(key, TelemetryScrubber.scrub(value))
+        }
+    }
+
+    private fun scrubMap(map: Map<*, *>): Map<String, Any?> = map.entries.associate { (key, value) ->
+        key.toString() to when (value) {
+            is String -> TelemetryScrubber.scrub(value)
+            is Map<*, *> -> scrubMap(value)
+            else -> value
         }
     }
 

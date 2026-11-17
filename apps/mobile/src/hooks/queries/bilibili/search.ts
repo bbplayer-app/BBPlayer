@@ -95,7 +95,10 @@ export const useSearchSuggestions = (query: string) => {
 			})
 
 			if (result.isErr()) {
-				logger.warning('search.suggestions.failed', { 'search.query': query })
+				// 搜索词是用户输入，不上报原文
+				logger.warning('search.suggestions.failed', {
+					'search.query_length': query.length,
+				})
 
 				return []
 			}

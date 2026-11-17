@@ -19,9 +19,9 @@ const SENSITIVE_KEY_REGEX = new RegExp(
 	'i',
 )
 
-// 查询参数与 cookie 里的 key=value
+// 查询参数与 cookie 里的 key=value，值也可能带引号（如 SESSDATA="..."）
 const PAIR_REGEX = new RegExp(
-	`(^|[^\\w-])(${SENSITIVE_KEYS})=([^&;\\s"'<>]+)`,
+	`(^|[^\\w-])(${SENSITIVE_KEYS})=("[^"]*"|'[^']*'|[^&;\\s"'<>]+)`,
 	'gi',
 )
 
@@ -88,9 +88,10 @@ function scrubValueWith(
 			: REDACTED
 	}
 
-	if (value === null || typeof value !== 'object' || depth >= MAX_DEPTH) {
-		return value
-	}
+	if (value === null || typeof value !== 'object') return value
+
+	// 太深的对象不再逐层检查，整个替换掉，不能原样放行
+	if (depth >= MAX_DEPTH) return REDACTED
 
 	if (Array.isArray(value)) {
 		return value.map((item) => scrubValueWith(item, ownMid, depth + 1))

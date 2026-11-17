@@ -14,9 +14,9 @@ object TelemetryScrubber {
         "SESSDATA|bili_jct|DedeUserID(?:__ckMd5)?|sid|buvid[34]?|b_nut|bili_ticket|ac_time_value|" +
             "access_key|access_token|refresh_token|csrf|(?:up_|v)?mid|upsig|oi"
 
-    // 查询参数与 cookie 里的 key=value
+    // 查询参数与 cookie 里的 key=value，值也可能带引号（如 SESSDATA="..."）
     private val pairRegex = Regex(
-        """(?<![\w-])($SENSITIVE_KEYS)=([^&;\s"'<>]+)""",
+        """(?<![\w-])($SENSITIVE_KEYS)=("[^"]*"|'[^']*'|[^&;\s"'<>]+)""",
         RegexOption.IGNORE_CASE,
     )
 
