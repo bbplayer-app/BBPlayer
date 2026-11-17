@@ -515,11 +515,6 @@
       "count": 2
     }
   },
-  "apps/mobile/src/lib/services/analyticsService.ts": {
-    "anti-slop/no-unsafe-dictionary-type": {
-      "count": 2
-    }
-  },
   "apps/mobile/src/lib/services/genKey.ts": {
     "anti-slop/require-safety-comment-for-type-assertion": {
       "count": 1

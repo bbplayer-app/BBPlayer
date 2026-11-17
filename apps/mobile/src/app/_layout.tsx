@@ -5,7 +5,6 @@ import {
 } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
-import * as Application from 'expo-application'
 import { Observe, ObserveRoot } from 'expo-observe'
 import { router, Stack } from 'expo-router'
 import * as Updates from 'expo-updates'
@@ -26,8 +25,8 @@ import {
 } from '@/components/navigation/NavigationRail'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import AppProviders from '@/components/providers'
-import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
+import { useDataCollectionSync } from '@/hooks/app/useDataCollectionSync'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import {
 	nowPlayingBarStore$,
@@ -42,7 +41,6 @@ import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import { runAfterStartup } from '@/lib/performance'
 import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
-import { analyticsService } from '@/lib/services/analyticsService'
 import { getLyricService } from '@/lib/services/getLyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
 import {
@@ -172,7 +170,7 @@ function RootLayout() {
 		useFastMigrations(drizzleDb, migrations)
 
 	useCheckUpdate()
-	useFeatureTracking()
+	useDataCollectionSync()
 
 	onlineManager.setEventListener((setOnline) => {
 		void fetchNetInfo().then((state) => {
@@ -185,22 +183,7 @@ function RootLayout() {
 	})
 
 	useEffect(() => {
-		const logAppInfo = async () => {
-			if (
-				Application.nativeApplicationVersion &&
-				Application.nativeBuildVersion
-			) {
-				await analyticsService.logAppInfo(
-					Application.nativeApplicationVersion,
-					Application.nativeBuildVersion,
-				)
-			}
-		}
-
-		runAfterStartup(() => {
-			void logAppInfo()
-			reportUpdateActivity()
-		})
+		runAfterStartup(reportUpdateActivity)
 
 		const subscription = AppState.addEventListener('change', onAppStateChange)
 

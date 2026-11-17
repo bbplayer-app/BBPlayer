@@ -18,17 +18,12 @@ import type {
 /**
  * 阶段 6：落库事务。
  * 创建 playlist/author、批量创建 artists、按顺序创建 tracks、重排并替换。
- * 返回 playlist ID；track 数量通过 onSynced 回调交给上层埋点。
+ * 返回 playlist ID。
  */
 export async function persistFavoriteSync(
 	deps: Pick<
 		FavoriteSyncDeps,
-		| 'db'
-		| 'playlistService'
-		| 'trackService'
-		| 'artistService'
-		| 'logger'
-		| 'onSynced'
+		'db' | 'playlistService' | 'trackService' | 'artistService' | 'logger'
 	>,
 	args: {
 		favoriteId: number
@@ -37,8 +32,7 @@ export async function persistFavoriteSync(
 		expansion: FavoriteExpansion
 	},
 ): Promise<Result<number, FacadeError>> {
-	const { db, playlistService, trackService, artistService, logger, onSynced } =
-		deps
+	const { db, playlistService, trackService, artistService, logger } = deps
 
 	const { favoriteId, metadata, details, expansion } = args
 
@@ -195,8 +189,6 @@ export async function persistFavoriteSync(
 				'bilibili.remote_id': favoriteId,
 				'playlist.id': playlistResult.value.id,
 			})
-
-			onSynced?.(finalOrderedTrackIds.length)
 
 			return playlistResult.value.id
 		}),

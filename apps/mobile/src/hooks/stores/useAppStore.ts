@@ -8,7 +8,6 @@ import { immer } from 'zustand/middleware/immer'
 
 import { alert } from '@/components/modals/AlertModal'
 import { expoDb } from '@/lib/db/db'
-import { analyticsService } from '@/lib/services/analyticsService'
 import type { AppState, Settings } from '@/types/core/appStore'
 import type { StorageKey } from '@/types/storage'
 import log from '@/utils/log'
@@ -244,7 +243,6 @@ export const useAppStore = create<AppState>()(
 					set((state) => {
 						state.settings.enableDataCollection = value
 					})
-					void analyticsService.setAnalyticsCollectionEnabled(value)
 
 					alert(
 						'重启？',

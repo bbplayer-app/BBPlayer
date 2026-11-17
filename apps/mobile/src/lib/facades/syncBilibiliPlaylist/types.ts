@@ -127,5 +127,4 @@ export interface FavoriteSyncDeps {
 	onProgress?: ProgressFn
 	/** 远端索引里存在、但详情接口查不到的隐藏稿件 */
 	onHiddenVideos?: (bvids: string[]) => void
-	onSynced?: (trackCount: number) => void
 }

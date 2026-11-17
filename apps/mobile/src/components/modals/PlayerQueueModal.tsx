@@ -37,7 +37,6 @@ import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { clearPlaybackQueue } from '@/lib/player/playbackSession'
-import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 
@@ -392,7 +391,6 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const reverseRemainingQueueHandler = useCallback(async () => {
 		void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
 		await Orpheus.reverseRemainingQueue()
-		void analyticsService.logPlayerQueueAction('reverse_remaining')
 	}, [])
 
 	const keyExtractor = useCallback((item: OrpheusTrack) => item.id, [])

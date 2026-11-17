@@ -4,7 +4,6 @@ packages:
   - packages/*
   - packages/*/example
 allowBuilds:
-  '@firebase/util': true
   '@sentry/cli': true
   esbuild: true
   lefthook: true

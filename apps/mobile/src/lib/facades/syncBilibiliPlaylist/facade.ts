@@ -12,7 +12,6 @@ import {
 } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
 import type { PlaylistService } from '@/lib/services/playlistService'
 import type { TrackService } from '@/lib/services/trackService'
@@ -319,11 +318,6 @@ export class SyncBilibiliPlaylistFacade {
 					'bilibili.remote_id': contents.info.id,
 					'playlist.id': playlistRes.value.id,
 				})
-				void analyticsService.logPlaylistSync(
-					'sync_bilibili',
-					type,
-					trackIds.length,
-				)
 
 				return playlistRes.value.id
 			}),
@@ -468,12 +462,6 @@ export class SyncBilibiliPlaylistFacade {
 							'playlist.id': playlistRes.value.id,
 						})
 
-						void analyticsService.logPlaylistSync(
-							'sync_bilibili',
-							'multi_page',
-							trackIds.length,
-						)
-
 						return playlistRes.value.id
 					}),
 					(e) =>
@@ -541,13 +529,6 @@ export class SyncBilibiliPlaylistFacade {
 										'bilibili.reason': tip,
 									})
 									toast.info(tip)
-								},
-								onSynced: (trackCount) => {
-									void analyticsService.logPlaylistSync(
-										'sync_bilibili',
-										'favorite',
-										trackCount,
-									)
 								},
 							},
 							favoriteId,

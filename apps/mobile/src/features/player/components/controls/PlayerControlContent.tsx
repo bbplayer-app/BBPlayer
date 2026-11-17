@@ -14,7 +14,6 @@ import ActivityIndicator from '@/components/common/ActivityIndicator'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useTrackDuration from '@/hooks/player/useTrackProgress'
 import { seekWithinTrack } from '@/lib/player/seek'
-import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { tintLottieSource } from '@/utils/lottie'
@@ -176,7 +175,6 @@ export function MainPlaybackControls({
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 						prevLottieRef.current?.play(0, 60)
 						void Orpheus.skipToPrevious()
-						void analyticsService.logPlayerAction('skip_prev')
 					}}
 					testID='player-prev'
 				>
@@ -209,10 +207,8 @@ export function MainPlaybackControls({
 					try {
 						if (debouncedIsPlaying) {
 							await Orpheus.pause()
-							void analyticsService.logPlayerAction('pause')
 						} else {
 							await Orpheus.play()
-							void analyticsService.logPlayerAction('play')
 						}
 					} catch (e) {
 						toastAndLogError('播放操作失败', e, 'UI.Player.Controls')
@@ -259,7 +255,6 @@ export function MainPlaybackControls({
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 						nextLottieRef.current?.play(0, 60)
 						void Orpheus.skipToNext()
-						void analyticsService.logPlayerAction('skip_next')
 					}}
 					testID='player-next'
 				>
