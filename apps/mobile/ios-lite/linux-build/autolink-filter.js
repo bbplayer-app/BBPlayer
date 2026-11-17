@@ -1,11 +1,6 @@
 // Runs Expo's community autolinking for iOS and drops native modules the first iOS build leaves out.
 const { execFileSync } = require('child_process')
-const DENY = new Set([
-	'@react-native-firebase/app',
-	'@react-native-firebase/analytics',
-	'@sentry/react-native',
-	'react-native-release-profiler',
-])
+const DENY = new Set(['@sentry/react-native', 'react-native-release-profiler'])
 const out = execFileSync(
 	process.execPath,
 	[

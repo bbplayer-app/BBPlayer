@@ -11,11 +11,14 @@ export type SeverityLevel =
 	| 'debug'
 
 export const init = noop
+export const setUser = noop
 export const addBreadcrumb = noop
 export const captureException = () => ''
+export const nativeCrash = noop
 export const appLoaded = noop
 export const flush = async () => true
 export const metrics = { distribution: noop }
+export const logger = { debug: noop, info: noop, warn: noop, error: noop }
 
 // The app sets tags on the global scope, and clones the current scope to start a
 // span with its own trace. Nothing is kept, so one scope serves both.

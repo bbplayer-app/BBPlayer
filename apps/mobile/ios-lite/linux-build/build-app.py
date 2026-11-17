@@ -82,7 +82,6 @@ def prepare_sources(target):
     src = APP_INT / 'Sources'
     src.mkdir(parents=True, exist_ok=True)
     delegate = (IOS / 'BBPlayer/AppDelegate.swift').read_text()
-    delegate = delegate.replace('import FirebaseCore\n', '')
     delegate = re.sub(r'// @generated begin bootsplash-header.*?// @generated end bootsplash-header\n', '', delegate, flags=re.S)
     delegate = re.sub(r'// @generated begin bootsplash-init.*?// @generated end bootsplash-init\n', '', delegate, flags=re.S)
     files = {'AppDelegate.swift': delegate, 'SceneDelegate.swift': (IOS / 'BBPlayer/SceneDelegate.swift').read_text(),
