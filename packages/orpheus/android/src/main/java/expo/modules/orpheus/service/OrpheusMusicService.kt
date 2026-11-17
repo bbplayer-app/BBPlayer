@@ -733,15 +733,18 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                NativeLog.info(
-                    LogTags.SERVICE,
-                    "player.playing.changed",
-                    mapOf(
-                        "player.is_playing" to isPlaying,
-                        "player.state_code" to player?.playbackState,
-                        "player.suppression_reason" to player?.playbackSuppressionReason,
-                    ),
+                val suppressionReason = player?.playbackSuppressionReason
+                val fields = mapOf(
+                    "player.is_playing" to isPlaying,
+                    "player.state_code" to player?.playbackState,
+                    "player.suppression_reason" to suppressionReason,
                 )
+                // 每次 seek、缓冲都会触发，只有被系统压制（如失去音频焦点）才上报
+                if (suppressionReason != null && suppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                    NativeLog.info(LogTags.SERVICE, "player.playing.changed", fields)
+                } else {
+                    NativeLog.debug(LogTags.SERVICE, "player.playing.changed", fields)
+                }
                 PlaybackTracer.onIsPlayingChanged(isPlaying)
                 lyricsManager.setPlaybackState(isPlaying)
                 if (isPlaying) {
@@ -902,15 +905,17 @@ class OrpheusMusicService : MediaLibraryService() {
                     Player.STATE_ENDED -> "ENDED"
                     else -> playbackState.toString()
                 }
-                NativeLog.info(
-                    LogTags.SERVICE,
-                    "player.state.changed",
-                    mapOf(
-                        "player.state" to stateName,
-                        "track.id" to player?.currentMediaItem?.mediaId,
-                        "player.position_ms" to player?.currentPosition,
-                    ),
+                val fields = mapOf(
+                    "player.state" to stateName,
+                    "track.id" to player?.currentMediaItem?.mediaId,
+                    "player.position_ms" to player?.currentPosition,
                 )
+                // BUFFERING/READY 每次 seek、切歌都会来回切换，只上报播完和停止
+                if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
+                    NativeLog.info(LogTags.SERVICE, "player.state.changed", fields)
+                } else {
+                    NativeLog.debug(LogTags.SERVICE, "player.state.changed", fields)
+                }
                 if (playbackState == Player.STATE_ENDED) {
                     // 队列最后一首自然播放完毕：清除断点
                     serviceHandler.removeCallbacks(resumeSaveRunnable)
