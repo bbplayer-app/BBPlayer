@@ -102,6 +102,11 @@ export function isSentryTelemetryEnabled(): boolean {
 let diagnosticId: string | null = null
 
 export function getDiagnosticId(): string | null {
+	// 启动时关闭、之后才开启数据分享的情况：ID 和原生 SDK 读的是同一个文件，重启后的上报会用它
+	if (!diagnosticId && isSentryTelemetryEnabled()) {
+		diagnosticId = getSentryInstallationId()
+	}
+
 	return diagnosticId
 }
 

@@ -33,7 +33,14 @@ const openExternalLink = async (url: string) => {
 
 // 匿名 ID，只有用户主动提供时才能用它在 Sentry 里找到对应的日志
 const copyDiagnosticId = async (id: string) => {
-	await Clipboard.setStringAsync(id)
+	try {
+		await Clipboard.setStringAsync(id)
+	} catch (e) {
+		toast.error('复制诊断 ID 失败', { description: String(e) })
+
+		return
+	}
+
 	toast.success('已复制诊断 ID', {
 		description: '反馈问题时附上它，方便定位日志',
 	})
