@@ -69,7 +69,7 @@ object OrpheusTelemetry {
         if (stream != null) {
             applyStream(stream)
         } else {
-            // 本地文件或已缓存的歌曲不会经过取流
+            // 本地文件和已缓存的歌曲不会经过取流；B 站歌曲也可能只是还没取完，这时分不清是否命中缓存
             setTag("orpheus.source", if (uri == null) null else sourceOf(uri))
             flush()
         }
@@ -82,7 +82,7 @@ object OrpheusTelemetry {
     }
 
     private fun sourceOf(uri: String) = when {
-        uri.startsWith("orpheus://bilibili") -> "bilibili-cached"
+        uri.startsWith("orpheus://bilibili") -> "bilibili"
         uri.startsWith("file:") || uri.startsWith("content:") -> "local"
         else -> "other"
     }

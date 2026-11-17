@@ -187,6 +187,7 @@ object DownloadUtil {
                     resolveStatus = SpanStatus.OK
                     return resolvedSpec
                 } catch (e: Exception) {
+                    OrpheusTelemetry.recordStream(uri.toString(), mapOf("kind" to "resolve_failed"))
                     // 播放器会重试，重试耗尽才会变成 onPlayerError
                     NativeLog.warning(
                         LogTags.STREAM,
