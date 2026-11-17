@@ -201,7 +201,7 @@ class OrpheusMusicService : MediaLibraryService() {
         LoudnessStorage.initialize(this)
         TrackResumeStorage.initialize(this)
 
-        setMediaNotificationProvider(object : DefaultMediaNotificationProvider(this) {
+        setMediaNotificationProvider(ForegroundSafeNotificationProvider(object : DefaultMediaNotificationProvider(this) {
             override fun getMediaButtons(
                 session: MediaSession,
                 playerCommands: Player.Commands,
@@ -275,7 +275,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 return builder.build()
             }
-        })
+        }))
 
         initializePlayer()
     }
