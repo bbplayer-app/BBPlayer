@@ -169,6 +169,123 @@ def write_app_config():
                    cwd=MOBILE, env=env, check=True, stdout=subprocess.DEVNULL)
 
 
+LICENSE_PLIST = 'com.mono0926.LicensePlist'
+
+
+def yaml_scalar(text):
+    """Decode a one-line value the way @callstack/licenses' YAML writer quotes it."""
+    if text[:1] == "'":
+        return text[1:-1].replace("''", "'")
+    if text[:1] == '"':
+        return re.sub(r'\\(.)', r'\1', text[1:-1])
+    return text
+
+
+def read_license_config(path):
+    """Read the license_plist.yml that react-native-legal writes during prebuild.
+
+    @callstack/licenses writes it with its own small YAML writer, so this reads only what that
+    writer produces: the rename map, the manual and exclude lists, one-line values and `|` blocks.
+    """
+    config = {'rename': {}, 'manual': [], 'exclude': []}
+    lines = path.read_text().split('\n')
+    section = None
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        if not line.strip() or line.startswith('#'):
+            continue
+        if not line.startswith(' '):
+            section = line.rstrip(':')
+            continue
+        rename = re.fullmatch(r'  ("[^"]*"|[^\s:]+): (.*)', line)
+        item = re.fullmatch(r'  (- |  )(\w+): (.*)', line)
+        if section == 'rename' and rename:
+            config['rename'][yaml_scalar(rename.group(1))] = yaml_scalar(rename.group(2))
+            continue
+        if section not in ('manual', 'exclude') or not item:
+            raise ValueError(f'{path.name} line {i} is not in the expected format')
+        start, key, value = item.groups()
+        if start == '- ':
+            config[section].append({})
+        elif not config[section]:
+            raise ValueError(f'{path.name} line {i} is outside a list item')
+        if value == '|':
+            block = []
+            while i < len(lines) and lines[i].startswith(' ' * 6):
+                block.append(lines[i][6:])
+                i += 1
+            config[section][-1][key] = '\n'.join(block)
+        else:
+            config[section][-1][key] = yaml_scalar(value)
+    return config
+
+
+def license_entries():
+    """The libraries LicensePlist would list, as (file key, name, version, license text).
+
+    That is the npm packages in license_plist.yml, then the pods in CocoaPods' acknowledgements
+    except those it excludes, which are npm packages already listed.
+    """
+    config = read_license_config(IOS / 'license_plist.yml')
+    entries, missing = [], 0
+    for item in config['manual']:
+        body = item.get('body', '')
+        if 'file' in item:
+            try:
+                body = (IOS / item['file']).read_text(errors='replace')
+            except OSError:
+                missing += 1
+        entries.append((item['name'], config['rename'].get(item['name'], item['name']), item.get('version'), body))
+    if missing:
+        print(f'  warning: {missing} license files listed in license_plist.yml are missing', flush=True)
+    excluded = {item['name'] for item in config['exclude']}
+    lock = (IOS / 'Podfile.lock').read_text()
+    pods = lock[lock.index('PODS:\n'):lock.index('\nDEPENDENCIES:')]
+    versions = dict(re.findall(r'^  - ([^\s/]+) \(([^)]+)\)', pods, re.M))
+    acknowledgements = plistlib.loads((SUPPORT / 'Pods-BBPlayer-acknowledgements.plist').read_bytes())
+    for spec in acknowledgements['PreferenceSpecifiers']:
+        title = spec.get('Title')
+        # CocoaPods' header and footer specifiers have no License.
+        if 'License' in spec and title and title not in excluded:
+            entries.append((title, title, versions.get(title), spec.get('FooterText', '')))
+    return entries
+
+
+def write_licenses():
+    """Write the license list into Settings.bundle, where an Xcode build has LicensePlist put it.
+
+    react-native-legal's config plugin adds Settings.bundle and a LicensePlist run script phase to
+    the Xcode project, and its iOS module reads the plists that LicensePlist writes. LicensePlist
+    only runs on macOS, so write the same plists here from the files it would read.
+    """
+    root = IOS / 'Settings.bundle/Root.plist'
+    if not (IOS / 'license_plist.yml').exists() or not root.exists():
+        return
+    try:
+        entries = license_entries()
+    except (OSError, ValueError, KeyError) as error:
+        print(f'  warning: no license list in the app: {error}', flush=True)
+        return
+    bundle = OUT / 'Settings.bundle'
+    (bundle / LICENSE_PLIST).mkdir(parents=True)
+    shutil.copyfile(root, bundle / 'Root.plist')
+    panes, files = [], set()
+    for key, name, version, body in sorted(entries, key=lambda entry: entry[1].lower()):
+        file = re.sub(r'[^\w@.+-]', '_', key)
+        while file in files:
+            file += '_'
+        files.add(file)
+        with (bundle / LICENSE_PLIST / f'{file}.plist').open('wb') as out:
+            plistlib.dump({'PreferenceSpecifiers': [{'Type': 'PSGroupSpecifier', 'FooterText': body}]}, out,
+                          fmt=plistlib.FMT_BINARY)
+        title = f'{name} ({version})' if version else name
+        panes.append({'Type': 'PSChildPaneSpecifier', 'Title': title, 'File': f'{LICENSE_PLIST}/{file}'})
+    with (bundle / f'{LICENSE_PLIST}.plist').open('wb') as out:
+        plistlib.dump({'PreferenceSpecifiers': panes, 'StringsTable': LICENSE_PLIST}, out, fmt=plistlib.FMT_BINARY)
+    print(f'  licenses: {len(panes)} libraries', flush=True)
+
 IPAD = 2
 IPHONE_ICONS = [('AppIcon60x60@2x.png', 120), ('AppIcon60x60@3x.png', 180)]
 IPAD_ICONS = [('AppIcon76x76@2x~ipad.png', 152), ('AppIcon83.5x83.5@2x~ipad.png', 167)]
@@ -278,6 +395,7 @@ def main():
     install_frameworks(target)
     install_resources(target)
     write_app_config()
+    write_licenses()
     families = device_families()
     make_icons(families)
     write_info_plist(families)
