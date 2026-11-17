@@ -182,6 +182,34 @@ jobs:
             --draft \
             --notes "auto release by GitHub Actions"
 
+  # 把 commit 关联到 Sentry Gradle 插件构建时创建的 release，
+  # 失败不影响 draft release，也不会让整个 workflow 标红
+  sentry-release:
+    needs: [setup, build]
+    if: needs.setup.outputs.buildType == 'prod'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.setup.outputs.commitSha }}
+          fetch-depth: 0 # versionCode 与 set-commits 都需要完整历史
+
+      - name: 🔗 Associate commits with Sentry release
+        env:
+          SENTRY_ORG: roitium
+          SENTRY_PROJECT: bbplayer
+        run: |
+          APP_VERSION=$(node -p "require('./apps/mobile/package.json').version")
+          VERSION_CODE=$(git rev-list --count HEAD)
+          # 与 Sentry Gradle 插件生成的 release 名保持一致
+          RELEASE="com.roitium.bbplayer@${APP_VERSION}+${VERSION_CODE}"
+          echo "Sentry release: $RELEASE"
+          npx -y @sentry/cli releases new "$RELEASE"
+          npx -y @sentry/cli releases set-commits "$RELEASE" --auto --ignore-missing
+          npx -y @sentry/cli releases finalize "$RELEASE"
+
   notify:
     needs: [setup, build]
     if: always() && github.event_name == 'pull_request'
