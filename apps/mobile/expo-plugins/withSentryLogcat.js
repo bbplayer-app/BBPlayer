@@ -12,7 +12,7 @@ const LOGCAT_TRACING_BLOCK = `tracingInstrumentation {
           features = []
           logcat {
               enabled = true
-              minLevel = io.sentry.android.gradle.instrumentation.logcat.LogcatLevel.INFO
+              minLevel = io.sentry.android.gradle.instrumentation.logcat.LogcatLevel.WARNING
           }
           appStart {
               enabled = false

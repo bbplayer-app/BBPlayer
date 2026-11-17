@@ -45,7 +45,7 @@ NativeLog.info(
 
 JS 保留文件日志和开发控制台输出；生产环境输出结构化 Sentry Logs 和 breadcrumb。
 Android 由 NativeLog 输出结构化 Sentry Logs，并为 warning/error 添加 breadcrumb。
-Sentry Gradle 插件另行采集应用和依赖库中 INFO 及以上的 `Log.i/w/e/wtf` 调用，
+Sentry Gradle 插件另行采集应用和依赖库中 WARN 及以上的 `Log.w/e/wtf` 调用（编译时只改写这些调用），
 同时记录为 Sentry Logs 和 Logcat breadcrumb，沿用原生侧的数据采集开关、正文脱敏和 Logs 限流。
 NativeLog 本地使用 `Log.println`，不在自动插桩范围内，因此不会重复上报。
 
