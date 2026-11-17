@@ -839,10 +839,10 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                // 超大队列是 OOM 的嫌疑之一：队列整体序列化成 JSON 存取，所以要在保存之前记下
+                player?.let { OrpheusTelemetry.update("queueSize" to it.mediaItemCount) }
                 saveCurrentQueue()
                 val player = player ?: return
-                // 超大队列是 OOM 的嫌疑之一：队列整体序列化成 JSON 存取
-                OrpheusTelemetry.update("queueSize" to player.mediaItemCount)
                 val currentItem = player.currentMediaItem ?: return
                 val duration = player.duration
                 if (duration != C.TIME_UNSET && duration > 0) {

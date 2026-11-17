@@ -128,7 +128,8 @@ object NativeTelemetry {
             event.exceptions?.forEach { it.value = TelemetryScrubber.scrubNullable(it.value) }
             event.breadcrumbs?.forEach(::scrubBreadcrumb)
             if (event.exceptions?.any { it.type == "OutOfMemoryError" } == true) {
-                event.contexts.put(MEMORY_CONTEXT, memorySnapshot())
+                // 堆已经耗尽，取快照本身也可能分配失败；失败就不带，不能连事件一起丢掉
+                runCatching { memorySnapshot() }.onSuccess { event.contexts.put(MEMORY_CONTEXT, it) }
             }
             // orpheus 等自定义 context 是普通 Map（如 lastAudioError 是原始异常文本），Device、OS 这类内置 context 不是
             val contexts = event.contexts
