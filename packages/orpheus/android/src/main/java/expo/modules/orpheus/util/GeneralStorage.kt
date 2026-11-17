@@ -1,11 +1,13 @@
 package expo.modules.orpheus.util
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
-import android.util.Log
 import androidx.core.graphics.toColorInt
 import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -55,7 +57,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_RESTORE_POSITION_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set restore position enabled", e)
+            NativeLog.error(LogTags.STORAGE, "storage.restore_position.set_failed", error = e)
         }
     }
 
@@ -63,7 +65,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_LOUDNESS_NORMALIZATION_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set loudness normalization enabled", e)
+            NativeLog.error(LogTags.STORAGE, "storage.loudness.set_failed", error = e)
         }
     }
 
@@ -94,7 +96,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_AUTOPLAY_ON_START_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set autoplay on start enabled", e)
+            NativeLog.error(LogTags.STORAGE, "storage.autoplay.set_failed", error = e)
         }
     }
 
@@ -106,7 +108,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_SPECTRUM_VISUALIZER_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set spectrum visualizer enabled", e)
+            NativeLog.error(LogTags.STORAGE, "storage.spectrum.set_failed", error = e)
         }
     }
 
@@ -137,7 +139,7 @@ object GeneralStorage {
             safeKv.encode(KEY_SAVED_QUEUE, jsonListString)
 
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to save queue", e)
+            NativeLog.error(LogTags.STORAGE, "storage.queue.save_failed", error = e)
         }
     }
 
@@ -157,12 +159,19 @@ object GeneralStorage {
                     track.toMediaItem(context)
 
                 } catch (e: Exception) {
-                    Log.e("MediaItemStorer", "Failed to parse track json: $trackJson", e)
+                    NativeLog.error(
+                        LogTags.STORAGE,
+                        "storage.track.parse_failed",
+                        mapOf(
+                            "storage.track_json_length" to trackJson.length,
+                        ),
+                        e,
+                    )
                     null
                 }
             }
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to restore queue", e)
+            NativeLog.error(LogTags.STORAGE, "storage.queue.restore_failed", error = e)
             emptyList()
         }
     }

@@ -1,4 +1,3 @@
-import { useObserve } from 'expo-observe'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useIncomingShare } from 'expo-sharing'
 import {
@@ -103,11 +102,9 @@ function SearchPageContent() {
 	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
 		useIncomingShare()
 
-	const { markInteractive } = useObserve()
 	useEffect(() => {
-		markInteractive()
 		void markPerfInteractive()
-	}, [markInteractive])
+	}, [])
 
 	const saveSearchHistory = useCallback(
 		(history: SearchHistoryItem[]) => {

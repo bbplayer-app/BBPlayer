@@ -74,7 +74,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 				set({ internalTrack: result.value })
 			}
 		} catch (e) {
-			logger.warning('Failed to sync player state', { error: e })
+			logger.warning('player.state.sync_failed', {}, e)
 		}
 	},
 }))

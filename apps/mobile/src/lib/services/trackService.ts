@@ -107,7 +107,10 @@ export class TrackService {
 			} as LocalTrack
 		}
 
-		logger.warning(`track ${dbTrack.id} 存在不一致的 source 和 metadata。`)
+		logger.warning('track.metadata_inconsistent', {
+			'track.id': dbTrack.id,
+			'track.source': dbTrack.source,
+		})
 
 		return null
 	}

@@ -3,7 +3,6 @@ import dayjs from 'dayjs'
 import { eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
-import { useObserve } from 'expo-observe'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -57,11 +56,9 @@ function MyPageContent() {
 	const activeSkin = useActiveSkin()
 	const avatarFrameIndex = useSkinStore((state) => state.activeAvatarFrameIndex)
 	const avatarFrame = activeSkin?.avatarFrames[avatarFrameIndex]
-	const { markInteractive } = useObserve()
 	useEffect(() => {
-		markInteractive()
 		void markPerfInteractive()
-	}, [markInteractive])
+	}, [])
 
 	const chevron = () => (
 		<Icon

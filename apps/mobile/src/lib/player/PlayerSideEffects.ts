@@ -4,14 +4,9 @@ import {
 	type PlaybackErrorEvent,
 } from '@bbplayer/orpheus'
 import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
-import { spanToJSON } from '@sentry/react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics/keys'
 import { queryClient } from '@/lib/config/queryClient'
-import {
-	failPendingPlaybackSpan,
-	takePendingPlaybackSpan,
-} from '@/lib/player/playbackSession'
 import { getLyricService } from '@/lib/services/getLyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
@@ -57,7 +52,7 @@ class PlayerSideEffects {
 		if (this.initialized) return
 		this.initialized = true
 
-		logger.info('Initializing PlayerSideEffects')
+		logger.info('player.effects.initialize')
 
 		// 预加载功能完全没必要，当初那个鲨臂让我加的？？？？？
 		// Orpheus.addListener('onTrackStarted', () => {
@@ -79,24 +74,6 @@ class PlayerSideEffects {
 	private registerHeadlessTask() {
 		registerOrpheusHeadlessTask(async (event) => {
 			if (event.eventName === 'onTrackStarted') {
-				// 结束由 startPlayback 创建的 playback.start transaction
-				const playbackSpan = takePendingPlaybackSpan()
-
-				if (playbackSpan) {
-					const expectedTrackId =
-						spanToJSON(playbackSpan).data?.['playback.expected_first_track_id']
-
-					// 校验事件归属：防止用户快速切歌时，A 的事件消耗 B 的 span
-					if (!expectedTrackId || expectedTrackId === event.trackId) {
-						playbackSpan.setAttribute('playback.first_track_id', event.trackId)
-						playbackSpan.end()
-					} else {
-						// 事件不属于此 span，丢弃 span
-						playbackSpan.setAttribute('playback.cancelled', true)
-						playbackSpan.end()
-					}
-				}
-
 				await getLyricService().pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
 				await finalizeAndRecordCurrentTrack(
@@ -106,7 +83,7 @@ class PlayerSideEffects {
 				)
 			} else if (event.eventName === 'onRequestClearLyrics') {
 				// 桌面歌词面板「清空歌词」按钮被点击时，标记该曲目跳过歌词
-				logger.info('收到清空歌词请求', { trackId: event.trackId })
+				logger.info('lyrics.clear_requested', { 'track.id': event.trackId })
 				await getLyricService().skipLyric(event.trackId)
 				// 使 React Query 缓存失效，让歌词面板立即显示跳过提示
 				// 使用 void 是因为软件在后台时不需要这个强制完成，可以等待到前台后再完成
@@ -287,12 +264,20 @@ class PlayerSideEffects {
 	 */
 	private setupErrorHandler() {
 		Orpheus.addListener('onPlayerError', async (event) => {
-			logger.error('播放器错误事件：', { event })
+			// 显式选择跨平台诊断字段，不上传整个原生事件或堆栈对象。
+			logger.error('player.error', {
+				'player.platform': event.platform,
+				'error.message': 'message' in event ? event.message : event.error,
+				'error.code': 'errorCode' in event ? event.errorCode : undefined,
+				'error.type':
+					'rootCauseClass' in event ? event.rootCauseClass : undefined,
+				'error.code_name':
+					event.platform === 'android' ? event.errorCodeName : undefined,
+				'error.root_cause_message':
+					event.platform === 'android' ? event.rootCauseMessage : undefined,
+			})
 
-			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败。
-			// 上报时复用同一个 Error 实例，beforeSend 才能把 issue 关联回这条 trace
 			const sentryError = this.toSentryError(event)
-			failPendingPlaybackSpan(sentryError)
 
 			let playerErrorInfo = {
 				message:
@@ -304,7 +289,11 @@ class PlayerSideEffects {
 				try {
 					playerErrorInfo = await this.getPlayerErrorInfo(event)
 				} catch (error) {
-					logger.error('解析播放器错误失败：', { error, event })
+					logger.error(
+						'player.error_parse_failed',
+						{ 'player.platform': event.platform },
+						error,
+					)
 				}
 
 				toast.error(playerErrorInfo.message, {
@@ -316,7 +305,11 @@ class PlayerSideEffects {
 					reportErrorToSentry(sentryError, '播放器错误事件', 'Native.Player')
 				}
 			} catch (error) {
-				logger.error('处理播放器错误事件失败：', { error, event })
+				logger.error(
+					'player.error_handle_failed',
+					{ 'player.platform': event.platform },
+					error,
+				)
 			}
 		})
 	}

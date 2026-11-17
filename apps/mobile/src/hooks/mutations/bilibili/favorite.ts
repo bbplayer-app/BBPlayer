@@ -62,7 +62,7 @@ export const useDealFavoriteForOneVideo = () => {
 				description: errorMessage,
 				duration: Number.POSITIVE_INFINITY,
 			})
-			logger.error('删除收藏夹内容失败:', error)
+			logger.error('bilibili.favorite.delete_failed', {}, error)
 		},
 	})
 }

@@ -1,6 +1,4 @@
 import { execSync } from 'child_process'
-import fs from 'fs'
-import path from 'path'
 
 import expoAsset from 'expo-asset/plugin'
 import expoBuildProperties from 'expo-build-properties/plugin'
@@ -85,28 +83,8 @@ const getAppName = () => {
 	return 'BBPlayer'
 }
 
-const getGoogleServicesFile = (defaultPath: string, realPath: string) => {
-	if (fs.existsSync(path.resolve(process.cwd(), realPath))) {
-		return realPath
-	}
-
-	return defaultPath
-}
-
 // oxlint-disable-next-line @typescript-eslint/no-unused-vars
 export default ({ config }: ConfigContext): ExpoConfig => {
-	const googleServicesJsonPath =
-		'./assets/config/google-services/google-services.json'
-
-	const googleServicesJsonRealPath =
-		'./assets/config/google-services/google-services.real.json'
-
-	const googleServicesPlistPath =
-		'./assets/config/google-services/GoogleService-Info.plist'
-
-	const googleServicesPlistRealPath =
-		'./assets/config/google-services/GoogleService-Info.real.plist'
-
 	return {
 		name: getAppName(),
 		slug: 'bbplayer',
@@ -122,10 +100,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				monochromeImage: './assets/images/adaptive-icon.png',
 				backgroundColor: '#ffffff',
 			},
-			googleServicesFile: getGoogleServicesFile(
-				googleServicesJsonPath,
-				googleServicesJsonRealPath,
-			),
 			package: getUniqueIdentifier(),
 			versionCode: versionCode,
 			runtimeVersion: { policy: 'appVersion' },
@@ -161,6 +135,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			'./expo-plugins/withKotlinSerialization',
 			// './expo-plugins/withAndroidPlugin',
 			'./expo-plugins/withAndroidGradleProperties',
+			'./expo-plugins/withSentryLogcat',
 			[
 				'./expo-plugins/withAndroidTv',
 				{ banner: './assets/images/tv-banner.png' },
@@ -279,7 +254,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				savePhotosPermission: '允许 $(PRODUCT_NAME) 保存图片到您的相册',
 				isAccessMediaLocationEnabled: true,
 			}),
-			'@react-native-firebase/app',
 			expoImage(),
 			expoSharing({
 				ios: {
@@ -313,10 +287,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			runtimeVersion: {
 				policy: 'appVersion',
 			},
-			googleServicesFile: getGoogleServicesFile(
-				googleServicesPlistPath,
-				googleServicesPlistRealPath,
-			),
 		},
 		updates: {
 			enabled: true,

@@ -139,7 +139,9 @@ export class SharedPlaylistFacade {
 						),
 					)
 
-				logger.debug('enableSharing: 读取曲目', trackLinks.length)
+				logger.debug('playlist.sharing.tracks_loaded', {
+					'playlist.track_count': trackLinks.length,
+				})
 
 				// 3. 构造初始曲目上传格式
 				const initialTracks = trackLinks
@@ -196,7 +198,10 @@ export class SharedPlaylistFacade {
 					if (updateResult.isErr()) throw updateResult.error
 				})
 
-				logger.info('enableSharing 完成', { localPlaylistId, shareId })
+				logger.info('playlist.sharing.enabled', {
+					'playlist.local_playlist_id': localPlaylistId,
+					'playlist.share_id': shareId,
+				})
 
 				return { shareId }
 			})(),
@@ -233,9 +238,9 @@ export class SharedPlaylistFacade {
 				if (existing.isErr()) throw existing.error
 
 				if (existing.isOk() && existing.value) {
-					logger.info('subscribeToPlaylist: 已存在本地副本', {
-						shareId,
-						id: existing.value.id,
+					logger.info('playlist.subscription.exists', {
+						'playlist.share_id': shareId,
+						'playlist.id': existing.value.id,
 					})
 
 					return { localPlaylistId: existing.value.id }
@@ -325,7 +330,10 @@ export class SharedPlaylistFacade {
 					return id
 				})
 
-				logger.info('subscribeToPlaylist 完成', { shareId, localPlaylistId })
+				logger.info('playlist.subscription.created', {
+					'playlist.share_id': shareId,
+					'playlist.local_playlist_id': localPlaylistId,
+				})
 
 				return { localPlaylistId }
 			})(),
@@ -457,7 +465,9 @@ export class SharedPlaylistFacade {
 					(rp) => !localShareIds.has(rp.id),
 				)
 
-				logger.info('restoreFromCloud: 需恢复的歌单数', missing.length)
+				logger.info('playlist.cloud_restore.started', {
+					'playlist.missing_count': missing.length,
+				})
 
 				let restored = 0
 
@@ -469,7 +479,9 @@ export class SharedPlaylistFacade {
 					})
 
 					if (!changesResp.ok) {
-						logger.error('恢复歌单：拉取初始数据失败', { shareId: remote.id })
+						logger.error('playlist.cloud_restore.fetch_failed', {
+							'playlist.share_id': remote.id,
+						})
 						continue
 					}
 
@@ -478,10 +490,11 @@ export class SharedPlaylistFacade {
 					try {
 						changesData = await changesResp.json()
 					} catch (e) {
-						logger.error('恢复歌单：解析初始数据失败', {
-							shareId: remote.id,
-							error: e,
-						})
+						logger.error(
+							'playlist.cloud_restore.parse_failed',
+							{ 'playlist.share_id': remote.id },
+							e,
+						)
 						continue
 					}
 
@@ -531,11 +544,17 @@ export class SharedPlaylistFacade {
 						})
 						restored++
 					} catch (e) {
-						logger.error('恢复歌单失败', { shareId: remote.id, error: e })
+						logger.error(
+							'playlist.cloud_restore.playlist_failed',
+							{ 'playlist.share_id': remote.id },
+							e,
+						)
 					}
 				}
 
-				logger.info('restoreFromCloud 完成', { restored })
+				logger.info('playlist.cloud_restore.completed', {
+					'playlist.restored': restored,
+				})
 
 				return { restored }
 			})(),
@@ -635,10 +654,10 @@ export class SharedPlaylistFacade {
 					return n
 				})
 
-				logger.debug('pullChanges 完成', {
-					localPlaylistId,
-					applied,
-					serverTime,
+				logger.debug('playlist.changes.pulled', {
+					'playlist.local_playlist_id': localPlaylistId,
+					'playlist.applied': applied,
+					'playlist.server_time': serverTime,
 				})
 
 				return { applied }
@@ -694,8 +713,8 @@ export class SharedPlaylistFacade {
 
 					if (playlist.shareRole === 'subscriber') {
 						// 订阅者：直接删除本地副本
-						logger.info('unsubscribeFromPlaylist: 删除订阅副本', {
-							localPlaylistId,
+						logger.info('playlist.subscription.deleted', {
+							'playlist.local_playlist_id': localPlaylistId,
 						})
 
 						const deleteResult =
@@ -704,13 +723,10 @@ export class SharedPlaylistFacade {
 						if (deleteResult.isErr()) throw deleteResult.error
 					} else {
 						// owner/editor：断开连接但保留本地数据
-						logger.info(
-							'unsubscribeFromPlaylist: 断开共享连接（保留本地数据）',
-							{
-								localPlaylistId,
-								role: playlist.shareRole,
-							},
-						)
+						logger.info('playlist.sharing.disconnected', {
+							'playlist.local_playlist_id': localPlaylistId,
+							'playlist.role': playlist.shareRole,
+						})
 
 						const updateResult = await txPlaylist.updatePlaylistMetadata(
 							localPlaylistId,

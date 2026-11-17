@@ -32,8 +32,8 @@ export function migrateIndependentAccountReset(): void {
 
 		storage.remove('shared-playlist-members')
 		storage.remove('bbplayer_jwt')
-		logger.info('[account] 已清空旧共享歌单状态与同步队列')
+		logger.info('database.account_reset.completed')
 	} catch (error) {
-		logger.error('[account] 清空旧共享歌单状态失败:', error)
+		logger.error('database.account_reset.failed', {}, error)
 	}
 }

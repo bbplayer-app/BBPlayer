@@ -1,12 +1,14 @@
 package expo.modules.orpheus.service
 
-import android.util.Log
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.media3.exoplayer.ExoPlayer
+import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.util.GeneralStorage
 
 /**
@@ -56,7 +58,7 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
         }
 
         player.shuffleModeEnabled = enabled
-        Log.d("ShuffleManager", "Shuffle mode set to: $enabled")
+        NativeLog.debug(LogTags.QUEUE, "player.shuffle.changed", mapOf("player.shuffle_enabled" to enabled))
     }
 
     /**
@@ -90,7 +92,14 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
 
         // Safety: if traversal doesn't cover all items, fall back to physical order.
         if (result.size != count) {
-            Log.w("ShuffleManager", "Traversal size mismatch: got ${result.size}, expected $count")
+            NativeLog.warning(
+                LogTags.QUEUE,
+                "player.shuffle.size_mismatch",
+                mapOf(
+                    "player.actual_count" to result.size,
+                    "player.expected_count" to count,
+                ),
+            )
             return (0 until count).toList().toIntArray()
         }
 
@@ -119,13 +128,25 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
         if (currentPos == -1) {
             // The current item should always appear in the traversal. If it doesn't,
             // the shuffle state is inconsistent — bail out rather than silently appending.
-            Log.e("ShuffleManager", "Current physical[$currentPhysical] not found in traversal; skipping repositionAsNext")
+            NativeLog.error(
+                LogTags.QUEUE,
+                "player.shuffle.current_missing",
+                mapOf(
+                    "player.current_index" to currentPhysical,
+                ),
+            )
             return
         }
         order.add(currentPos + 1, insertedPhysicalIndex)
 
         player.setShuffleOrder(DefaultShuffleOrder(order.toIntArray(), System.currentTimeMillis()))
-        Log.d("ShuffleManager", "Repositioned physical[$insertedPhysicalIndex] as next in shuffle order")
+        NativeLog.debug(
+            LogTags.QUEUE,
+            "player.shuffle.repositioned",
+            mapOf(
+                "player.inserted_index" to insertedPhysicalIndex,
+            ),
+        )
     }
 
     /** Reorder the displayed shuffle traversal without moving physical media items. */

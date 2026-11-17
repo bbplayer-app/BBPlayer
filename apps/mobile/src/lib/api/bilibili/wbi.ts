@@ -56,7 +56,9 @@ function isSameDayAsToday(timestamp: number) {
 	const dateToCompare = new Date(timestamp)
 
 	if (Number.isNaN(dateToCompare.getTime())) {
-		logger.error('提供的时间戳无效:', timestamp)
+		logger.error('bilibili.wbi.timestamp_invalid', {
+			'bilibili.timestamp': timestamp,
+		})
 
 		return false
 	}
@@ -84,7 +86,7 @@ function getWbiKeysFromStorage() {
 	try {
 		return JSON.parse(keys) as WbiKeys
 	} catch (error) {
-		logger.warning('从本地解析 wbi_keys 失败，尝试重新获取:', error)
+		logger.warning('bilibili.wbi.cache_invalid', {}, error)
 
 		return null
 	}
@@ -107,7 +109,7 @@ function getWbiKeys(): ResultAsync<
 			return okAsync(localKeys)
 		}
 
-		logger.debug('本地 wbi_keys 已过期，重新获取')
+		logger.debug('bilibili.wbi.cache_expired')
 	}
 
 	const result = bilibiliApiClient.get<{

@@ -37,6 +37,7 @@ android {
 }
 
 dependencies {
+    implementation project(':bbplayer-native')
     implementation 'com.facebook.react:react-android'
     // Keep Compose aligned with @expo/ui in Expo SDK 58.
     implementation 'androidx.compose.foundation:foundation-android:1.12.1'

@@ -1,5 +1,7 @@
 package expo.modules.orpheus.util
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -10,7 +12,6 @@ import android.provider.MediaStore
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.request.RequestOptions
-import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
@@ -20,6 +21,7 @@ import androidx.media3.exoplayer.offline.DownloadIndex
 import expo.modules.orpheus.manager.CoverDownloadManager
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.model.LyricFileCache
+import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -66,7 +68,7 @@ fun runExportDownloads(
         }
 
     if (!isPublicMusic && (pickedDir == null || !pickedDir.canWrite())) {
-        Log.e("OrpheusExport", "Destination directory is not writable: $destinationUri")
+        NativeLog.error(LogTags.EXPORT, "export.directory.unwritable")
         return
     }
 
@@ -171,7 +173,7 @@ private suspend fun exportSingleItem(
             )
         )
     } catch (e: Exception) {
-        Log.e("OrpheusExport", "Failed to export $id: ${e.message}")
+        NativeLog.error(LogTags.EXPORT, "export.track.failed", mapOf("track.id" to id), e)
         sendEvent(
             "onExportProgress", mapOf(
                 "currentId" to id,
@@ -341,10 +343,10 @@ private fun writeMetadata(
                 }
                 tag.setField(artwork)
             } catch (e: Exception) {
-                Log.w("OrpheusExport", "Cover embed skipped for $id: ${e.message}")
+                NativeLog.warning(LogTags.EXPORT, "export.cover.embed_failed", mapOf("track.id" to id), e)
             }
         } else {
-            Log.w("OrpheusExport", "Cover file not found for $id, skipping artwork embed")
+            NativeLog.warning(LogTags.EXPORT, "export.cover.missing", mapOf("track.id" to id))
         }
 
         // 歌词（仅在已缓存且 embedLyrics=true 时写入）
@@ -354,7 +356,7 @@ private fun writeMetadata(
 
         audioFile.commit()
     } catch (e: Exception) {
-        Log.e("OrpheusExport", "Failed to write metadata for $id: ${e.message}")
+        NativeLog.error(LogTags.EXPORT, "export.metadata.failed", mapOf("track.id" to id), e)
     }
 }
 
@@ -372,16 +374,22 @@ private fun writeLyrics(
     try {
         val lyricsDir = File(context.filesDir, "lyrics")
         val lyricFile = File(lyricsDir, "${id.replace("::", "--")}.json")
-        Log.d("OrpheusExport", "Checking lyrics file: $lyricFile")
+        NativeLog.debug(
+            LogTags.EXPORT,
+            "export.lyrics.check_started",
+            mapOf(
+                "lyrics.file_exists" to lyricFile.exists(),
+            ),
+        )
         if (!lyricFile.exists()) return
 
         val lyricJson = lyricFile.readText()
         val lrcContent0 = json.decodeFromString<LyricFileCache>(lyricJson).lrc
         if (lrcContent0 == null) {
-            Log.w("OrpheusExport", "No 'lrc' field found in lyrics JSON for $id")
+            NativeLog.warning(LogTags.EXPORT, "export.lyrics.missing", mapOf("track.id" to id))
             return
         }
-        Log.d("OrpheusExport", "Extracted lyrics: ${lrcContent0.take(100)}")
+        NativeLog.debug(LogTags.EXPORT, "export.lyrics.extracted", mapOf("lyrics.text_length" to lrcContent0.length))
 
         var lrcContent = lrcContent0
 
@@ -391,7 +399,7 @@ private fun writeLyrics(
 
         tag.setField(FieldKey.LYRICS, lrcContent)
     } catch (e: Exception) {
-        Log.e("OrpheusExport", "Failed to embed lyrics for $id: ${e.message}")
+        NativeLog.error(LogTags.EXPORT, "export.lyrics.embed_failed", mapOf("track.id" to id), e)
     }
 }
 

@@ -96,7 +96,10 @@ export const loadActiveSkin = (
 	const cached = appSkinCache.get(meta.id)
 
 	if (cached !== undefined) {
-		log.debug('[runtime] cache hit', { skinId: meta.id, appSkin: !!cached })
+		log.debug('theme.cache.hit', {
+			'theme.skin_id': meta.id,
+			'theme.app_skin': !!cached,
+		})
 
 		return okAsync(cached)
 	}

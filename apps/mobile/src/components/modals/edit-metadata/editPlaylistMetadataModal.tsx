@@ -58,7 +58,9 @@ export default function EditPlaylistMetadataModal({
 		setTitle(metadata.title)
 		setDescription(metadata.description)
 		setCoverUrl(metadata.coverUrl)
-		logger.debug('获取远程播放列表元数据成功', metadata)
+		logger.debug('playlist.metadata.fetched', {
+			'playlist.title': metadata.title,
+		})
 		toast.success('获取远程播放列表元数据成功')
 	}, [playlist.remoteSyncId, playlist.type])
 

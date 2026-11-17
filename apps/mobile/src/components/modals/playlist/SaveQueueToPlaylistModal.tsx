@@ -38,7 +38,7 @@ export default function SaveQueueToPlaylistModal({
 			return
 		}
 
-		logger.info('保存队列到播放列表成功', res.value)
+		logger.info('playlist.queue.saved', { 'playlist.id': res.value })
 		toast.success('保存队列到播放列表成功')
 		await Promise.all([
 			queryClient.invalidateQueries({

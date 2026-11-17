@@ -4,7 +4,6 @@ import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { and, eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { useImage } from 'expo-image'
-import { useObserve } from 'expo-observe'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
@@ -183,12 +182,7 @@ const deletePlaylistDialogPrompt = (
 export default function LocalPlaylistPage() {
 	const isListReady = useScreenTransitionReady()
 	const { id } = useLocalSearchParams<{ id: string }>()
-	const { markInteractive } = useObserve()
 	const router = useRouter()
-
-	useEffect(() => {
-		markInteractive()
-	}, [markInteractive])
 
 	const {
 		data: playlistData,

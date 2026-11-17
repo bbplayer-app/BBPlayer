@@ -28,7 +28,7 @@ export async function createBackup(): Promise<string> {
 		// 1. SQLite 快照：VACUUM INTO 保证一致性，无需关闭连接
 		const dbBackupPath = dbBackupFile.uri.replace('file://', '')
 		expoDb.execSync(`VACUUM INTO '${dbBackupPath}'`)
-		logger.debug('数据库快照已创建')
+		logger.debug('backup.snapshot.created')
 
 		const dbBase64 = dbBackupFile.base64Sync()
 
@@ -54,7 +54,7 @@ export async function createBackup(): Promise<string> {
 		const zipFile = new File(cacheDir, `bbplayer-backup-${backupId}.bbplayer`)
 		await zipFile.write(zipData)
 
-		logger.info('备份创建完成', { uri: zipFile.uri })
+		logger.info('backup.export.completed', { 'backup.uri': zipFile.uri })
 
 		return zipFile.uri
 	} finally {

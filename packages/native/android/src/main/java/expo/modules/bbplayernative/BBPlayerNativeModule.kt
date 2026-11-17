@@ -1,5 +1,7 @@
 package expo.modules.bbplayernative
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.app.DownloadManager
 import android.content.ContentValues
 import android.content.Context
@@ -19,6 +21,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 import expo.modules.kotlin.types.OptimizedRecord
+import expo.modules.bbplayernative.telemetry.NativeTelemetry
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -50,6 +53,7 @@ class BBPlayerNativeModule : Module() {
 
         AsyncFunction("clearCacheAsync") Coroutine { ->
             withContext(Dispatchers.IO) { AppStorage.clearCache(requireContext()) }
+            NativeLog.info(LogTags.STORAGE, "storage.cache.cleared")
         }
 
         AsyncFunction("listStorageDirectoryAsync") Coroutine { path: String ->
@@ -68,7 +72,21 @@ class BBPlayerNativeModule : Module() {
             val downloadManager =
                 context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             val downloadId = enqueueApkDownload(context, downloadManager, options)
-            val downloadedUri = waitForDownload(downloadManager, downloadId)
+            NativeLog.info(
+                LogTags.UPDATE,
+                "update.apk.download_enqueued",
+                mapOf(
+                    "download.id" to downloadId,
+                    "http.host" to Uri.parse(options.url).host,
+                ),
+            )
+            val downloadedUri = try {
+                waitForDownload(downloadManager, downloadId)
+            } catch (e: Exception) {
+                NativeLog.error(LogTags.UPDATE, "update.apk.download_failed", mapOf("download.id" to downloadId), e)
+                throw e
+            }
+            NativeLog.info(LogTags.UPDATE, "update.apk.downloaded", mapOf("download.id" to downloadId))
             withContext(Dispatchers.Main) {
                 openApkInstaller(context, downloadedUri)
             }
@@ -81,7 +99,60 @@ class BBPlayerNativeModule : Module() {
 
 
         AsyncFunction("unzipAsync") Coroutine { options: UnzipOptions ->
-            withContext(Dispatchers.IO) { unzip(options) }
+            withContext(Dispatchers.IO) {
+                try {
+                    unzip(options).also { NativeLog.info(
+                        LogTags.STORAGE,
+                        "storage.unzip.completed",
+                        mapOf(
+                            "storage.file_count" to it.fileCount,
+                        ),
+                    ) }
+                } catch (e: Exception) {
+                    NativeLog.warning(LogTags.STORAGE, "storage.unzip.failed", error = e)
+                    throw e
+                }
+            }
+        }
+
+        // JS 在 Sentry.init 之前调用，让启动阶段的事件和日志也带上同一个 user.id
+        Function("getSentryInstallationId") {
+            NativeTelemetry.installationId(requireContext())
+        }
+
+        // JS 的 Sentry.init 完成原生初始化后调用，返回 Sentry 的匿名安装 ID
+        Function("installNativeTelemetry") { enabled: Boolean ->
+            NativeTelemetry.install(enabled)
+        }
+
+        Function("setNativeTracesSampleRate") { rate: Double ->
+            NativeTelemetry.setTracesSampleRate(rate)
+        }
+
+        Function("setNativeTelemetryEnabled") { enabled: Boolean ->
+            NativeTelemetry.updateEnabled(enabled)
+        }
+
+        // 测试页使用：输出几条结构化原生日志，并由原生 SDK 上报一个异常，
+        // 用来验证结构化字段、脱敏、限流和 orpheus context 是否生效
+        Function("debugTriggerNativeError") {
+            NativeLog.info(LogTags.TELEMETRY, "telemetry.native.info", mapOf("telemetry.sample_id" to "native-info"))
+            NativeLog.warning(
+                LogTags.TELEMETRY,
+                "telemetry.native.warning",
+                mapOf(
+                    "telemetry.sample_id" to "native-warning",
+                ),
+            )
+            NativeLog.error(
+                LogTags.TELEMETRY,
+                "telemetry.native.error",
+                mapOf(
+                    "telemetry.sample_id" to "native-error",
+                ),
+                IllegalStateException("测试原生日志异常"),
+            )
+            io.sentry.Sentry.captureException(IllegalStateException("BBPlayer 测试原生异常 access_key=abcdef"))
         }
 
         // 与 expo-app-metrics 同一时钟（uptimeMillis），便于和它的启动指标对齐
@@ -93,7 +164,10 @@ class BBPlayerNativeModule : Module() {
             val context = requireContext()
             val uri = android.net.Uri.parse(sourceUri)
             val inputStream = context.contentResolver.openInputStream(uri)
-                ?: return@Function null
+                ?: run {
+                    NativeLog.warning(LogTags.STORAGE, "backup.export.source_unreadable")
+                    return@Function null
+                }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val values = ContentValues().apply {
@@ -103,7 +177,10 @@ class BBPlayerNativeModule : Module() {
                     put(MediaStore.Downloads.IS_PENDING, 1)
                 }
                 val downloadUri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                    ?: return@Function null
+                    ?: run {
+                        NativeLog.warning(LogTags.STORAGE, "backup.export.insert_failed")
+                        return@Function null
+                    }
                 context.contentResolver.openOutputStream(downloadUri)?.use { out ->
                     inputStream.use { it.copyTo(out) }
                 }
@@ -160,7 +237,11 @@ class BBPlayerNativeModule : Module() {
                 ?.let { MessageDigest.getInstance("SHA-256").digest(it.toByteArray()) }
                 ?.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xFF) }
                 ?: ""
-        }.getOrDefault("")
+        }.getOrElse { error ->
+            // 取不到时 JS 侧会把它当作非官方构建，Sentry 不会启用
+            NativeLog.warning(LogTags.TELEMETRY, "telemetry.signature.unavailable", error = error)
+            ""
+        }
     }
 
     private fun ensureCanRequestPackageInstalls(context: Context) {

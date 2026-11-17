@@ -4,7 +4,6 @@ import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
 import { Computed, useObserveEffect } from '@legendapp/state/react'
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
-import { useObserve } from 'expo-observe'
 import { router, useIsFocused } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -119,11 +118,6 @@ export default function PlayerPage() {
 	const insets = useSafeAreaInsets()
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
-	const { markInteractive } = useObserve()
-
-	useEffect(() => {
-		markInteractive()
-	}, [markInteractive])
 
 	const currentTrackCover = resolveBilibiliImageUrl(
 		currentTrack
@@ -186,7 +180,7 @@ export default function PlayerPage() {
 		if (Platform.OS !== 'android') return
 		void Orpheus.setDesktopLyricsSuppressed(suppressDesktopLyrics).catch(
 			(e) => {
-				logger.error('更新桌面歌词临时隐藏状态失败', e)
+				logger.error('lyrics.overlay.hide_failed', {}, e)
 			},
 		)
 	}, [suppressDesktopLyrics])
@@ -195,7 +189,7 @@ export default function PlayerPage() {
 		return () => {
 			if (Platform.OS !== 'android') return
 			void Orpheus.setDesktopLyricsSuppressed(false).catch((e) => {
-				logger.error('恢复桌面歌词显示失败', e)
+				logger.error('lyrics.overlay.restore_failed', {}, e)
 			})
 		}
 	}, [])
@@ -303,7 +297,7 @@ export default function PlayerPage() {
 			})
 			.catch((e) => {
 				if (cancelled) return
-				logger.error('提取封面图片主题色失败', e)
+				logger.error('player.theme.extract_failed', {}, e)
 				reportErrorToSentry(e, '提取封面图片主题色失败', 'App.Player')
 			})
 

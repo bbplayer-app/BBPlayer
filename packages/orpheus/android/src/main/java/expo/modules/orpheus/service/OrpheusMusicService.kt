@@ -1,11 +1,12 @@
 package expo.modules.orpheus.service
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
@@ -50,6 +51,9 @@ import expo.modules.orpheus.manager.UnifiedLyricsManager
 import expo.modules.orpheus.model.LyricsData
 import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.orpheus.telemetry.OrpheusTelemetry
+import expo.modules.orpheus.telemetry.PlaybackTracer
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
@@ -155,6 +159,7 @@ class OrpheusMusicService : MediaLibraryService() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
         if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
+            NativeLog.info(LogTags.SERVICE, "player.service.task_removed")
             stopSelf()
         }
         super.onTaskRemoved(rootIntent)
@@ -173,7 +178,7 @@ class OrpheusMusicService : MediaLibraryService() {
             val track = try {
                 json.decodeFromString<TrackRecord>(trackJson)
             } catch (e: Exception) {
-                Log.w("Orpheus", "Failed to refresh artwork for ${item.mediaId}", e)
+                NativeLog.warning(LogTags.SERVICE, "cover.track.parse_failed", mapOf("track.id" to item.mediaId), e)
                 continue
             }
             val artworkUri = track.toMediaItem(this).mediaMetadata.artworkUri
@@ -190,6 +195,7 @@ class OrpheusMusicService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        NativeLog.info(LogTags.SERVICE, "player.service.created")
 
         GeneralStorage.initialize(this)
         LoudnessStorage.initialize(this)
@@ -287,6 +293,20 @@ class OrpheusMusicService : MediaLibraryService() {
 
         // 功耗测量用的开关，只在创建播放器时读取
         val testForceMediaCodec = GeneralStorage.isTestForceMediaCodec()
+        NativeLog.info(
+            LogTags.SERVICE,
+            "player.initialize.started",
+            mapOf(
+                "audio.ffmpeg_available" to androidx.media3.decoder.ffmpeg.FfmpegLibrary.isAvailable(),
+                "audio.force_media_codec" to testForceMediaCodec,
+                "audio.force_pcm" to GeneralStorage.isTestForcePcm(),
+            ),
+        )
+        OrpheusTelemetry.update(
+            "ffmpegAvailable" to androidx.media3.decoder.ffmpeg.FfmpegLibrary.isAvailable(),
+            "testForceMediaCodec" to testForceMediaCodec.takeIf { it },
+            "testForcePcm" to GeneralStorage.isTestForcePcm().takeIf { it },
+        )
 
         val renderersFactory = object : DefaultRenderersFactory(this) {
             private var enableFloatOutput = false
@@ -432,7 +452,7 @@ class OrpheusMusicService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     fun ensurePlayer(): ExoPlayer {
         if (player == null) {
-            Log.w("OrpheusMusicService", "Player was null, reinitializing...")
+            NativeLog.warning(LogTags.SERVICE, "player.initialize.recovering")
             initializePlayer()
         }
         return player!!
@@ -443,6 +463,8 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        NativeLog.info(LogTags.SERVICE, "player.service.destroyed")
+        PlaybackTracer.onServiceDestroyed()
         serviceHandler.removeCallbacks(lyricsUpdateRunnable)
         serviceHandler.removeCallbacks(resumeSaveRunnable)
         saveCurrentResumeRecord()
@@ -469,10 +491,12 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     fun startSleepTimer(durationMs: Long) {
+        NativeLog.info(LogTags.SERVICE, "player.sleep_timer.started", mapOf("player.duration_ms" to durationMs))
         sleepTimerManager?.start(durationMs)
     }
 
     fun cancelSleepTimer() {
+        NativeLog.info(LogTags.SERVICE, "player.sleep_timer.canceled")
         sleepTimerManager?.cancel()
     }
 
@@ -546,6 +570,17 @@ class OrpheusMusicService : MediaLibraryService() {
             val savedPosition = GeneralStorage.getSavedPosition()
             val savedShuffleMode = GeneralStorage.getShuffleMode()
             val savedRepeatMode = GeneralStorage.getRepeatMode()
+            NativeLog.info(
+                LogTags.SERVICE,
+                "player.queue.restored",
+                mapOf(
+                    "player.queue_size" to restoredItems.size,
+                    "player.queue_index" to savedIndex,
+                    "player.restore_position" to restorePosition,
+                    "player.shuffle_enabled" to savedShuffleMode,
+                    "player.repeat_mode" to savedRepeatMode,
+                ),
+            )
 
             // 起播位置优先级：会话恢复位置 > podcast 逐首断点 > 从头开始
             val startPositionMs = when {
@@ -625,7 +660,8 @@ class OrpheusMusicService : MediaLibraryService() {
             intent.putExtra("reason", reason)
             startService(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // 后台启动服务受限等情况，JS 侧会漏掉这次事件
+            NativeLog.warning(LogTags.SERVICE, "player.headless.start_failed", error = e)
         }
     }
 
@@ -641,7 +677,8 @@ class OrpheusMusicService : MediaLibraryService() {
             intent.putExtra("duration", duration)
             startService(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // 后台启动服务受限等情况，JS 侧会漏掉这次事件
+            NativeLog.warning(LogTags.SERVICE, "player.headless.start_failed", error = e)
         }
     }
 
@@ -651,7 +688,8 @@ class OrpheusMusicService : MediaLibraryService() {
             intent.putExtra("eventName", "onTrackPaused")
             startService(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // 后台启动服务受限等情况，JS 侧会漏掉这次事件
+            NativeLog.warning(LogTags.SERVICE, "player.headless.start_failed", error = e)
         }
     }
 
@@ -661,7 +699,8 @@ class OrpheusMusicService : MediaLibraryService() {
             intent.putExtra("eventName", "onTrackResumed")
             startService(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // 后台启动服务受限等情况，JS 侧会漏掉这次事件
+            NativeLog.warning(LogTags.SERVICE, "player.headless.start_failed", error = e)
         }
     }
 
@@ -672,19 +711,41 @@ class OrpheusMusicService : MediaLibraryService() {
             intent.putExtra("trackId", trackId)
             startService(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // 后台启动服务受限等情况，JS 侧会漏掉这次事件
+            NativeLog.warning(LogTags.SERVICE, "player.headless.start_failed", error = e)
         }
     }
 
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
             override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
+                NativeLog.info(
+                    LogTags.SERVICE,
+                    "player.parameters.changed",
+                    mapOf(
+                        "player.speed" to playbackParameters.speed,
+                        "player.pitch" to playbackParameters.pitch,
+                    ),
+                )
+                OrpheusTelemetry.update("speed" to playbackParameters.speed.takeIf { it != 1f })
                 // 兜底：倍速可能从别处直接修改（不经过 setPlaybackParameters），保持 offload 偏好与倍速一致
                 applyAudioOffloadPreferences()
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
+                val suppressionReason = player?.playbackSuppressionReason
+                val fields = mapOf(
+                    "player.is_playing" to isPlaying,
+                    "player.state_code" to player?.playbackState,
+                    "player.suppression_reason" to suppressionReason,
+                )
+                // 每次 seek、缓冲都会触发，只有被系统压制（如失去音频焦点）才上报
+                if (suppressionReason != null && suppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                    NativeLog.info(LogTags.SERVICE, "player.playing.changed", fields)
+                } else {
+                    NativeLog.debug(LogTags.SERVICE, "player.playing.changed", fields)
+                }
+                PlaybackTracer.onIsPlayingChanged(isPlaying)
                 lyricsManager.setPlaybackState(isPlaying)
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
@@ -713,17 +774,35 @@ class OrpheusMusicService : MediaLibraryService() {
                     Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
                     else -> "UNKNOWN($reason)"
                 }
-                android.util.Log.d("StatusBarLyrics", "[Service] onMediaItemTransition: id=$mediaId reason=$reasonStr ts=${System.currentTimeMillis()}")
+                NativeLog.info(
+                    LogTags.SERVICE,
+                    "player.media.transitioned",
+                    mapOf(
+                        "track.id" to mediaId,
+                        "player.transition_reason" to reasonStr,
+                    ),
+                )
 
                 // If the same track is still current (e.g. an item was added/removed elsewhere
                 // in the queue causing a PLAYLIST_CHANGED transition with the same media ID),
                 // we should NOT reset lyrics or notify JS as it causes a UI flash and audio stutter.
                 if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT && mediaId == currentMediaId) {
-                    Log.d("OrpheusMusicService", "Ignoring onMediaItemTransition as track hasn't changed.")
+                    NativeLog.debug(LogTags.SERVICE, "player.media.transition_ignored", mapOf("track.id" to mediaId))
                     saveCurrentQueue()
                     return
                 }
                 currentMediaId = mediaId
+                OrpheusTelemetry.onMediaItemChanged(mediaId, mediaItem?.localConfiguration?.uri?.toString())
+                // 单曲循环回到开头不算一次起播
+                if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                    PlaybackTracer.onMediaItemTransition(
+                        mediaId,
+                        mediaItem?.localConfiguration?.uri?.toString(),
+                        reasonStr,
+                        player?.playWhenReady == true,
+                        player?.isPlaying == true,
+                    )
+                }
 
                 // 自然循环到同一音频：清除该音频断点，从头播放
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
@@ -743,6 +822,20 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 val volumeData = LoudnessStorage.getLoudnessData(uri)
                 applyVolumeForCurrentItem(volumeData)
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                val item = player?.currentMediaItem
+                PlaybackTracer.onPlayWhenReadyChanged(
+                    playWhenReady,
+                    player?.isPlaying == true,
+                    item?.mediaId,
+                    item?.localConfiguration?.uri?.toString(),
+                )
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                PlaybackTracer.onPlayerError(error.errorCodeName, error)
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -805,6 +898,24 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
+                val stateName = when (playbackState) {
+                    Player.STATE_IDLE -> "IDLE"
+                    Player.STATE_BUFFERING -> "BUFFERING"
+                    Player.STATE_READY -> "READY"
+                    Player.STATE_ENDED -> "ENDED"
+                    else -> playbackState.toString()
+                }
+                val fields = mapOf(
+                    "player.state" to stateName,
+                    "track.id" to player?.currentMediaItem?.mediaId,
+                    "player.position_ms" to player?.currentPosition,
+                )
+                // BUFFERING/READY 每次 seek、切歌都会来回切换，只上报播完和停止
+                if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
+                    NativeLog.info(LogTags.SERVICE, "player.state.changed", fields)
+                } else {
+                    NativeLog.debug(LogTags.SERVICE, "player.state.changed", fields)
+                }
                 if (playbackState == Player.STATE_ENDED) {
                     // 队列最后一首自然播放完毕：清除断点
                     serviceHandler.removeCallbacks(resumeSaveRunnable)
@@ -959,6 +1070,16 @@ class OrpheusMusicService : MediaLibraryService() {
         // 先于轨道重选更新：渲染器在播放线程上按它判断由 MediaCodec 还是 FFmpeg 解码
         audioOffloadPreferences = preferences
         if (player.trackSelectionParameters.audioOffloadPreferences == preferences) return
+        val offloadMode = if (mode == AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED) "enabled" else "disabled"
+        NativeLog.info(
+            LogTags.AUDIO,
+            "audio.offload.changed",
+            mapOf(
+                "audio.offload_mode" to offloadMode,
+                "audio.speed_change_required" to preferences.isSpeedChangeSupportRequired,
+            ),
+        )
+        OrpheusTelemetry.update("offloadPreference" to offloadMode)
 
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             .setAudioOffloadPreferences(preferences)
@@ -991,7 +1112,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     @OptIn(UnstableApi::class)
     private fun applyVolumeForCurrentItem(measuredI: Double) {
-        Log.d("LoudnessNormalization", "measuredI: $measuredI")
+        NativeLog.debug(LogTags.LOUDNESS, "audio.volume.applied", mapOf("audio.integrated_loudness_lufs" to measuredI))
         val player = player ?: return
         volumeFadeJob?.cancel()
         val isLoudnessNormalizationEnabled = GeneralStorage.isLoudnessNormalizationEnabled()

@@ -82,7 +82,10 @@ export function redirectSystemPath({
 
 		return resolveStartupPath(path, initial)
 	} catch {
-		log.error('redirectSystemPath 失败', { path, initial })
+		log.error('navigation.intent.failed', {
+			'navigation.path': path,
+			'navigation.initial': initial,
+		})
 
 		return '/'
 	}

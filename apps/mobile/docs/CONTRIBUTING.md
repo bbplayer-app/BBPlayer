@@ -59,18 +59,6 @@ cd apps/mobile
 pnpm expo start
 ```
 
-> [!IMPORTANT]
-> **Firebase 配置 (Firebase Configuration)**
->
-> 项目包含模拟的 Firebase 配置文件 (`google-services.json` 和 `GoogleService-Info.plist`)，你可以直接运行项目。
->
-> 如果你需要使用真实的 Firebase 功能（如 Analytics），请将你的真实配置文件重命名为：
->
-> - `google-services.real.json`
-> - `GoogleService-Info.real.plist`
->
-> 并放在 `apps/mobile/assets/config/google-services/` 目录下。使用 eas 构建时会自动优先使用真实文件。（如果不使用 eas 构建，则需要在放置真实文件后，运行 `npx expo prebuild --clean`）
-
 ## 📂 文档导航
 
 为了更好地理解项目，建议按以下顺序阅读文档：

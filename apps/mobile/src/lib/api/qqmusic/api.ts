@@ -161,9 +161,11 @@ export class QQMusicApi {
 			if (exactMatch) {
 				bestMatch = exactMatch
 			} else {
-				logger.debug(
-					`No exact duration match found. Using first result: ${bestMatch.title} (${bestMatch.duration}s) vs target ${targetDurationSeconds}s`,
-				)
+				logger.debug('lyrics.qqmusic.duration_fallback', {
+					'lyrics.candidate_title': bestMatch.title,
+					'lyrics.candidate_duration_seconds': bestMatch.duration,
+					'lyrics.target_duration_seconds': targetDurationSeconds,
+				})
 			}
 
 			return this.getLyrics(bestMatch.remoteId as string, signal).map(

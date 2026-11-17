@@ -45,6 +45,11 @@ declare class BBPlayerNativeModule extends NativeModule {
 		mimeType: string,
 	): string | null
 	getMillisSinceProcessStart(): number
+	installNativeTelemetry(enabled: boolean): string | null
+	setNativeTracesSampleRate(rate: number): void
+	getSentryInstallationId(): string | null
+	setNativeTelemetryEnabled(enabled: boolean): void
+	debugTriggerNativeError(): void
 }
 
 let nativeModule: BBPlayerNativeModule | null = null
@@ -135,3 +140,62 @@ export const exportBackupToDownloads = (
  */
 export const getMillisSinceProcessStart = () =>
 	getNativeModule().getMillisSinceProcessStart()
+
+/**
+ * 在原生 Sentry SDK 上挂接脱敏、限流与数据采集开关，并按开关开启原生日志。
+ *
+ * 必须在 JS 的 `Sentry.init` 完成原生初始化（`onReady`）之后调用。
+ * 返回 Sentry 的匿名安装 ID；原生 SDK 未初始化或不可用时返回 null。
+ */
+export const installNativeTelemetry = (enabled: boolean): string | null => {
+	if (Platform.OS !== 'android') return null
+
+	try {
+		return getNativeModule().installNativeTelemetry(enabled)
+	} catch {
+		return null
+	}
+}
+
+/**
+ * 开启原生侧 tracing，采样率应与 JS 的 `tracesSampleRate` 一致。
+ *
+ * 单独成一个函数而不是加进 `installNativeTelemetry` 的参数：热更新的 JS 可能跑在没有这个函数的旧原生包上，
+ * 这时只是原生请求没有 span，不影响脱敏与限流回调的挂接。
+ */
+export const setNativeTracesSampleRate = (rate: number) => {
+	if (Platform.OS !== 'android') return
+
+	try {
+		getNativeModule().setNativeTracesSampleRate(rate)
+	} catch {}
+}
+
+/** 同步数据采集开关：关闭后原生侧立即停止上报事件与日志。 */
+export const setNativeTelemetryEnabled = (enabled: boolean) => {
+	if (Platform.OS !== 'android') return
+
+	try {
+		getNativeModule().setNativeTelemetryEnabled(enabled)
+	} catch {
+		// 原生模块不可用（例如 Expo Go）时没有原生 SDK 需要同步
+	}
+}
+
+/** 测试页使用：输出几条原生日志，并由原生 Sentry SDK 上报一个异常。 */
+export const debugTriggerNativeError = () =>
+	getNativeModule().debugTriggerNativeError()
+
+/**
+ * Sentry 的匿名安装 ID，与原生 SDK 使用的是同一个，可以在 `Sentry.init` 之前同步取得。
+ * 不可用时返回 null。
+ */
+export const getSentryInstallationId = (): string | null => {
+	if (Platform.OS !== 'android') return null
+
+	try {
+		return getNativeModule().getSentryInstallationId()
+	} catch {
+		return null
+	}
+}

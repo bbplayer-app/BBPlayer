@@ -62,19 +62,19 @@ async function fetchPageLists(
 
 			if (res.isErr()) {
 				if (res.error.type === 'ResponseFailed') {
-					logger.warning('获取分 P 列表失败，折叠为单条', {
-						bvid,
-						message: res.error.message,
+					logger.warning('bilibili.pages.collapsed', {
+						'bilibili.bvid': bvid,
+						'error.message': res.error.message,
 					})
 					skippedBvids.push(bvid)
 					continue
 				}
 
 				firstError = res.error
-				logger.error('展开分 P：分 P 列表查询失败', {
-					bvid,
-					type: res.error.type,
-					message: res.error.message,
+				logger.error('bilibili.pages.fetch_failed', {
+					'bilibili.bvid': bvid,
+					'bilibili.type': res.error.type,
+					'error.message': res.error.message,
 				})
 
 				return
@@ -133,12 +133,9 @@ export async function fetchRemoteFavoriteSnapshot(
 		(item) => item.type === 2, // 过滤非视频稿件 (type 2 is video)
 	)
 
-	deps.logger.debug(
-		'step 1: 调用 bilibiliapi getFavoriteListAllContents 完成',
-		{
-			total: allBvids.length,
-		},
-	)
+	deps.logger.debug('bilibili.favorite.index_loaded', {
+		'bilibili.total': allBvids.length,
+	})
 
 	return ok({
 		metadata: firstPage.info,
@@ -163,8 +160,8 @@ export async function loadLocalFavoriteState(
 		return err(localPlaylist.error)
 	}
 
-	deps.logger.debug('step 2: 查询本地收藏夹元数据完成', {
-		localPlaylistId: localPlaylist.value?.id ?? '不存在',
+	deps.logger.debug('bilibili.favorite.local_loaded', {
+		'bilibili.local_playlist_id': localPlaylist.value?.id ?? '不存在',
 	})
 	deps.onProgress?.({
 		message: '正在比对本地数据...',
@@ -237,7 +234,9 @@ export async function fetchFavoriteTrackDetails(
 			total: totalToAdd,
 			stage: 'fetching_details',
 		})
-		logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
+		logger.debug('bilibili.favorite.page_requested', {
+			'bilibili.page': nowPageNumber,
+		})
 
 		// oxlint-disable-next-line no-await-in-loop
 		const pageResult = await api.getFavoriteListContents({
@@ -260,7 +259,9 @@ export async function fetchFavoriteTrackDetails(
 			)
 		}
 
-		logger.debug(page.medias.length)
+		logger.debug('bilibili.favorite.page_loaded', {
+			'bilibili.item_count': page.medias.length,
+		})
 		hasMore = page.has_more
 
 		for (const item of page.medias) {
@@ -279,9 +280,9 @@ export async function fetchFavoriteTrackDetails(
 		})
 	}
 
-	logger.debug('step 4: 获取要添加的 tracks 元数据完成', {
-		added: addedTracksMetadata.size,
-		requestApiTimes: nowPageNumber,
+	logger.debug('bilibili.favorite.metadata_loaded', {
+		'bilibili.added': addedTracksMetadata.size,
+		'bilibili.request_api_times': nowPageNumber,
 	})
 
 	const orderedBvids = new Set(plan.orderedBvids)
@@ -321,14 +322,14 @@ export async function buildExpandedTracks(
 	const allBvids = Array.from(details.orderedBvids)
 	const mainInfoMap = buildMainInfoMap(details.metadata, localGrouped)
 	const toQueryBvids = selectBvidsToQuery(allBvids, localGrouped, mainInfoMap)
-	logger.debug('展开分 P：统计', {
-		total: allBvids.length,
-		reused: allBvids.length - toQueryBvids.length,
-		toQuery: toQueryBvids.length,
-		singlePageSkipped: Array.from(mainInfoMap.values()).filter(
+	logger.debug('bilibili.pages.expansion_evaluated', {
+		'bilibili.total': allBvids.length,
+		'bilibili.reused': allBvids.length - toQueryBvids.length,
+		'bilibili.to_query': toQueryBvids.length,
+		'bilibili.single_page_skipped': Array.from(mainInfoMap.values()).filter(
 			(v) => v.pageCount !== undefined && v.pageCount <= 1,
 		).length,
-		locallyCollapsed: Array.from(mainInfoMap.values()).filter(
+		'bilibili.locally_collapsed': Array.from(mainInfoMap.values()).filter(
 			(v) => !v.videoIsValid,
 		).length,
 	})
@@ -346,8 +347,8 @@ export async function buildExpandedTracks(
 	const { pageLists, skippedBvids } = pageListsResult.value
 
 	if (skippedBvids.length > 0) {
-		logger.warning('展开分 P：以下视频查询失败，已折叠为单条', {
-			bvids: skippedBvids,
+		logger.warning('bilibili.pages.expansion_partial', {
+			'bilibili.bvids': skippedBvids,
 		})
 	}
 
@@ -362,9 +363,7 @@ export async function buildExpandedTracks(
 		return err(expandedTracksMapResult.error)
 	}
 
-	logger.debug('step 5: 展开分 P 视频完成', {
-		total: allBvids.length,
-	})
+	logger.debug('bilibili.pages.expanded', { 'bilibili.total': allBvids.length })
 
 	return ok({ expandedTracksMap: expandedTracksMapResult.value })
 }
@@ -427,25 +426,23 @@ export async function runFavoriteSync(
 		'sync.added': plan.stats.added,
 		'sync.removed': plan.stats.removed,
 	})
-	deps.logger.debug('step 3: 对远程和本地的 tracks 进行 diff 完成', {
-		added: plan.stats.added,
-		removed: plan.stats.removed,
+	deps.logger.debug('bilibili.favorite.diff_completed', {
+		'bilibili.added': plan.stats.added,
+		'bilibili.removed': plan.stats.removed,
 	})
-	deps.logger.info('收藏夹变更统计', {
-		added: plan.stats.added,
-		removed: plan.stats.removed,
+	deps.logger.info('bilibili.favorite.changes_evaluated', {
+		'bilibili.added': plan.stats.added,
+		'bilibili.removed': plan.stats.removed,
 	})
 
 	if (plan.kind === 'noop') {
-		deps.logger.info('收藏夹为空或与上次相比无变化，无需同步')
+		deps.logger.info('bilibili.favorite.unchanged')
 
 		return ok(plan.playlistId)
 	}
 
 	if (plan.stats.rebuild) {
-		deps.logger.info(
-			'收藏夹内容无变化，但同步模式与本地状态不一致，按所选模式重建',
-		)
+		deps.logger.info('bilibili.favorite.mode_changed')
 	}
 
 	const details = await step('favorite_sync.fetch_details', (d) =>

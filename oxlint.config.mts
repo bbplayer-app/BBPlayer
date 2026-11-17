@@ -140,6 +140,7 @@ export default defineConfig({
 		{
 			files: ['apps/mobile/src/**/*.{ts,tsx,mts,cts}'],
 			rules: {
+				'bbplayer/structured-log-event': 'error',
 				'import-alias/prefer-alias': [
 					'error',
 					{

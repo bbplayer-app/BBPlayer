@@ -11,7 +11,6 @@ import {
 	setPlayerShuffleMode,
 } from '@/hooks/player/usePlaybackOptions'
 import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
-import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 
@@ -59,10 +58,6 @@ export function MusicControls({
 
 							return
 						}
-
-						void analyticsService.logPlayerAction('shuffle', {
-							mode: !shuffleMode,
-						})
 					}}
 					testID='player-mode-shuffle'
 				/>
@@ -93,9 +88,6 @@ export function MusicControls({
 						void setPlayerRepeatMode(nextMode).catch((error: unknown) =>
 							toastAndLogError('修改循环模式失败', error, 'Player.Controls'),
 						)
-						void analyticsService.logPlayerAction('repeat', {
-							mode: nextMode,
-						})
 					}}
 					testID='player-mode-repeat'
 				/>
@@ -127,7 +119,6 @@ export function MusicControls({
 					onPress={() => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 						onOpenQueue()
-						void analyticsService.logPlayerQueueAction('open_queue')
 					}}
 					testID='player-open-queue'
 				/>
