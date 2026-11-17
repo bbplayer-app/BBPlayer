@@ -725,23 +725,27 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("getQueue") Coroutine { ->
-            val items = withServiceAndPlayerOnMainThread { service, currentPlayer ->
-                // When shuffle is enabled, return items in the logical playback (shuffle traversal)
-                // order so the UI displays what will actually be played next.
-                val traversal = if (service.shuffleManager.isEnabled) {
-                    service.shuffleManager.getTraversalOrder()
-                } else {
-                    null
-                }
+            getQueueItemsInPlayOrder().map(::mediaItemToTrackRecord)
+        }
 
-                if (traversal != null) {
-                    traversal.map { physicalIdx -> currentPlayer.getMediaItemAt(physicalIdx) }
-                } else {
-                    List(currentPlayer.mediaItemCount) { index -> currentPlayer.getMediaItemAt(index) }
+        // 大队列时逐个对象转换成 JS 值非常慢，直接拼接每首已有的 track_json，由 JS 侧 JSON.parse
+        AsyncFunction("getQueueJsonInternal") Coroutine { ->
+            val items = getQueueItemsInPlayOrder()
+            buildString {
+                append('[')
+                items.forEachIndexed { index, item ->
+                    if (index > 0) append(',')
+                    append(
+                        item.mediaMetadata.extras?.getString("track_json")
+                            ?: json.encodeToString(mediaItemToTrackRecord(item))
+                    )
                 }
+                append(']')
             }
+        }
 
-            items.map(::mediaItemToTrackRecord)
+        AsyncFunction("getQueueSize") Coroutine { ->
+            withPlayerOnMainThread { it.mediaItemCount }
         }
 
         AsyncFunction("reverseRemainingQueue") Coroutine { ->
@@ -787,45 +791,12 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("addToEnd") Coroutine { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
-            val context = appContext.reactContext
-            val mediaItems = tracks.map { track ->
-                track.toMediaItem(context)
-            }
-            withServiceAndPlayerOnMainThread { service, currentPlayer ->
-                if (clearQueue == true) {
-                    // 替换队列前先保存旧音频断点
-                    service.saveCurrentResumeRecord()
-                    currentPlayer.clearMediaItems()
-                }
-                val initialSize = currentPlayer.mediaItemCount
-                val requestedIndex = tracks.indexOfFirst { it.id == startFromId }
-                // addMediaItems/seekTo/prepare 都可能触发加载，不能等 playWhenReady 回调才创建父 span。
-                if (!startFromId.isNullOrEmpty() && requestedIndex != -1) {
-                    val item = mediaItems[requestedIndex]
-                    PlaybackTracer.onPlaybackRequested(
-                        item.mediaId, item.localConfiguration?.uri?.toString(), "SEEK",
-                    )
-                }
-                currentPlayer.addMediaItems(mediaItems)
+            addTracksToEnd(tracks, startFromId, clearQueue)
+        }
 
-                if (!startFromId.isNullOrEmpty()) {
-                    val relativeIndex = requestedIndex
-
-                    if (relativeIndex != -1) {
-                        val targetIndex = initialSize + relativeIndex
-
-                        currentPlayer.seekTo(targetIndex, C.TIME_UNSET)
-                        currentPlayer.prepare()
-                        currentPlayer.play()
-
-                        return@withServiceAndPlayerOnMainThread
-                    }
-                }
-
-                if (currentPlayer.playbackState == Player.STATE_IDLE) {
-                    currentPlayer.prepare()
-                }
-            }
+        // 与 addToEnd 相同，但曲目以 JSON 字符串传入，避免逐个对象转换参数
+        AsyncFunction("addToEndJsonInternal") Coroutine { tracksJson: String, startFromId: String?, clearQueue: Boolean? ->
+            addTracksToEnd(json.decodeFromString<List<TrackRecord>>(tracksJson), startFromId, clearQueue)
         }
 
         AsyncFunction("playNext") Coroutine { track: TrackRecord ->
@@ -1564,6 +1535,64 @@ class ExpoOrpheusModule : Module() {
             }, MoreExecutors.directExecutor())
         }
     }
+
+    private suspend fun addTracksToEnd(tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean?) {
+        val context = appContext.reactContext
+        val mediaItems = tracks.map { track ->
+            track.toMediaItem(context)
+        }
+        withServiceAndPlayerOnMainThread { service, currentPlayer ->
+            if (clearQueue == true) {
+                // 替换队列前先保存旧音频断点
+                service.saveCurrentResumeRecord()
+                currentPlayer.clearMediaItems()
+            }
+            val initialSize = currentPlayer.mediaItemCount
+            val requestedIndex = tracks.indexOfFirst { it.id == startFromId }
+            // addMediaItems/seekTo/prepare 都可能触发加载，不能等 playWhenReady 回调才创建父 span。
+            if (!startFromId.isNullOrEmpty() && requestedIndex != -1) {
+                val item = mediaItems[requestedIndex]
+                PlaybackTracer.onPlaybackRequested(
+                    item.mediaId, item.localConfiguration?.uri?.toString(), "SEEK",
+                )
+            }
+            currentPlayer.addMediaItems(mediaItems)
+
+            if (!startFromId.isNullOrEmpty()) {
+                val relativeIndex = requestedIndex
+
+                if (relativeIndex != -1) {
+                    val targetIndex = initialSize + relativeIndex
+
+                    currentPlayer.seekTo(targetIndex, C.TIME_UNSET)
+                    currentPlayer.prepare()
+                    currentPlayer.play()
+
+                    return@withServiceAndPlayerOnMainThread
+                }
+            }
+
+            if (currentPlayer.playbackState == Player.STATE_IDLE) {
+                currentPlayer.prepare()
+            }
+        }
+    }
+
+    /** 随机播放开启时按随机遍历顺序返回，让 UI 看到实际接下来会播放的顺序 */
+    private suspend fun getQueueItemsInPlayOrder(): List<MediaItem> =
+        withServiceAndPlayerOnMainThread { service, currentPlayer ->
+            val traversal = if (service.shuffleManager.isEnabled) {
+                service.shuffleManager.getTraversalOrder()
+            } else {
+                null
+            }
+
+            if (traversal != null) {
+                traversal.map { physicalIdx -> currentPlayer.getMediaItemAt(physicalIdx) }
+            } else {
+                List(currentPlayer.mediaItemCount) { index -> currentPlayer.getMediaItemAt(index) }
+            }
+        }
 
     private suspend fun <T> withPlayerOnMainThread(block: (Player) -> T): T {
         awaitController()

@@ -83,7 +83,10 @@
   移除指定索引的歌曲。
 
 - **`getQueue(): Promise<Track[]>`**
-  获取完整播放队列。
+  获取完整播放队列。队列很长时开销较大，只需要队列长度时请用 `getQueueSize()`。
+
+- **`getQueueSize(): Promise<number>`**
+  获取播放队列长度。
 
 - **`getCurrentIndex(): Promise<number>`**
   获取当前播放索引。

@@ -132,7 +132,7 @@ class OrpheusPlayerManager: NSObject {
         saveState()
     }
     
-    private func getQueueCount() -> Int {
+    func getQueueCount() -> Int {
         return queueManager.getQueueCount()
     }
     

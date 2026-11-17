@@ -58,8 +58,11 @@ object CoverDownloadManager {
      * 将 trackId 中的文件系统非法字符替换为 _，确保可作为文件名。
      */
     private fun sanitizeTrackId(trackId: String): String {
-        return trackId.replace(Regex("[/\\\\:*?\"<>|]"), "_")
+        return trackId.replace(ILLEGAL_FILENAME_CHARS, "_")
     }
+
+    // 入队时每首歌都会调用，不能每次都重新编译正则
+    private val ILLEGAL_FILENAME_CHARS = Regex("[/\\\\:*?\"<>|]")
 
     /**
      * 从 URL 提取文件扩展名，默认 jpg。

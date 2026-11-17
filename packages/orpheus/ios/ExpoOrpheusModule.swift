@@ -138,6 +138,10 @@ public class ExpoOrpheusModule: Module {
         return OrpheusPlayerManager.shared.getQueue()
     }
 
+    AsyncFunction("getQueueSize") { () -> Int in
+        return OrpheusPlayerManager.shared.getQueueCount()
+    }
+
     AsyncFunction("getIndexTrack") { (index: Int) -> Track? in
         return OrpheusPlayerManager.shared.getTrack(at: index)
     }

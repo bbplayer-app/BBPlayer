@@ -1,4 +1,5 @@
 import { requireNativeModule, NativeModule } from 'expo-modules-core'
+import { Platform } from 'react-native'
 
 export enum PlaybackState {
 	IDLE = 1,
@@ -280,6 +281,14 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 让 UI 看到实际接下来会播放的顺序。
 	 */
 	getQueue(): Promise<Track[]>
+	/** 返回播放队列长度；只关心队列是否为空或长度时用它，避免读回整个队列。 */
+	getQueueSize(): Promise<number>
+	/**
+	 * 仅供原生桥接使用：以 JSON 字符串返回 `getQueue()` 的结果（仅 Android）。
+	 *
+	 * 大队列时逐个对象转换成 JS 值非常慢，JS 业务代码应使用 `getQueue`。
+	 */
+	getQueueJsonInternal(): Promise<string>
 	/**
 	 * 保持当前曲目不变，反转其后的待播放队列。
 	 *
@@ -294,6 +303,16 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	addToEnd(
 		tracks: Track[],
+		startFromId?: string,
+		clearQueue?: boolean,
+	): Promise<void>
+	/**
+	 * 仅供原生桥接使用：与 `addToEnd` 相同，但曲目以 JSON 字符串传入（仅 Android）。
+	 *
+	 * JS 业务代码应使用 `addToEnd`。
+	 */
+	addToEndJsonInternal(
+		tracksJson: string,
 		startFromId?: string,
 		clearQueue?: boolean,
 	): Promise<void>
@@ -481,7 +500,10 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 
 const NativeModuleInstance = requireNativeModule<NativeOrpheusModule>('Orpheus')
 
-type PublicOrpheusModule = Omit<NativeOrpheusModule, 'setLyricsInternal'> & {
+type PublicOrpheusModule = Omit<
+	NativeOrpheusModule,
+	'setLyricsInternal' | 'getQueueJsonInternal' | 'addToEndJsonInternal'
+> & {
 	/**
 	 * 将已解析歌词提交给原生消费者。
 	 *
@@ -504,6 +526,28 @@ Orpheus.setLyrics = async (
 		JSON.stringify(data),
 		consumers,
 	)
+}
+
+// 大队列时 expo 逐个对象、逐个字段地转换 Track 非常慢，Android 上改为整体传一个 JSON 字符串
+if (Platform.OS === 'android') {
+	Orpheus.getQueue = async () => {
+		const queueJson = await NativeModuleInstance.getQueueJsonInternal()
+
+		// SAFETY: 原生端用 kotlinx 序列化 TrackRecord 生成该数组，字段与 Track 一一对应
+		return JSON.parse(queueJson) as Track[]
+	}
+
+	Orpheus.addToEnd = async (
+		tracks: Track[],
+		startFromId?: string,
+		clearQueue?: boolean,
+	) => {
+		return await NativeModuleInstance.addToEndJsonInternal(
+			JSON.stringify(tracks),
+			startFromId,
+			clearQueue,
+		)
+	}
 }
 
 export interface AudioDebugSection {
