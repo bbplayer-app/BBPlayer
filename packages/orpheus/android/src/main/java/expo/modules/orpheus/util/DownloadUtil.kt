@@ -23,6 +23,7 @@ import expo.modules.orpheus.telemetry.PlaybackTracer
 import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
 import java.util.concurrent.Executors
+import io.sentry.SpanStatus
 
 @UnstableApi
 object DownloadUtil {
@@ -68,7 +69,7 @@ object DownloadUtil {
     @Synchronized
     fun getPlayerDataSourceFactory(context: Context): DataSource.Factory {
         if (playerDataSourceFactory == null) {
-            val upstreamFactory = getUpstreamFactory()
+            val upstreamFactory = getUpstreamFactory(forPlayback = true)
 
             val downloadCache = DownloadCache.getStableCache(context)
             val lruCache = DownloadCache.getLruCache(context)
@@ -93,12 +94,12 @@ object DownloadUtil {
     @Synchronized
     private fun getDownloadDataSourceFactory(): DataSource.Factory {
         if (downloadDataSourceFactory == null) {
-            downloadDataSourceFactory = getUpstreamFactory()
+            downloadDataSourceFactory = getUpstreamFactory(forPlayback = false)
         }
         return downloadDataSourceFactory!!
     }
 
-    private fun getUpstreamFactory(): DataSource.Factory {
+    private fun getUpstreamFactory(forPlayback: Boolean): DataSource.Factory {
         val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
             expo.modules.orpheus.network.OkHttpClientManager.okHttpClient
         )
@@ -106,7 +107,7 @@ object DownloadUtil {
 
         return ResolvingDataSource.Factory(
             DataSource.Factory { BilibiliFallbackDataSource(httpDataSourceFactory) },
-            BilibiliResolver()
+            BilibiliResolver(forPlayback)
         )
     }
 
@@ -129,11 +130,13 @@ object DownloadUtil {
             .createDataSource()
     }
 
-    private class BilibiliResolver :
+    private class BilibiliResolver(private val forPlayback: Boolean) :
         ResolvingDataSource.Resolver {
         override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
             val uri = dataSpec.uri
             if (uri.scheme == "orpheus" && uri.host == "bilibili") {
+                val resolveSpan = if (forPlayback) PlaybackTracer.spanForResolve(uri.toString()) else null
+                var resolveStatus = SpanStatus.INTERNAL_ERROR
                 try {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
@@ -145,7 +148,7 @@ object DownloadUtil {
                         enableDolby = uri.getQueryParameter("dolby") == "1",
                         enableHiRes = uri.getQueryParameter("hires") == "1",
                         cookie = OrpheusConfig.bilibiliCookie,
-                        parent = PlaybackTracer.spanForResolve(uri.toString()),
+                        parent = resolveSpan,
                     )
                     val urls = resolved.urls
                     OrpheusTelemetry.recordStream(
@@ -175,12 +178,14 @@ object DownloadUtil {
                     val headers = HashMap(dataSpec.httpRequestHeaders)
                     headers["Referer"] = "https://www.bilibili.com/"
 
-                    return dataSpec.buildUpon()
+                    val resolvedSpec = dataSpec.buildUpon()
                         .setUri(urls.first().toUri())
-                        .setCustomData(BilibiliStreamUrls(urls))
+                        .setCustomData(BilibiliStreamUrls(urls, uri.toString().takeIf { forPlayback }))
                         .setHttpRequestHeaders(headers)
                         .setKey(uri.toString())
                         .build()
+                    resolveStatus = SpanStatus.OK
+                    return resolvedSpec
                 } catch (e: Exception) {
                     // 播放器会重试，重试耗尽才会变成 onPlayerError
                     NativeLog.warning(
@@ -192,6 +197,8 @@ object DownloadUtil {
                         e,
                     )
                     throw IOException("Resolve Url Failed: ${e.message}", e)
+                } finally {
+                    PlaybackTracer.onResolveFinished(resolveSpan, resolveStatus)
                 }
             }
             return dataSpec

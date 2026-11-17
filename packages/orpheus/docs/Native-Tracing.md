@@ -7,9 +7,11 @@ Orpheus 在原生侧记录两类 span：
 
 ## 等待出声
 
-`playback.wait_for_audio` 只有一条规则：**切歌或按下播放时，如果 `playWhenReady && !isPlaying` 成立就开始，出声时结束。** 不论起播由谁触发（JS、通知栏、耳机、自动下一首）都会经过播放服务的回调，所以统一在原生侧记录。
+主动播放或选曲播放时，在 `addMediaItems`、`seekTo`、`prepare` 之前创建 `playback.wait_for_audio`，出声时结束。加载线程可能在 `playWhenReady` 回调之前开始取流，等回调才创建 transaction 会让请求失去 parent。同一曲目的后续切歌回调复用已创建的 transaction。
 
-预加载好的下一首、缓冲还在的继续播放都会立即出声，条件不成立，不会记录。会被记录的是真的要等的情况：要取地址、要缓冲、重启后第一次播放、暂停太久缓存被清掉等。播放中途的卡顿缓冲不算。
+通知栏、耳机、自动下一首等入口仍由播放服务的回调兜底：切歌或按下播放时，如果 `playWhenReady && !isPlaying` 成立就开始，出声时结束。
+
+主动播放已缓存的歌曲时可能只记录一段很短的等待；没有主动播放命令的回调路径仍按上述条件判断。播放中途的卡顿缓冲不算。
 
 | 情况                                 | 状态                | 额外属性                           |
 | ------------------------------------ | ------------------- | ---------------------------------- |
@@ -21,6 +23,30 @@ Orpheus 在原生侧记录两类 span：
 - `playback.reason`：ExoPlayer 的切歌原因（`AUTO`、`SEEK`、`PLAYLIST_CHANGED`），按下播放时为 `PLAY`。单曲循环回到开头不算。
 - 等待期间如果为这首歌请求了地址，请求 span 会挂在它下面，并带上 `playback.resolved_url: true`。判断方式是取流的 URI 和当前等待的 URI 一致；预加载下一首、下载触发的请求仍然各自是独立的 transaction。
 - 和 JS 侧是独立的 trace。JS 的 `playback.submit` 只记录校验、查歌单、调用原生这几步，它的 `playback.starting_track_id` 对应这里的 `track.id`。
+
+### 起播阶段
+
+| span                          | 起止边界                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `playback.prepare`            | 播放请求 → 开始解析地址；包含队列操作、Media3 准备、缓存检查与加载线程调度。缓存命中时，到音频格式回调结束。 |
+| `playback.resolve_audio`      | 地址解析开始 → 解析结果和请求头准备完成；Bilibili 的 `nav`、`pagelist`、`playurl` 请求作为它的子 span。      |
+| `playback.await_retry`        | 地址解析失败 → 下一次解析或播放结束。                                                                        |
+| `playback.await_audio_format` | 地址解析完成 → 收到音频输入格式；包含 CDN 读取、容器探测与轨道识别。                                         |
+| `playback.await_audio_output` | 收到音频输入格式 → AudioTrack 初始化；包含解码器和输出准备。                                                 |
+| `playback.await_playing`      | AudioTrack 初始化 → `isPlaying=true`；包含剩余缓冲和播放状态切换的等待。                                     |
+
+这些阶段按实际回调切换，不代表每段只执行一种工作；复用音频输出时可能没有新的 AudioTrack 初始化回调，当前阶段会延续到起播结束。
+
+另有更细的子 span：
+
+- `playback.wbi_keys`：取得 WBI 密钥，包含缓存/锁等待和必要时的 `nav` 请求。
+- `playback.api.prepare`：Retrofit API/转换器首次初始化及请求构造，不包含发起网络请求。
+- `playback.wbi_sign`：生成 WBI 请求签名。
+- `playback.cdn.open`（`http.client`）：每次 CDN `DataSource.open`，包含连接及等待 HTTP 响应头，镜像重试分别记录；只上传主机，不记录带签名的 URL。
+- `playback.cdn.first_read`：打开后到第一次读取返回数据或 EOF，不能当作完整音频下载耗时。
+- `playback.decoder_init`：使用 Media3 报告的初始化时刻和耗时补记解码器初始化，不把主线程回调排队时间算进去。
+
+CDN span 仅绑定当前等待出声的曲目。暂停、切歌、失败或超时时会结束未完成的阶段和任务，不会把下载或持续播放中的读取混进下一次起播。
 
 ## 依赖的 SDK 内部行为
 

@@ -24,6 +24,7 @@ import androidx.media3.exoplayer.source.MediaLoadData
 import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.bbplayernative.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
+import expo.modules.orpheus.telemetry.PlaybackTracer
 import expo.modules.orpheus.util.GeneralStorage
 import java.util.Locale
 
@@ -82,6 +83,7 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         decoderInitDurationMs = initializationDurationMs
         decoderInitAtMs = SystemClock.elapsedRealtime()
         audioMediaId = mediaIdOf(eventTime)
+        PlaybackTracer.onDecoderInitialized(audioMediaId, decoderName, initializedTimestampMs, initializationDurationMs)
         NativeLog.info(
             LogTags.AUDIO,
             "audio.decoder.initialized",
@@ -102,6 +104,7 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     ) {
         inputFormat = format
         audioMediaId = mediaIdOf(eventTime)
+        PlaybackTracer.onAudioFormat(audioMediaId, format.sampleMimeType)
         NativeLog.info(
             LogTags.AUDIO,
             "audio.format.changed",
@@ -121,6 +124,7 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         this.audioTrackConfig = audioTrackConfig
         audioTrackInitAtMs = SystemClock.elapsedRealtime()
         liveAudioTrackCount++
+        PlaybackTracer.onAudioOutput(mediaIdOf(eventTime))
         val output = outputMode(audioTrackConfig)
         NativeLog.info(
             LogTags.AUDIO,

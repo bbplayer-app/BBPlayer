@@ -9,11 +9,14 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
 import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.bbplayernative.telemetry.NativeLog
+import expo.modules.orpheus.telemetry.PlaybackTracer
+import io.sentry.ISpan
+import io.sentry.SpanStatus
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
 
-internal data class BilibiliStreamUrls(val urls: List<String>)
+internal data class BilibiliStreamUrls(val urls: List<String>, val playbackUri: String?)
 
 /** Tries API-provided mirrors of the same audio representation without rewriting signed URLs. */
 @UnstableApi
@@ -24,6 +27,7 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
     private var candidates: List<String> = emptyList()
     private var nextCandidate = 0
     private var bytesRead = 0L
+    private var firstReadSpan: ISpan? = null
 
     override fun addTransferListener(transferListener: TransferListener) {
         listeners.add(transferListener)
@@ -39,6 +43,7 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
     }
 
     private fun openNext(previousError: IOException?): Long {
+        finishFirstRead(SpanStatus.CANCELLED)
         val spec = checkNotNull(originalSpec)
         var lastError = previousError
         do {
@@ -48,8 +53,16 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
             val nextSpec = spec.subrange(bytesRead).let {
                 if (candidates.isEmpty()) it else it.withUri(Uri.parse(candidates[nextCandidate++]))
             }
+            val playbackUri = (spec.customData as? BilibiliStreamUrls)?.playbackUri
+            val openSpan = PlaybackTracer.startDataSourceSpan(playbackUri, "playback.cdn.open", nextSpec.uri.host)
+            var openStatus = SpanStatus.INTERNAL_ERROR
             try {
-                return source.open(nextSpec)
+                val length = source.open(nextSpec)
+                openStatus = SpanStatus.OK
+                firstReadSpan = PlaybackTracer.startDataSourceSpan(
+                    playbackUri, "playback.cdn.first_read", nextSpec.uri.host, "playback",
+                )
+                return length
             } catch (error: IOException) {
                 lastError?.let(error::addSuppressed)
                 lastError = error
@@ -65,6 +78,8 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
                     error,
                 )
                 if (!retry) throw error
+            } finally {
+                PlaybackTracer.finishDataSourceSpan(openSpan, openStatus)
             }
         } while (nextCandidate < candidates.size)
         throw checkNotNull(lastError)
@@ -80,8 +95,12 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
             try {
                 val count = checkNotNull(upstream).read(buffer, offset, length)
                 if (count > 0) bytesRead += count
+                if (count != 0) {
+                    finishFirstRead(SpanStatus.OK)
+                }
                 return count
             } catch (error: IOException) {
+                finishFirstRead(SpanStatus.INTERNAL_ERROR)
                 val retry = canRetry(error)
                 NativeLog.warning(
                     LogTags.STREAM,
@@ -133,10 +152,16 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
         upstream?.responseHeaders.orEmpty()
 
     override fun close() {
+        finishFirstRead(SpanStatus.CANCELLED)
         val source = upstream
         upstream = null
         originalSpec = null
         candidates = emptyList()
         source?.close()
+    }
+
+    private fun finishFirstRead(status: SpanStatus) {
+        PlaybackTracer.finishDataSourceSpan(firstReadSpan, status)
+        firstReadSpan = null
     }
 }

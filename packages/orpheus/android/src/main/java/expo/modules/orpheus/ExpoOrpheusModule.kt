@@ -53,6 +53,7 @@ import expo.modules.orpheus.util.TrackResumeStorage
 import expo.modules.orpheus.util.runExportDownloads
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
+import expo.modules.orpheus.telemetry.PlaybackTracer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -531,6 +532,13 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("play") Coroutine { ->
             withPlayerOnMainThread { currentPlayer ->
+                if (!currentPlayer.isPlaying) {
+                    currentPlayer.currentMediaItem?.let { item ->
+                        PlaybackTracer.onPlaybackRequested(
+                            item.mediaId, item.localConfiguration?.uri?.toString(), "PLAY",
+                        )
+                    }
+                }
                 if (currentPlayer.playbackState == Player.STATE_ENDED) {
                     currentPlayer.seekTo(0)
                 }
@@ -790,10 +798,18 @@ class ExpoOrpheusModule : Module() {
                     currentPlayer.clearMediaItems()
                 }
                 val initialSize = currentPlayer.mediaItemCount
+                val requestedIndex = tracks.indexOfFirst { it.id == startFromId }
+                // addMediaItems/seekTo/prepare 都可能触发加载，不能等 playWhenReady 回调才创建父 span。
+                if (!startFromId.isNullOrEmpty() && requestedIndex != -1) {
+                    val item = mediaItems[requestedIndex]
+                    PlaybackTracer.onPlaybackRequested(
+                        item.mediaId, item.localConfiguration?.uri?.toString(), "SEEK",
+                    )
+                }
                 currentPlayer.addMediaItems(mediaItems)
 
                 if (!startFromId.isNullOrEmpty()) {
-                    val relativeIndex = tracks.indexOfFirst { it.id == startFromId }
+                    val relativeIndex = requestedIndex
 
                     if (relativeIndex != -1) {
                         val targetIndex = initialSize + relativeIndex

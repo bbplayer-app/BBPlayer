@@ -39,6 +39,18 @@ object BilibiliRepository {
     private var cachedSubKey: String? = null
     private var cachedDateStr: String? = null
 
+    private fun <T> traceStep(parent: ISpan?, name: String, block: (ISpan?) -> T): T {
+        val span = parent?.startChild("playback", name)
+        var status = SpanStatus.INTERNAL_ERROR
+        try {
+            val result = block(span)
+            status = SpanStatus.OK
+            return result
+        } finally {
+            span?.finish(status)
+        }
+    }
+
     /**
      * 执行请求并记录一个 http.client span。span 名与属性和 JS 侧 ApiClient 保持一致
      * （error.type 取 RequestFailed / ResponseFailed），在 Sentry 里能和 JS 的请求一起按接口聚合、告警；
@@ -48,7 +60,11 @@ object BilibiliRepository {
      * @param codeOf 取出响应体里的业务码；不传表示业务码非 0 也不算失败（如未登录时 nav 返回 -101）
      * @param parent 所属的起播 span；为空时请求自己成为一个 transaction
      */
-    private fun <T> execute(call: Call<T>, parent: ISpan?, codeOf: ((T) -> Int)? = null): Response<T> {
+    private fun <T> execute(parent: ISpan?, createCall: () -> Call<T>, codeOf: ((T) -> Int)? = null): Response<T> {
+        // Retrofit/转换器首次初始化和请求构造发生在 call.execute 之前，不能落在 HTTP span 外的空白里。
+        val call = traceStep(parent, "playback.api.prepare") {
+            createCall().also { it.request() }
+        }
         val request = call.request()
         val url = request.url
         val fields = mutableMapOf<String, Any?>(
@@ -114,7 +130,7 @@ object BilibiliRepository {
         }
         NativeLog.info(LogTags.STREAM, "bilibili.wbi.refresh_started")
 
-        val response = execute(api.getNavInfo(), parent)
+        val response = execute(parent, { api.getNavInfo() })
         val wbiData = response.body()?.data?.wbiImg
 
         if (!response.isSuccessful || wbiData == null) {
@@ -145,7 +161,7 @@ object BilibiliRepository {
         parent: ISpan? = null,
     ): ResolvedAudio {
         var cidInternal = cid
-        val (imgKey, subKey) = getWbiKeys(parent)
+        val (imgKey, subKey) = traceStep(parent, "playback.wbi_keys") { getWbiKeys(it) }
         if (cidInternal === null) {
             cidInternal = getFirstCid(bvid, cookie, parent)
         }
@@ -172,9 +188,9 @@ object BilibiliRepository {
             "voice_balance" to 1
         )
 
-        val signedParams = WbiUtil.sign(rawParams, imgKey, subKey)
+        val signedParams = traceStep(parent, "playback.wbi_sign") { WbiUtil.sign(rawParams, imgKey, subKey) }
 
-        val response = execute(api.getPlayUrl(cookie, signedParams), parent) { it.code }
+        val response = execute(parent, { api.getPlayUrl(cookie, signedParams) }) { it.code }
 
         if (!response.isSuccessful) {
             throw IOException("Bilibili API Http Error: ${response.code()}")
@@ -287,7 +303,7 @@ object BilibiliRepository {
     }
 
     fun getFirstCid(bvid: String, cookie: String?, parent: ISpan? = null): Long {
-        val response = execute(api.getPageList(cookie = cookie, bvid = bvid), parent) { it.code }
+        val response = execute(parent, { api.getPageList(cookie = cookie, bvid = bvid) }) { it.code }
 
         if (!response.isSuccessful) {
             throw IOException("Bilibili API Http Error: ${response.code()}")
