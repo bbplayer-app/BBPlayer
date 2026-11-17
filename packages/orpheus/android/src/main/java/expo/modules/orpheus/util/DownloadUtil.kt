@@ -151,16 +151,19 @@ object DownloadUtil {
                         parent = resolveSpan,
                     )
                     val urls = resolved.urls
-                    OrpheusTelemetry.recordStream(
-                        uri.toString(),
-                        buildMap {
-                            put("kind", resolved.kind)
-                            resolved.streamId?.let { put("id", it) }
-                            resolved.codecs?.let { put("codecs", it) }
-                            resolved.bandwidth?.let { put("bandwidth", it) }
-                            put("mirrors", urls.size)
-                        },
-                    )
+                    // 下载和播放可能是同一首歌，下载取到的流不能覆盖播放的
+                    if (forPlayback) {
+                        OrpheusTelemetry.recordStream(
+                            uri.toString(),
+                            buildMap {
+                                put("kind", resolved.kind)
+                                resolved.streamId?.let { put("id", it) }
+                                resolved.codecs?.let { put("codecs", it) }
+                                resolved.bandwidth?.let { put("bandwidth", it) }
+                                put("mirrors", urls.size)
+                            },
+                        )
+                    }
                     // 在这里保存响度均衡数据，并且直接发一个事件，在 OrpheusMusicService 监听
                     val volume = resolved.volume
                     if (volume !== null) {
@@ -187,7 +190,7 @@ object DownloadUtil {
                     resolveStatus = SpanStatus.OK
                     return resolvedSpec
                 } catch (e: Exception) {
-                    OrpheusTelemetry.recordStream(uri.toString(), mapOf("kind" to "resolve_failed"))
+                    if (forPlayback) OrpheusTelemetry.recordStream(uri.toString(), mapOf("kind" to "resolve_failed"))
                     // 播放器会重试，重试耗尽才会变成 onPlayerError
                     NativeLog.warning(
                         LogTags.STREAM,
