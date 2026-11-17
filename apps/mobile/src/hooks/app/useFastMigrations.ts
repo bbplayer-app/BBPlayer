@@ -79,6 +79,8 @@ export const useFastMigrations = (
 				endStartupPhase('app.startup.db_migrate')
 				dispatch({ type: 'migrated', payload: true })
 			} catch (error) {
+				// 失败也记下迁移花了多久
+				endStartupPhase('app.startup.db_migrate')
 				logger.error('database.migration.failed', {}, error)
 				dispatch({ type: 'error', payload: error as Error })
 			}

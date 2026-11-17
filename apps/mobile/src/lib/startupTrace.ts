@@ -56,14 +56,15 @@ export function measureStartupPhase<T>(name: StartupPhase, fn: () => T): T {
 /** 首次可交互时补记；SDK 在处理事件时才把首个 navigation transaction 改为 ui.load。 */
 export function flushStartupPhases(): void {
 	if (flushed) return
-	flushed = true
 
 	const parent = getActiveUiSpan()
 
 	if (!parent) return
 	const op = Sentry.spanToJSON(parent).op
 
+	// 没有可挂的 transaction 时先不标记，留给之后的调用再试
 	if (op !== 'navigation' && op !== 'ui.load') return
+	flushed = true
 
 	for (const phase of phases) {
 		Sentry.startInactiveSpan({
