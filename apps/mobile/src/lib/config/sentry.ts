@@ -30,6 +30,11 @@ const development = process.env.NODE_ENV === 'development'
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() ?? ''
 const hasSentryDsn = SENTRY_DSN.length > 0
 
+// 只有热更新包会在 expo export 时内联它（见 .github/workflows/update.yml），让每次热更新
+// 有独立的 release。内嵌 bundle 没有这个值，回落到原生 SDK 的 `包名@版本+versionCode`。
+const SENTRY_RELEASE =
+	process.env.EXPO_PUBLIC_SENTRY_RELEASE?.trim() || undefined
+
 // 仅在官方应用包名上启用 Sentry，其他标识（Expo Go、第三方套壳等）一律忽略
 // 忽略最后一个字母，允许用户改包名共存（其实是我有时候要测试）
 const isOfficialApp = identifier?.startsWith('com.roitium.bbplaye') ?? false
@@ -149,6 +154,8 @@ export function initializeSentry() {
 
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
+		// 同时传给原生 SDK，热更新后的原生崩溃和会话也归到这个 release
+		release: SENTRY_RELEASE,
 		debug: false,
 		tracesSampleRate: TRACES_SAMPLE_RATE,
 		integrations: [navigationIntegration],
