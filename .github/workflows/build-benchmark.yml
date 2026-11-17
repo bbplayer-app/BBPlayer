@@ -5,6 +5,11 @@ run-name: Android benchmark (${{ inputs.cache_mode }}, ${{ inputs.arch }})
 on:
   workflow_dispatch:
     inputs:
+      cpus:
+        description: 'Runner sizes to compare (or retry individually)'
+        type: choice
+        options: ['[2,4,8]', '[2]', '[4]', '[8]']
+        default: '[2,4,8]'
       cache_mode:
         description: 'cold writes a fresh cache; warm restores that cache'
         type: choice
@@ -28,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cpu: [2, 4, 8]
+        cpu: ${{ fromJSON(inputs.cpus) }}
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
