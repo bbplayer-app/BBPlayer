@@ -119,6 +119,10 @@ export default function PlayerPage() {
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
 
+	const chaptersSheetMounted = usePlayerChaptersSheetStore(
+		(state) => state.isMounted,
+	)
+
 	const currentTrackCover = resolveBilibiliImageUrl(
 		currentTrack
 			? resolveTrackCover(currentTrack.uniqueKey, currentTrack.coverUrl)
@@ -534,7 +538,7 @@ export default function PlayerPage() {
 						</Computed>
 					</View>
 
-					<PlayerChaptersSheet />
+					{chaptersSheetMounted && <PlayerChaptersSheet />}
 					<PlayerFunctionalMenu
 						menuVisible={menuVisible}
 						setMenuVisible={setMenuVisible}
