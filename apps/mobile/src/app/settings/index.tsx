@@ -1,6 +1,4 @@
-import { useObserve } from 'expo-observe'
 import { Redirect, useRouter } from 'expo-router'
-import { useEffect } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Divider, List, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -15,13 +13,8 @@ export default function SettingsPage() {
 	const insets = useSafeAreaInsets()
 	const colors = useTheme().colors
 	const router = useRouter()
-	const { markInteractive } = useObserve()
 
 	const split = useSettingsSplit()
-
-	useEffect(() => {
-		markInteractive()
-	}, [markInteractive])
 
 	// 分栏时侧栏就是目录，直接展示第一个分区。
 	if (split) return <Redirect href={SETTINGS_SECTIONS[0].path} />

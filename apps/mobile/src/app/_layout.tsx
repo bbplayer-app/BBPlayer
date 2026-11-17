@@ -5,7 +5,7 @@ import {
 } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
-import { Observe, ObserveRoot } from 'expo-observe'
+import { AppMetricsRoot } from 'expo-app-metrics'
 import { router, Stack } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
@@ -56,11 +56,6 @@ import { isActuallyOffline } from '@/utils/network'
 import migrations from '../../drizzle/migrations'
 
 const logger = log.extend('UI.RootLayout')
-
-Observe.configure({
-	dispatchingEnabled: useAppStoreObj.getState().settings.enableDataCollection,
-	integrations: { 'expo-router': true },
-})
 
 // 初始化 Sentry
 initializeSentry()
@@ -441,7 +436,7 @@ function RootLayout() {
 // 用户点击追踪（ui.action.touch）与触摸面包屑以 testID 作为元素标识。
 // 同一节点上 testID 优先于 accessibilityLabel 与子节点文本；都没有时保留原始文本，
 // 点击 transaction 名即 `{路由}.{元素标识}`
-export default Sentry.wrap(ObserveRoot.wrap(RootLayout), {
+export default Sentry.wrap(AppMetricsRoot.wrap(RootLayout), {
 	touchEventBoundaryProps: { labelName: 'testID' },
 })
 

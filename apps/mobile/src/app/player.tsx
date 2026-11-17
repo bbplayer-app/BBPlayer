@@ -4,7 +4,6 @@ import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
 import { Computed, useObserveEffect } from '@legendapp/state/react'
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
-import { useObserve } from 'expo-observe'
 import { router, useIsFocused } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -119,11 +118,6 @@ export default function PlayerPage() {
 	const insets = useSafeAreaInsets()
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
-	const { markInteractive } = useObserve()
-
-	useEffect(() => {
-		markInteractive()
-	}, [markInteractive])
 
 	const currentTrackCover = resolveBilibiliImageUrl(
 		currentTrack
