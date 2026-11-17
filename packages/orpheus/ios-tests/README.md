@@ -1,6 +1,6 @@
 # iOS 播放逻辑测试
 
-这里的测试在 Linux 上运行 `../ios` 里真实的 `OrpheusPlayerManager`、`OrpheusQueueManager` 和 `GeneralStorage`，检查队列、切歌、暂停、失败重试和听歌记录这些状态逻辑。不需要 Mac，也不需要设备。
+这里的测试在 Linux 上运行 `../ios` 里真实的 `OrpheusPlayerManager`、`OrpheusQueueManager` 和 `GeneralStorage`，检查队列、切歌、暂停、失败重试、听歌记录，以及播放中打开频谱时改用 MP4 这些状态逻辑。不需要 Mac，也不需要设备。
 
 ```bash
 packages/orpheus/ios-tests/run.sh
@@ -19,7 +19,7 @@ packages/orpheus/ios-tests/run.sh
 
 ## 测试能说明什么
 
-替身播放器只记录管理器对它的调用，状态由测试脚本推动。模拟的 B 站接口会把每次取链接的请求留住，直到测试给出回应，所以测试可以控制“链接还没回来”这段时间里发生什么。
+替身播放器只记录管理器对它的调用，状态由测试脚本推动。模拟的 B 站接口会把每次取链接的请求留住，直到测试给出回应，所以测试可以控制“链接还没回来”这段时间里发生什么。模拟的音频资源也一样，加载音轨的请求要等测试来完成。
 
 它验证的是管理器的逻辑，不是 AVPlayer 的实际表现：缓冲、后台挂起、系统中断的时序这些仍然要在真机上测。
 

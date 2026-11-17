@@ -77,7 +77,12 @@ final class AVAssetResourceLoader {
 }
 
 class AVAsset {
-    func loadTracks(withMediaType type: AVMediaType, completionHandler: @escaping ([AVAssetTrack]?, Error?) -> Void) {}
+    /// Every track load that has not been answered, oldest first. The harness answers them.
+    static var trackLoads: [(asset: AVAsset, completion: ([AVAssetTrack]?, Error?) -> Void)] = []
+
+    func loadTracks(withMediaType type: AVMediaType, completionHandler: @escaping ([AVAssetTrack]?, Error?) -> Void) {
+        AVAsset.trackLoads.append((self, completionHandler))
+    }
 }
 
 final class AVURLAsset: AVAsset {
@@ -431,7 +436,7 @@ final class MMKV {
 final class AudioSpectrumAnalyzer {
     static let shared = AudioSpectrumAnalyzer()
     func setEnabled(_ enabled: Bool) {}
-    func createTap() -> MTAudioProcessingTap? { nil }
+    func createTap() -> MTAudioProcessingTap? { MTAudioProcessingTap() }
 }
 
 final class OrpheusDownloadManager {

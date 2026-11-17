@@ -38,8 +38,17 @@ class OrpheusPlayerManager: NSObject {
         let loadedAt = Date()
         /// Held here because AVAssetResourceLoader only keeps a weak reference to its delegate.
         let playlistLoader: DashAudioPlaylistLoader?
+        /// The video the stream was resolved from, so it can be fetched again in another form.
+        let source: BilibiliSource?
+    }
+    private struct BilibiliSource {
+        let bvid: String
+        let cid: String
     }
     private var currentLoad: StreamLoad?
+    /// A move to the MP4 started because the spectrum was turned on while an HLS item played;
+    /// nil when none is running. Main thread only.
+    private var tapSwitch: UUID?
     /// One failure can arrive as both a failed status and a failure to play to the end.
     private weak var failedItem: AVPlayerItem?
 
@@ -153,7 +162,7 @@ class OrpheusPlayerManager: NSObject {
             if !load.mirrors.isEmpty {
                 let next = load.mirrors.removeFirst()
                 NSLog("[OrpheusPlayer] stream failed, trying the next mirror: %@", message)
-                loadAvPlayerItem(trackId: load.trackId, url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback, refresh: load.refresh)
+                loadAvPlayerItem(trackId: load.trackId, url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback, refresh: load.refresh, source: load.source)
                 return
             }
 
@@ -400,6 +409,7 @@ class OrpheusPlayerManager: NSObject {
         loadedTrackId = nil
         pendingStartPosition = nil
         pendingLookup = nil
+        tapSwitch = nil
         player.pause()
         player.replaceCurrentItem(with: nil)
         onPlaybackStateChanged?(.idle)
@@ -567,6 +577,7 @@ class OrpheusPlayerManager: NSObject {
         loadedTrackId = nil
         // Anything still being fetched belonged to the entry this one replaces.
         pendingLookup = nil
+        tapSwitch = nil
 
         // Index is BACKING index
         queueManager.skipTo(backingIndex: index)
@@ -676,7 +687,8 @@ class OrpheusPlayerManager: NSObject {
                     // A seek made while the first stream was on the way moved where the entry starts.
                     let startPosition = self.loadedTrackId == nil ? self.pendingStartPosition : startPosition
                     self.loadAvPlayerItem(trackId: trackId, url: url, headers: BilibiliApi.browserHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
-                                          mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh)
+                                          mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh,
+                                          source: BilibiliSource(bvid: bvid, cid: cid))
                 case .failure(let error):
 
                     self.failLoad(Self.describe(error))
@@ -701,11 +713,14 @@ class OrpheusPlayerManager: NSObject {
         }
     }
 
+    /// `preparedAsset` and `audioMix` come from a move to the MP4 whose tracks are already loaded.
     private func loadAvPlayerItem(trackId: String, url: String, headers: [String: String]?, segmentBase: BilibiliPlayUrlResponse.SegmentBase? = nil, startPosition: Double? = nil,
-                                  mirrors: [String] = [], fallback: ((Double?) -> Void)? = nil, refresh: ((Double?) -> Void)? = nil) {
+                                  mirrors: [String] = [], fallback: ((Double?) -> Void)? = nil, refresh: ((Double?) -> Void)? = nil,
+                                  source: BilibiliSource? = nil, preparedAsset: AVURLAsset? = nil, audioMix: AVMutableAudioMix? = nil) {
         guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
-                self?.loadAvPlayerItem(trackId: trackId, url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh)
+                self?.loadAvPlayerItem(trackId: trackId, url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh,
+                                       source: source, preparedAsset: preparedAsset, audioMix: audioMix)
             }
             return
         }
@@ -713,6 +728,8 @@ class OrpheusPlayerManager: NSObject {
             failLoad("Invalid stream URL")
             return
         }
+        // This item replaces the one a move to the MP4 was waiting to replace.
+        tapSwitch = nil
 
         var options: [String: Any] = [:]
         if let headers = headers {
@@ -721,7 +738,9 @@ class OrpheusPlayerManager: NSObject {
 
         let asset: AVURLAsset
         var playlistLoader: DashAudioPlaylistLoader?
-        if let segmentBase = segmentBase {
+        if let preparedAsset = preparedAsset {
+            asset = preparedAsset
+        } else if let segmentBase = segmentBase {
             let loader = DashAudioPlaylistLoader(mediaUrl: url, segmentBase: segmentBase, headers: headers ?? [:])
             asset = AVURLAsset(url: DashAudioPlaylistLoader.playlistUrl, options: options)
             asset.resourceLoader.setDelegate(loader, queue: loader.queue)
@@ -729,13 +748,16 @@ class OrpheusPlayerManager: NSObject {
         } else {
             asset = AVURLAsset(url: nsUrl, options: options)
         }
-        currentLoad = StreamLoad(trackId: trackId, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh, playlistLoader: playlistLoader)
+        currentLoad = StreamLoad(trackId: trackId, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh,
+                                 playlistLoader: playlistLoader, source: source)
         loadedTrackId = trackId
         loadedTrackFinished = false
         pendingStartPosition = startPosition
 
         let item = AVPlayerItem(asset: asset)
-        if segmentBase == nil {
+        if let audioMix = audioMix {
+            item.audioMix = audioMix
+        } else if segmentBase == nil {
             attachSpectrumTap(to: item, asset: asset)
         }
 
@@ -751,18 +773,98 @@ class OrpheusPlayerManager: NSObject {
             // Paused while the stream was on the way. Nothing will start playing to end the task.
             endTransitionTask()
         }
+
+        // A stream asked for before the spectrum was turned on can still arrive as HLS.
+        if segmentBase != nil, GeneralStorage.shared.isSpectrumVisualizerEnabled {
+            startTapSwitch()
+        }
     }
 
     /// Loading a remote asset's tracks waits on the network, so this must stay asynchronous.
     private func attachSpectrumTap(to item: AVPlayerItem, asset: AVAsset) {
         asset.loadTracks(withMediaType: .audio) { [weak item] tracks, _ in
-            guard let track = tracks?.first, let tap = AudioSpectrumAnalyzer.shared.createTap() else { return }
-            let inputParams = AVMutableAudioMixInputParameters(track: track)
-            inputParams.audioTapProcessor = tap
-            let audioMix = AVMutableAudioMix()
-            audioMix.inputParameters = [inputParams]
+            guard let audioMix = tracks?.first.flatMap({ Self.spectrumMix(for: $0) }) else { return }
             DispatchQueue.main.async {
                 item?.audioMix = audioMix
+            }
+        }
+    }
+
+    private static func spectrumMix(for track: AVAssetTrack) -> AVMutableAudioMix? {
+        guard let tap = AudioSpectrumAnalyzer.shared.createTap() else { return nil }
+        let inputParams = AVMutableAudioMixInputParameters(track: track)
+        inputParams.audioTapProcessor = tap
+        let audioMix = AVMutableAudioMix()
+        audioMix.inputParameters = [inputParams]
+        return audioMix
+    }
+
+    // MARK: - Spectrum
+
+    /// The spectrum reads the audio through a tap, which an HLS item can't take. Turned on while
+    /// one plays, it moves the track to the MP4 instead of waiting for the next track.
+    func spectrumVisualizerChanged(enabled: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if enabled {
+                self.startTapSwitch()
+            } else {
+                self.tapSwitch = nil
+            }
+        }
+    }
+
+    /// The HLS item keeps playing while the MP4 is fetched and its tracks load, so the swap only
+    /// waits for the MP4 to buffer at the position playback has reached by then.
+    private func startTapSwitch() {
+        guard tapSwitch == nil, pendingLookup == nil, !loadedTrackFinished,
+              let load = currentLoad, load.segmentBase != nil, let source = load.source,
+              let trackId = loadedTrackId, trackId == load.trackId,
+              let item = player.currentItem, item.status != .failed, item !== failedItem else { return }
+        let token = UUID()
+        tapSwitch = token
+        // Anything that replaced the HLS item meanwhile, or turned the spectrum off, ends the move.
+        let stillWanted: () -> Bool = { [weak self, weak item] in
+            guard let self = self, self.tapSwitch == token else { return false }
+            guard let item = item, self.player.currentItem === item, self.loadedTrackId == trackId, !self.loadedTrackFinished else {
+                self.tapSwitch = nil
+                return false
+            }
+            return true
+        }
+
+        BilibiliApi.shared.getPlayStream(bvid: source.bvid, cid: source.cid, audioOnly: false) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self, stillWanted() else { return }
+                guard case .success(let stream) = result, stream.segmentBase == nil,
+                      let url = stream.urls.first, let nsUrl = URL(string: url) else {
+                    // The spectrum then starts with the next track.
+                    NSLog("[OrpheusPlayer] couldn't fetch the MP4 for the spectrum")
+                    self.tapSwitch = nil
+                    return
+                }
+                let asset = AVURLAsset(url: nsUrl, options: ["AVURLAssetHTTPHeaderFieldsKey": BilibiliApi.browserHeaders])
+                asset.loadTracks(withMediaType: .audio) { [weak self] tracks, _ in
+                    let audioMix = tracks?.first.flatMap { Self.spectrumMix(for: $0) }
+                    DispatchQueue.main.async {
+                        guard let self = self, stillWanted() else { return }
+                        self.tapSwitch = nil
+                        guard let audioMix = audioMix else {
+                            NSLog("[OrpheusPlayer] the MP4 for the spectrum has no audio track to tap")
+                            return
+                        }
+                        let position = self.currentEntryPosition()
+                        NSLog("[OrpheusPlayer] spectrum turned on, moving to the MP4 at %.1fs", position)
+                        // Nothing is audible until the MP4 has buffered, as at a failover.
+                        self.beginTransitionTask()
+                        let refresh: (Double?) -> Void = { [weak self] position in
+                            self?.fetchBilibiliPlayUrl(bvid: source.bvid, cid: source.cid, trackId: trackId, startPosition: position, audioOnly: false)
+                        }
+                        self.loadAvPlayerItem(trackId: trackId, url: url, headers: BilibiliApi.browserHeaders, startPosition: position,
+                                              mirrors: Array(stream.urls.dropFirst()), refresh: refresh, source: source,
+                                              preparedAsset: asset, audioMix: audioMix)
+                    }
+                }
             }
         }
     }

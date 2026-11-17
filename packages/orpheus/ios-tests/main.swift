@@ -67,6 +67,7 @@ func resetWorld() {
     UIApplication.shared.reset()
     AVPlayer.created.removeAll()
     MPRemoteCommandCenter.reset()
+    AVAsset.trackLoads.removeAll()
 }
 
 func makeFixture() -> Fixture {
@@ -453,6 +454,157 @@ test("next on the last track changes nothing") {
     check(f.events.finished.isEmpty, "the track is not finished")
     check(f.player.rate > 0, "it should keep playing")
     check(GeneralStorage.shared.getSavedPosition() == 50, "the saved position should stay")
+}
+
+// MARK: - Turning the spectrum on while an HLS stream plays
+
+let hlsPlaylist = DashAudioPlaylistLoader.playlistUrl.absoluteString
+
+/// Answers the oldest unanswered lookup with an audio-only DASH stream, which plays as HLS.
+func answerHls(_ id: String, mirrors: Int = 0, line: Int = #line) {
+    guard !BilibiliApi.shared.streamRequests.isEmpty else {
+        check(false, "there is no lookup to answer", line: line)
+        return
+    }
+    let urls = (0...mirrors).map { "https://cdn\($0).test/\(id).m4s" }
+    let segmentBase = BilibiliPlayUrlResponse.SegmentBase(initialization: "0-999", index_range: "1000-1999")
+    BilibiliApi.shared.answerStream(.success(BilibiliStream(urls: urls, segmentBase: segmentBase, measuredLoudness: nil)))
+    pump()
+}
+
+/// A queue of A and B with A playing as HLS.
+func playingHlsA(mirrors: Int = 0) -> Fixture {
+    let f = makeFixture()
+    f.manager.setQueue(["A", "B"].map { track($0) }, startIndex: 0)
+    answerHls("A", mirrors: mirrors)
+    f.player.becomeReady(duration: 200)
+    return f
+}
+
+/// What the module's setter does.
+func setSpectrum(_ f: Fixture, _ enabled: Bool) {
+    GeneralStorage.shared.isSpectrumVisualizerEnabled = enabled
+    f.manager.spectrumVisualizerChanged(enabled: enabled)
+    pump()
+}
+
+/// The tracks of the asset loaded from `url` finish loading. False when nothing was loading them.
+@discardableResult
+func finishTrackLoad(_ url: String) -> Bool {
+    guard let index = AVAsset.trackLoads.firstIndex(where: { ($0.asset as? AVURLAsset)?.url.absoluteString == url }) else { return false }
+    AVAsset.trackLoads.remove(at: index).completion([AVAssetTrack()], nil)
+    pump()
+    return true
+}
+
+test("turning the spectrum on mid-stream moves to the MP4 where playback has got to") {
+    let f = playingHlsA()
+    f.player.advance(to: 30)
+    f.player.calls.removeAll()
+    setSpectrum(f, true)
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [false], "the MP4 should be fetched")
+    check(f.player.currentItem?.url == hlsPlaylist && f.player.rate > 0, "the HLS item should play on meanwhile")
+    answer("A")
+    check(f.player.currentItem?.url == hlsPlaylist, "the swap should wait for the MP4's tracks")
+    f.player.advance(to: 34)
+    check(finishTrackLoad(mediaUrl("A")), "the MP4's tracks should be loading")
+    check(f.player.currentItem?.url == mediaUrl("A"), "the MP4 should replace the HLS item")
+    check(f.player.calls.contains("seek:34"), "at the position reached at the swap, not where it was when turned on")
+    check(f.player.currentItem?.audioMix != nil, "with the spectrum tap already attached")
+    check(f.player.rate > 0, "and keep playing")
+    check(f.events.started.count == 1 && f.events.finished.isEmpty, "the same listen goes on")
+    check(f.events.errors.isEmpty, "no error should be reported")
+}
+
+test("play and pause still act on the HLS item while the MP4 is fetched") {
+    let f = playingHlsA()
+    setSpectrum(f, true)
+    f.manager.pause()
+    check(f.player.rate == 0, "pause should stop playback")
+    f.manager.play()
+    check(f.player.rate > 0, "play should start it again")
+}
+
+test("turned on while paused, the move keeps it paused") {
+    let f = playingHlsA()
+    f.player.advance(to: 20)
+    f.manager.pause()
+    setSpectrum(f, true)
+    answer("A")
+    finishTrackLoad(mediaUrl("A"))
+    check(f.player.currentItem?.url == mediaUrl("A"), "the MP4 should be loaded")
+    check(f.player.calls.contains("seek:20"), "at the paused position")
+    check(f.player.rate == 0, "it should stay paused")
+    check(UIApplication.shared.runningTasks.isEmpty, "the background task should be released")
+}
+
+test("a skip while the MP4 is fetched drops it") {
+    let f = playingHlsA()
+    setSpectrum(f, true)
+    f.manager.playNext()
+    answer("A")
+    finishTrackLoad(mediaUrl("A"))
+    answer("B")
+    check(f.player.currentItem?.url == mediaUrl("B"), "B should play")
+    check(!f.player.loaded.contains { $0.url == mediaUrl("A") }, "A's MP4 must never be loaded")
+}
+
+test("turning the spectrum off before the MP4 is ready cancels the move") {
+    let f = playingHlsA()
+    setSpectrum(f, true)
+    answer("A")
+    setSpectrum(f, false)
+    finishTrackLoad(mediaUrl("A"))
+    check(f.player.currentItem?.url == hlsPlaylist, "the HLS item should play on")
+}
+
+test("a failed MP4 lookup leaves the HLS item playing, and turning it on again retries") {
+    let f = playingHlsA()
+    setSpectrum(f, true)
+    check(!BilibiliApi.shared.streamRequests.isEmpty, "the MP4 should be fetched")
+    if !BilibiliApi.shared.streamRequests.isEmpty {
+        BilibiliApi.shared.answerStream(.failure(offline))
+        pump()
+    }
+    check(f.player.currentItem?.url == hlsPlaylist && f.player.rate > 0, "the HLS item should play on")
+    check(f.events.errors.isEmpty, "a failed move is not a playback error")
+    setSpectrum(f, false)
+    setSpectrum(f, true)
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [false], "turning it on again should try again")
+}
+
+test("the move still works after a mirror failover") {
+    let f = playingHlsA(mirrors: 1)
+    f.player.advance(to: 40)
+    f.player.failItem(offline)
+    pump()
+    check(f.player.currentItem?.url == hlsPlaylist, "the mirror should load as HLS")
+    f.player.becomeReady(duration: 200)
+    setSpectrum(f, true)
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [false], "the MP4 should be fetched for the mirror too")
+}
+
+test("MP4 and downloaded items need no move") {
+    let f = playingA()
+    setSpectrum(f, true)
+    check(BilibiliApi.shared.streamRequests.isEmpty, "an MP4 item already takes the tap")
+
+    resetWorld()
+    OrpheusDownloadManager.shared.localFiles["A"] = URL(string: "file:///downloads/A.m4a")!
+    let g = makeFixture()
+    g.manager.setQueue(["A", "B"].map { track($0) }, startIndex: 0)
+    g.player.becomeReady(duration: 200)
+    setSpectrum(g, true)
+    check(BilibiliApi.shared.streamRequests.isEmpty, "a downloaded file already takes the tap")
+}
+
+test("turned on while the first lookup is on the way, the move starts once HLS arrives") {
+    let f = makeFixture()
+    f.manager.setQueue(["A", "B"].map { track($0) }, startIndex: 0)
+    setSpectrum(f, true)
+    check(BilibiliApi.shared.streamRequests.count == 1, "only the first lookup should be out")
+    answerHls("A")
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [false], "the MP4 should be fetched once the HLS item loads")
 }
 
 // MARK: - The queue on its own

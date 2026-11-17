@@ -129,6 +129,7 @@ public class ExpoOrpheusModule: Module {
             .get { GeneralStorage.shared.isSpectrumVisualizerEnabled }
             .set { (enabled: Bool) in
                 GeneralStorage.shared.isSpectrumVisualizerEnabled = enabled
+                OrpheusPlayerManager.shared.spectrumVisualizerChanged(enabled: enabled)
                 self.sendEvent("onSpectrumVisualizerEnabledChanged", ["enabled": enabled])
             }
 
