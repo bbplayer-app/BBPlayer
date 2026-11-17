@@ -100,7 +100,9 @@ async function fetchRecentReleases(repo: string): Promise<GitHubRelease[]> {
 		headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
 	}
 
-	const url = `https://api.github.com/repos/${repo}/releases?per_page=8`
+	// 热更新也会创建 GitHub release（ota- 开头，见 .github/workflows/update.yml），
+	// 多取一些再滤掉，避免原生包的 release 被挤出列表
+	const url = `https://api.github.com/repos/${repo}/releases?per_page=50`
 	const res = await fetch(url, { headers })
 
 	if (!res.ok) {
@@ -115,7 +117,10 @@ async function fetchRecentReleases(repo: string): Promise<GitHubRelease[]> {
 		throw new Error('GitHub releases response is not an array')
 	}
 
-	return json.map(parseRelease)
+	return json
+		.map(parseRelease)
+		.filter((release) => !release.tag_name.startsWith('ota-'))
+		.slice(0, 8)
 }
 
 function parseRelease(value: unknown): GitHubRelease {
