@@ -37,7 +37,9 @@ data class DashData(
 data class DashAudioItem(
     @SerialName("id") val id: Int,
     @SerialName("base_url") val baseUrl: String,
-    @SerialName("backup_url") val backupUrl: List<String>? = null
+    @SerialName("backup_url") val backupUrl: List<String>? = null,
+    @SerialName("codecs") val codecs: String? = null,
+    @SerialName("bandwidth") val bandwidth: Long? = null
 )
 
 @Serializable

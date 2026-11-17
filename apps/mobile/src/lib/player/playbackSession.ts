@@ -1,5 +1,4 @@
 import { Orpheus, type Track } from '@bbplayer/orpheus'
-import type { Span } from '@sentry/react-native'
 
 import {
 	applyResumeStrategy,
@@ -13,60 +12,20 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import usePlayerStore from '@/hooks/stores/usePlayerStore'
 import { playlistService } from '@/lib/services/playlistService'
-import { markSpanError, markSpanTimeout, startOperation } from '@/lib/tracing'
+import { traceOperation, traceSpan, type TraceParent } from '@/lib/tracing'
 import type { PlayerMode } from '@/types/core/playback'
 
-/**
- * 进行中的 playback.start transaction。
- *
- * 生命周期：
- * - `submitTracks` 在能确定哪首歌会开始播放时创建（见 `resolveStartingTrackId`）
- * - `PlayerSideEffects` 在对应的 `onTrackStarted` 事件时结束；`onPlayerError` 时标记失败并结束
- * - `submitTracks` 自身抛错时标记失败并结束
- *
- * 只保留最后一次：用户快速切歌时，前一个 span 被新的替换并立即结束（标记 cancelled）。
- */
-let pendingPlaybackSpan: Span | null = null
-let pendingPlaybackTimeout: ReturnType<typeof setTimeout> | null = null
-
-/** 超过这个时间仍未收到 onTrackStarted，视为起播超时（缓冲卡住、用户暂停、切到后台等） */
-const PLAYBACK_START_TIMEOUT_MS = 30_000
-
-/**
- * 取走并返回当前 pending 的 playback span，清空持有。
- * 供 PlayerSideEffects 在首次 onTrackStarted 时调用。
- */
-export function takePendingPlaybackSpan(): Span | null {
-	const span = pendingPlaybackSpan
-
-	pendingPlaybackSpan = null
-
-	if (pendingPlaybackTimeout) {
-		clearTimeout(pendingPlaybackTimeout)
-		pendingPlaybackTimeout = null
-	}
-
-	return span
-}
-
-function setPendingPlaybackSpan(span: Span) {
-	takePendingPlaybackSpan()
-	pendingPlaybackSpan = span
-	pendingPlaybackTimeout = setTimeout(() => {
-		const timedOut = takePendingPlaybackSpan()
-
-		if (!timedOut) return
-		markSpanTimeout(timedOut)
-		timedOut.setAttribute('playback.timed_out', true)
-		timedOut.end()
-	}, PLAYBACK_START_TIMEOUT_MS)
-}
-
-async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
+async function resolveInitialMode(
+	playlistId: number | undefined,
+	parent: TraceParent,
+): Promise<PlayerMode> {
 	const fallback = useAppStore.getState().settings.defaultPlayerMode
 
 	if (playlistId === undefined) return fallback
-	const result = await playlistService.getPlaylistMetadata(playlistId)
+
+	const result = await playlistService
+		.withTrace(parent)
+		.getPlaylistMetadata(playlistId)
 
 	if (result.isErr()) throw result.error
 
@@ -76,20 +35,6 @@ async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
 	return preference === 'music' || preference === 'podcast'
 		? preference
 		: fallback
-}
-
-/**
- * 结束当前 pending 的 playback span 并标记为失败。
- * 传入 `expected` 时，只有 pending span 仍是它才处理，避免误伤之后提交创建的 span。
- */
-export function failPendingPlaybackSpan(error: Error, expected?: Span) {
-	if (expected && pendingPlaybackSpan !== expected) return
-
-	const span = takePendingPlaybackSpan()
-
-	if (!span) return
-	markSpanError(span, error)
-	span.end()
 }
 
 interface QueueOptions {
@@ -122,7 +67,30 @@ function resolveStartingTrackId(
 	return undefined
 }
 
+/**
+ * 提交到原生播放队列，记录一个 playback.submit span，只覆盖 JS 这一侧（校验、查歌单、调用原生）。
+ * 等待出声的时间由原生的 playback.wait_for_audio 记录（不论起播由谁触发都会经过原生），两者是独立的 trace。
+ */
 async function submitTracks(options: QueueOptions, replace: boolean) {
+	await traceOperation(
+		{
+			name: 'playback.submit',
+			op: 'playback',
+			attributes: {
+				'playback.track_count': options.tracks.length,
+				'playback.replace': replace,
+				'playback.play_next': options.playNext ?? false,
+			},
+		},
+		(span) => submitTracksImpl(options, replace, span),
+	)
+}
+
+async function submitTracksImpl(
+	options: QueueOptions,
+	replace: boolean,
+	span: TraceParent,
+) {
 	if (!options.tracks.length) throw new Error('没有可播放的内容')
 
 	if (options.playNext && options.tracks.length !== 1)
@@ -141,7 +109,13 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 
 	const context =
 		replace || !queue.length
-			? createPlaybackContext(await resolveInitialMode(options.playlistId))
+			? createPlaybackContext(
+					await traceSpan(
+						span,
+						{ name: 'playback.resolve_mode', op: 'function' },
+						(child) => resolveInitialMode(options.playlistId, child),
+					),
+				)
 			: (previous ??
 				createPlaybackContext(
 					useAppStore.getState().settings.defaultPlayerMode,
@@ -156,56 +130,31 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 		!queue.length,
 	)
 
-	let playbackSpan: Span | undefined
+	span?.setAttribute('playback.mode', context.mode)
 
+	// 和原生 playback.wait_for_audio 的 track.id 对应，方便在 Sentry 里对照两边
 	if (startingTrackId) {
-		// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
-		const previousSpan = takePendingPlaybackSpan()
-
-		if (previousSpan) {
-			previousSpan.setAttribute('playback.cancelled', true)
-			previousSpan.end()
-		}
-
-		playbackSpan = startOperation({
-			name: 'playback.start',
-			op: 'playback',
-			attributes: {
-				'playback.track_count': options.tracks.length,
-				'playback.mode': context.mode,
-				'playback.replace': replace,
-				'playback.play_next': options.playNext ?? false,
-				// 记录期望的第一个 track ID，用于在 onTrackStarted 中校验事件归属
-				'playback.expected_first_track_id': startingTrackId,
-			},
-		})
-
-		setPendingPlaybackSpan(playbackSpan)
+		span?.setAttribute('playback.starting_track_id', startingTrackId)
 	}
 
-	try {
-		if (options.playNext) {
-			applyResumeStrategy(context.mode)
-			await Orpheus.playNext(options.tracks[0])
-		} else {
-			applyResumeStrategy(context.mode)
-			await Orpheus.addToEnd(options.tracks, options.startFromKey, replace)
-		}
+	applyResumeStrategy(context.mode)
 
-		setPlaybackContext(context)
+	if (options.playNext) {
+		await traceSpan(span, { name: 'Orpheus.playNext', op: 'function' }, () =>
+			Orpheus.playNext(options.tracks[0]),
+		)
+	} else {
+		await traceSpan(span, { name: 'Orpheus.addToEnd', op: 'function' }, () =>
+			Orpheus.addToEnd(options.tracks, options.startFromKey, replace),
+		)
+	}
 
-		if (willPlay) {
-			await Orpheus.play()
-		}
-	} catch (error) {
-		if (playbackSpan) {
-			failPendingPlaybackSpan(
-				error instanceof Error ? error : new Error(String(error)),
-				playbackSpan,
-			)
-		}
+	setPlaybackContext(context)
 
-		throw error
+	if (willPlay) {
+		await traceSpan(span, { name: 'Orpheus.play', op: 'function' }, () =>
+			Orpheus.play(),
+		)
 	}
 }
 

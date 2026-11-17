@@ -55,19 +55,16 @@ export async function matchSearchStrategies(
 
 		if (ctype && fid) {
 			if (ctype === '21') {
-				logger.debug('parseUrlToStrategy: 主站收藏夹 URL (ctype=21)', { fid })
+				logger.debug('search.url.favorite_matched', { 'search.fid': fid })
 
 				return { type: 'COLLECTION', id: fid }
 			} else if (ctype === '11') {
-				logger.debug('parseUrlToStrategy: 主站收藏夹 URL (ctype=11)', { fid })
+				logger.debug('search.url.favorite_matched', { 'search.fid': fid })
 
 				return { type: 'FAVORITE', id: fid }
 			}
 		} else if (fid && !ctype) {
-			logger.debug(
-				'parseUrlToStrategy: 主站 URL 缺少 ctype 参数，默认为收藏夹',
-				{ fid },
-			)
+			logger.debug('search.url.favorite_defaulted', { 'search.fid': fid })
 
 			return { type: 'FAVORITE', id: fid }
 		}
@@ -82,22 +79,14 @@ export async function matchSearchStrategies(
 					const collectionId = sliced[1]
 
 					if (!collectionId) {
-						logger.debug(
-							'parseUrlToStrategy: 匹配 space.bilibili.com/<mid>/lists',
-							{
-								mid,
-							},
-						)
+						logger.debug('search.url.uploader_matched', { 'search.mid': mid })
 
 						return { type: 'UPLOADER', mid }
 					}
 
-					logger.debug(
-						'parseUrlToStrategy: 匹配 space.bilibili.com/<mid>/lists/<collectionId>',
-						{
-							collectionId,
-						},
-					)
+					logger.debug('search.url.collection_matched', {
+						'search.collection_id': collectionId,
+					})
 
 					if (!/^\d+$/.test(collectionId)) return null
 
@@ -106,9 +95,7 @@ export async function matchSearchStrategies(
 						: { type: 'COLLECTION', id: collectionId }
 				}
 
-				logger.debug('parseUrlToStrategy: 匹配 space.bilibili.com/<mid>', {
-					mid,
-				})
+				logger.debug('search.url.uploader_matched', { 'search.mid': mid })
 
 				return { type: 'UPLOADER', mid }
 			}
@@ -120,7 +107,7 @@ export async function matchSearchStrategies(
 
 		if (spaceMatch) {
 			const mid = spaceMatch[1]
-			logger.debug('parseUrlToStrategy: 匹配 space/<mid>', { mid })
+			logger.debug('search.url.uploader_matched', { 'search.mid': mid })
 
 			return { type: 'UPLOADER', mid }
 		}
@@ -130,7 +117,7 @@ export async function matchSearchStrategies(
 
 		if (bvidInUrl) {
 			const bvid = 'BV' + bvidInUrl.slice(2)
-			logger.debug('parseUrlToStrategy: URL 中匹配到 BV', { bvid })
+			logger.debug('search.url.bvid_matched', { 'bilibili.bvid': bvid })
 
 			return { type: 'BVID', bvid }
 		}
@@ -142,13 +129,14 @@ export async function matchSearchStrategies(
 
 			if (Number.isFinite(avid) && avid > 0) {
 				const bvid = av2bv(avid)
-				logger.debug('parseUrlToStrategy: URL 中匹配到 AV', { avid, bvid })
+				logger.debug('search.url.avid_matched', {
+					'search.avid': avid,
+					'bilibili.bvid': bvid,
+				})
 
 				return { type: 'BVID', bvid }
 			} else {
-				logger.debug('parseUrlToStrategy: URL 中 AV 解析失败', {
-					href: urlObj.href,
-				})
+				logger.debug('search.url.avid_invalid', { 'search.href': urlObj.href })
 
 				return { type: 'AV_PARSE_ERROR', query: urlObj.href }
 			}
@@ -172,7 +160,9 @@ export async function matchSearchStrategies(
 				})
 
 				if (resolved.isErr()) {
-					logger.debug('1.1 短链解析失败', { query })
+					logger.debug('search.short_url.resolve_failed', {
+						'search.query': query,
+					})
 
 					return { type: 'B23_RESOLVE_ERROR', query, error: resolved.error }
 				}
@@ -182,10 +172,10 @@ export async function matchSearchStrategies(
 					const parsed = parseUrlToStrategy(resolvedUrlObj)
 
 					if (parsed) {
-						logger.debug('1.1 短链解析并作为完整 URL 继续解析', {
-							original: url.toString(),
-							resolved: resolved.value,
-							strategy: parsed.type,
+						logger.debug('search.short_url.resolved', {
+							'search.original': url.toString(),
+							'search.resolved': resolved.value,
+							'search.strategy': parsed.type,
 						})
 
 						return parsed
@@ -198,16 +188,16 @@ export async function matchSearchStrategies(
 
 				if (bvid) {
 					const normalized = 'BV' + bvid.slice(2)
-					logger.debug('1.1 短链解析后在 resolved 字符串中匹配到 BV', {
-						bvid: normalized,
+					logger.debug('search.short_url.bvid_matched', {
+						'bilibili.bvid': normalized,
 					})
 
 					return { type: 'BVID', bvid: normalized }
 				}
 
-				logger.debug('1.1 短链解析出错（无已识别内容）', {
-					original: url.toString(),
-					resolved: resolved.value,
+				logger.debug('search.short_url.unrecognized', {
+					'search.original': url.toString(),
+					'search.resolved': resolved.value,
 				})
 
 				return {
@@ -221,9 +211,9 @@ export async function matchSearchStrategies(
 			const fromUrl = parseUrlToStrategy(url)
 
 			if (fromUrl) {
-				logger.debug('1.2 匹配主站 URL', {
-					href: url.toString(),
-					strategy: fromUrl.type,
+				logger.debug('search.url.matched', {
+					'search.href': url.toString(),
+					'search.strategy': fromUrl.type,
 				})
 
 				return fromUrl
@@ -231,9 +221,7 @@ export async function matchSearchStrategies(
 
 			// 如果没有返回（未识别的长链），继续走 BV/AV 检测或关键词搜索
 		} catch {
-			logger.debug('URL 解析失败，继续走 BV/AV 检测', {
-				query,
-			})
+			logger.debug('search.url.invalid', { 'search.query': query })
 		}
 	}
 
@@ -242,7 +230,7 @@ export async function matchSearchStrategies(
 
 	if (mBV) {
 		const bvid = 'BV' + mBV[1].slice(2)
-		logger.debug('2 匹配 BV 号', { bvid })
+		logger.debug('search.bvid.matched', { 'bilibili.bvid': bvid })
 
 		return { type: 'BVID', bvid }
 	}
@@ -255,18 +243,21 @@ export async function matchSearchStrategies(
 
 		if (Number.isFinite(avid) && avid > 0) {
 			const bvid = av2bv(avid)
-			logger.debug('3 匹配 AV 号', { avid, bvid })
+			logger.debug('search.avid.matched', {
+				'search.avid': avid,
+				'bilibili.bvid': bvid,
+			})
 
 			return { type: 'BVID', bvid }
 		} else {
-			logger.debug('3 AV 号解析失败', { query })
+			logger.debug('search.avid.invalid', { 'search.query': query })
 
 			return { type: 'AV_PARSE_ERROR', query }
 		}
 	}
 
 	// 4. 走关键词搜索
-	logger.debug('4 默认关键词搜索', { query })
+	logger.debug('search.keyword.selected', { 'search.query': query })
 
 	return { type: 'SEARCH', query }
 }
@@ -283,8 +274,8 @@ export function navigateWithSearchStrategy(
 ) {
 	switch (strategy.type) {
 		case 'BVID':
-			logger.debug('Navigating to PlaylistMultipage with bvid', {
-				bvid: strategy.bvid,
+			logger.debug('search.navigate.multi_page', {
+				'bilibili.bvid': strategy.bvid,
 			})
 			router.navigate({
 				pathname: '/playlist/remote/multipage/[bvid]',
@@ -293,7 +284,7 @@ export function navigateWithSearchStrategy(
 
 			return 0
 		case 'FAVORITE':
-			logger.debug('Navigating to PlaylistFavorite', { id: strategy.id })
+			logger.debug('search.navigate.favorite', { 'search.id': strategy.id })
 			router.navigate({
 				pathname: '/playlist/remote/favorite/[id]',
 				params: { id: strategy.id },
@@ -301,7 +292,7 @@ export function navigateWithSearchStrategy(
 
 			return 0
 		case 'COLLECTION':
-			logger.debug('Navigating to PlaylistCollection', { id: strategy.id })
+			logger.debug('search.navigate.collection', { 'search.id': strategy.id })
 			router.navigate({
 				pathname: '/playlist/remote/collection/[id]',
 				params: { id: strategy.id },
@@ -316,7 +307,7 @@ export function navigateWithSearchStrategy(
 
 			return 0
 		case 'UPLOADER':
-			logger.debug('Navigating to PlaylistUploader', { mid: strategy.mid })
+			logger.debug('search.navigate.uploader', { 'search.mid': strategy.mid })
 			router.navigate({
 				pathname: '/playlist/remote/uploader/[mid]',
 				params: { mid: strategy.mid },
@@ -324,7 +315,9 @@ export function navigateWithSearchStrategy(
 
 			return 0
 		case 'SEARCH':
-			logger.debug('Navigating to SearchResult', { query: strategy.query })
+			logger.debug('search.navigate.results', {
+				'search.query': strategy.query,
+			})
 			router.navigate({
 				pathname: '/playlist/remote/search-result/global/[query]',
 				params: { query: strategy.query },

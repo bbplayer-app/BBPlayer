@@ -1,5 +1,4 @@
 import Icon from '@react-native-vector-icons/material-design-icons'
-import { useObserve } from 'expo-observe'
 import { useLocalSearchParams } from 'expo-router'
 import { useEffect, useState, useTransition } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -47,12 +46,10 @@ function LibraryContent() {
 	const colors = useTheme().colors
 	const headerForegroundColor = useSkinForegroundColor()
 	const { tab } = useLocalSearchParams<{ tab: string }>()
-	const { markInteractive } = useObserve()
 
 	useEffect(() => {
-		markInteractive()
 		void markPerfInteractive()
-	}, [markInteractive])
+	}, [])
 
 	// 仅在路由参数变化时定位分页，返回音乐库时保留用户当前选择。
 	useEffect(() => {

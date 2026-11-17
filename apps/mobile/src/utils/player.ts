@@ -37,7 +37,10 @@ function convertToOrpheusTrack(
 	// 如果没有有效的 URL，返回错误
 	if (!url) {
 		const errorMsg = '没有找到有效的音频流 URL'
-		logger.warning(errorMsg, track)
+		logger.warning('player.track.url_missing', {
+			'track.id': track.id,
+			'track.source': track.source,
+		})
 
 		return err(
 			createPlayerError('AudioUrlNotFound', `${errorMsg}: ${track.id}`),
@@ -74,9 +77,9 @@ async function reportPlaybackHistory(
 	const trackResult = await trackService.getTrackByUniqueKey(uniqueKey)
 
 	if (trackResult.isErr()) {
-		logger.debug('查询 track 失败，跳过播放历史上报', {
-			uniqueKey,
-			error: flatErrorMessage(trackResult.error),
+		logger.debug('playback.history.track_lookup_failed', {
+			'track.unique_key': uniqueKey,
+			'error.message': flatErrorMessage(trackResult.error),
 		})
 
 		return
@@ -96,18 +99,18 @@ async function reportPlaybackHistory(
 		})
 
 		if (videoPageResult.isErr()) {
-			logger.debug('查询视频信息失败，跳过播放历史上报', {
-				uniqueKey,
-				bvid: track.bilibiliMetadata.bvid,
-				error: flatErrorMessage(videoPageResult.error),
+			logger.debug('playback.history.video_lookup_failed', {
+				'track.unique_key': uniqueKey,
+				'bilibili.bvid': track.bilibiliMetadata.bvid,
+				'error.message': flatErrorMessage(videoPageResult.error),
 			})
 
 			return
 		}
 
 		if (videoPageResult.value.length === 0) {
-			logger.warning('视频无分 p 信息，无法上报播放记录', {
-				bvid: track.bilibiliMetadata.bvid,
+			logger.warning('playback.history.pages_missing', {
+				'bilibili.bvid': track.bilibiliMetadata.bvid,
 			})
 
 			return
@@ -115,17 +118,17 @@ async function reportPlaybackHistory(
 
 		cid = videoPageResult.value[0].cid
 	} else if (track.bilibiliMetadata.isMultiPage && !cid) {
-		logger.warning('多 p 视频无法上报播放记录，不存在 cid', {
-			bvid: track.bilibiliMetadata.bvid,
+		logger.warning('playback.history.cid_missing', {
+			'bilibili.bvid': track.bilibiliMetadata.bvid,
 		})
 
 		return
 	}
 
-	logger.debug('上报播放记录', {
-		bvid: track.bilibiliMetadata.bvid,
-		cid,
-		position,
+	logger.debug('playback.history.report_started', {
+		'bilibili.bvid': track.bilibiliMetadata.bvid,
+		'bilibili.cid': cid,
+		'playback.position_seconds': position,
 	})
 
 	const result = await bilibiliApi.reportPlaybackHistory({
@@ -135,13 +138,11 @@ async function reportPlaybackHistory(
 	})
 
 	if (result.isErr()) {
-		logger.warning('上报播放记录到 bilibili 失败', {
-			params: {
-				bvid: track.bilibiliMetadata.bvid,
-				cid,
-			},
-			error: result.error,
-		})
+		logger.warning(
+			'playback.history.report_failed',
+			{ 'bilibili.bvid': track.bilibiliMetadata.bvid, 'bilibili.cid': cid },
+			result.error,
+		)
 	}
 
 	return
@@ -221,14 +222,13 @@ async function finalizeAndRecordCurrentTrack(
 		const effectivePlayed = Math.min(playedSeconds, duration)
 		const threshold = Math.max(Math.floor(duration * 0.9), duration - 2)
 		const completed = effectivePlayed >= threshold
-		logger.info('完成播放', { uniqueKey })
-		logger.debug('完成播放标记', {
-			playedSeconds,
-			duration,
-			effectivePlayed,
-			threshold,
-			completed,
-			uniqueKey,
+		logger.info('playback.session.finalized', {
+			'playback.played_seconds': playedSeconds,
+			'playback.duration_seconds': duration,
+			'playback.effective_played_seconds': effectivePlayed,
+			'playback.threshold_seconds': threshold,
+			'playback.completed': completed,
+			'track.unique_key': uniqueKey,
 		})
 
 		const res = await trackService.addPlayRecordFromUniqueKey(uniqueKey, {
@@ -238,27 +238,25 @@ async function finalizeAndRecordCurrentTrack(
 		})
 
 		if (res.isErr()) {
-			logger.debug('增加播放记录失败', {
-				uniqueKey,
-				message: flatErrorMessage(res.error),
+			logger.debug('playback.history.insert_failed', {
+				'track.unique_key': uniqueKey,
+				'error.message': flatErrorMessage(res.error),
 			})
 
 			return
 		}
 
-		logger.debug('增加播放记录成功', {
-			uniqueKey,
-		})
+		logger.debug('playback.history.inserted', { 'track.unique_key': uniqueKey })
 
 		void queryClient.invalidateQueries({
 			queryKey: trackKeys.history(),
 		})
 
 		await reportPlaybackHistory(uniqueKey, effectivePlayed).catch((error) =>
-			logger.error('上报播放历史失败', error),
+			logger.error('playback.history.failed', {}, error),
 		)
 	} catch (error) {
-		logger.debug('增加播放记录异常', error)
+		logger.debug('playback.history.insert_exception', {}, error)
 	}
 }
 

@@ -11,6 +11,7 @@ import {
 	STARTUP_PROFILING_KEY,
 	startupProfilingStarted,
 } from '@/lib/startupProfiling'
+import { endStartupPhase, flushStartupPhases } from '@/lib/startupTrace'
 import { storage } from '@/utils/mmkv'
 
 export const PROFILING_DURATION_MS = 10_000
@@ -47,6 +48,7 @@ let fetched = false
 let startupProfilingActive = startupProfilingStarted
 let profilingActive = startupProfilingStarted
 let interactivePromise: Promise<void> | null = null
+let markedInteractive = false
 let splashHiddenSinceProcessStart: number | null = null
 let resolveSplashHidden: (() => void) | null = null
 
@@ -296,6 +298,14 @@ export function runAfterStartup(task: () => void): void {
 }
 
 export function markPerfInteractive(): Promise<void> {
+	// 只记第一个可交互的页面，作为本地性能页展示的启动 TTI
+	if (!markedInteractive) {
+		markedInteractive = true
+		AppMetrics.markInteractive()
+		endStartupPhase('app.startup.first_screen')
+		flushStartupPhases()
+	}
+
 	resolveStartupInteractive?.()
 
 	if (!interactivePromise) {

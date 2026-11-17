@@ -20,12 +20,99 @@ export async function flushLogs(): Promise<void> {
 	await flushFileAsyncTransport()
 }
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- 日志边界接收 catch 的任意异常，并在这里规范化。
+const stringifyError = (e: unknown): string => {
+	if (e === null) return 'null'
+
+	// oxlint-disable-next-line @typescript-eslint/no-base-to-string
+	if (typeof e !== 'object') return String(e)
+
+	try {
+		return JSON.stringify(e)
+	} catch {
+		// Circular reference or other stringify error
+		return Object.prototype.toString.call(e)
+	}
+}
+
+/** 事件名使用稳定的 domain.action；变量只放在属性里。 */
+export type LogEvent = `${Lowercase<string>}.${Lowercase<string>}`
+
+export type LogValue =
+	| string
+	| number
+	| boolean
+	| readonly (string | number | boolean)[]
+
+export type LogAttributes = Readonly<
+	Partial<Record<`${string}.${string}`, LogValue | null>>
+>
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- catch 的异常由统一入口规范化为 error.type/error.message。
+type LogMethod = (
+	event: LogEvent,
+	attributes?: LogAttributes,
+	error?: unknown,
+) => void
+
+export interface StructuredLogger {
+	debug: LogMethod
+	info: LogMethod
+	warning: LogMethod
+	error: LogMethod
+	setSeverity: (level: 'debug' | 'info') => void
+	extend: (scope: string) => StructuredLogger
+}
+
+/** 所有输出共用同一份事件和字段，本地文件也不再拼接动态消息。 */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- transport 的未知参数只由下方受类型约束的 sink 写入。
+function toStructuredLog(rawMsg: unknown, extension?: string | null) {
+	// SAFETY: transportLogger 是模块私有的，所有写入均由 createStructuredLogger 传入 event 和扁平 fields。
+	const [message, fields] = rawMsg as [LogEvent, LogAttributes]
+	const attributes = { ...fields }
+
+	if (extension) attributes['log.scope'] = extension
+
+	return {
+		message,
+		attributes,
+	}
+}
+
 const sentryBreadcrumbTransport: transportFunctionType<object> = (props) => {
+	const { message, attributes } = toStructuredLog(props.rawMsg, props.extension)
+
 	Sentry.addBreadcrumb({
-		category: 'log',
-		level: props.level.text as Sentry.SeverityLevel,
-		message: props.msg,
+		category: props.extension ? `log.${props.extension}` : 'log',
+		level:
+			props.level.text === 'debug'
+				? 'debug'
+				: props.level.text === 'info'
+					? 'info'
+					: props.level.text === 'warning'
+						? 'warning'
+						: 'error',
+		message,
+		data: attributes,
 	})
+}
+
+const sentryLogTransport: transportFunctionType<object> = (props) => {
+	const { message, attributes } = toStructuredLog(props.rawMsg, props.extension)
+
+	switch (props.level.text) {
+		case 'debug':
+			Sentry.logger.debug(message, attributes)
+			break
+		case 'info':
+			Sentry.logger.info(message, attributes)
+			break
+		case 'warning':
+			Sentry.logger.warn(message, attributes)
+			break
+		default:
+			Sentry.logger.error(message, attributes)
+	}
 }
 
 // 创建 Logger 实例
@@ -33,7 +120,7 @@ const config = {
 	severity: isDev ? 'debug' : 'info',
 	transport: isDev
 		? [mapConsoleTransport, fileAsyncTransport]
-		: [sentryBreadcrumbTransport, fileAsyncTransport],
+		: [sentryBreadcrumbTransport, sentryLogTransport, fileAsyncTransport],
 	levels: {
 		debug: 0,
 		info: 1,
@@ -66,7 +153,7 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
 		const logDir = new EXPOFS.Directory(EXPOFS.Paths.document, 'logs')
 
 		if (!logDir.exists) {
-			log.debug('日志目录不存在，无需清理')
+			log.debug('logs.directory.absent')
 
 			return ok(0)
 		}
@@ -100,9 +187,9 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
 					file.delete()
 					deleted += 1
 				} catch (e) {
-					log.warning('删除旧日志文件失败', {
-						file: file.uri,
-						error: String(e),
+					log.warning('logs.file.delete_failed', {
+						'logs.file': file.uri,
+						'error.message': String(e),
 					})
 				}
 			}
@@ -152,21 +239,7 @@ export function flatErrorMessage(
  * @param scope 项目不同分区
  * @param message 附加信息
  */
-
-const stringifyError = (e: unknown): string => {
-	if (e === null) return 'null'
-
-	// oxlint-disable-next-line @typescript-eslint/no-base-to-string
-	if (typeof e !== 'object') return String(e)
-
-	try {
-		return JSON.stringify(e)
-	} catch {
-		// Circular reference or other stringify error
-		return Object.prototype.toString.call(e)
-	}
-}
-
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- 接收调用方捕获的未知异常，下面先转换为 Error。
 export function reportErrorToSentry(
 	error: unknown,
 	message?: string,
@@ -196,7 +269,7 @@ export function reportErrorToSentry(
 	}
 
 	const id = Sentry.captureException(normalizedError, { tags, extra })
-	log.error(`已上报错误到 sentry，id: ${id}`)
+	log.debug('sentry.exception.captured', { 'sentry.event_id': id })
 }
 
 try {
@@ -206,6 +279,49 @@ try {
 	})
 } catch {}
 
-const log = logger.createLogger(config)
+const transportLogger = logger.createLogger(config)
+
+function createStructuredLogger(scope?: string): StructuredLogger {
+	const sink = scope ? transportLogger.extend(scope) : transportLogger
+
+	const write =
+		(level: 'debug' | 'info' | 'warning' | 'error'): LogMethod =>
+		(event, attributes = {}, error) => {
+			const fields: Record<string, LogValue> = {}
+
+			for (const [key, value] of Object.entries(attributes)) {
+				if (value != null) fields[key] = value
+			}
+
+			if (error != null) {
+				fields['error.type'] =
+					error instanceof CustomError
+						? (error.type ?? error.name)
+						: error instanceof Error
+							? error.name
+							: 'UnknownError'
+				fields['error.message'] =
+					error instanceof Error
+						? flatErrorMessage(error)
+						: stringifyError(error)
+			}
+
+			sink[level](event, fields)
+		}
+
+	return {
+		setSeverity: (level) => {
+			transportLogger.setSeverity(level)
+		},
+		debug: write('debug'),
+		info: write('info'),
+		warning: write('warning'),
+		error: write('error'),
+		extend: (child) =>
+			createStructuredLogger(scope ? `${scope}.${child}` : child),
+	}
+}
+
+const log = createStructuredLogger()
 
 export default log

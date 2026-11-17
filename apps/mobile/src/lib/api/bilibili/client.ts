@@ -1,9 +1,10 @@
+import type { Span } from '@sentry/react-native'
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { fetch } from 'react-native-nitro-fetch'
 
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import { type TraceParent, traceResult } from '@/lib/tracing'
+import { type TraceParent, traceOperationResult } from '@/lib/tracing'
 
 import { getCsrfToken } from './utils'
 
@@ -64,7 +65,7 @@ export class ApiClient {
 
 	/**
 	 * 返回一个把请求 span 挂到指定 parent 下的新实例。
-	 * @param parent - 当前业务流程的 span，为空时不产生 span。
+	 * @param parent - 当前业务流程的 span。为空时请求自己成为一个 transaction（或挂到正在进行的 UI span 下）。
 	 */
 	withTrace(parent: TraceParent) {
 		return new ApiClient(parent)
@@ -103,11 +104,40 @@ export class ApiClient {
 			})
 		}
 
-		const method = options.method ?? 'GET'
+		return this.traceFetch(
+			url,
+			{
+				...options,
+				headers,
+				// react native 实现了 cookie 的自动注入，但我们正在自己管理 cookie，所以忽略
+				// TODO: 应该采用 react-native-cookie 库实现与原生请求库 cookie jar 的更紧密集成。但现阶段我们直接忽略原生注入的 cookie。
+				credentials: 'omit',
+			},
+			(response, span) =>
+				this.parseResponse<T>(response)
+					.andTee((data) => {
+						span.setAttribute('bilibili.code', data.code)
+					})
+					.andThen((data) => this.unwrapResponse<T>(endpoint, data)),
+		)
+	}
+
+	/**
+	 * 发起请求并记录一个 http.client span，span 一直持续到 handle 处理完响应。
+	 * 不经过 `get` / `post` 的请求（如非标准响应格式的接口）也应通过它发出，这样才能被 Sentry 监控到。
+	 */
+	traceFetch<T>(
+		url: string,
+		init: RequestInit,
+		handle: (
+			response: Response,
+			span: Span,
+		) => ResultAsync<T, BilibiliApiError>,
+	): ResultAsync<T, BilibiliApiError> {
+		const method = init.method ?? 'GET'
 		const { withoutQuery, host, path } = toUrlParts(url)
 
-		return traceResult(
-			this.traceParent,
+		return traceOperationResult(
 			{
 				name: `${method} ${withoutQuery}`,
 				op: 'http.client',
@@ -118,24 +148,12 @@ export class ApiClient {
 				},
 			},
 			(span) =>
-				ResultAsync.fromPromise(
-					fetch(url, {
-						...options,
-						headers,
-						// react native 实现了 cookie 的自动注入，但我们正在自己管理 cookie，所以忽略
-						// TODO: 应该采用 react-native-cookie 库实现与原生请求库 cookie jar 的更紧密集成。但现阶段我们直接忽略原生注入的 cookie。
-						credentials: 'omit',
-					}),
-					toRequestError,
-				)
+				ResultAsync.fromPromise(fetch(url, init), toRequestError)
 					.andTee((response) => {
-						span?.setAttribute('http.response.status_code', response.status)
+						span.setAttribute('http.response.status_code', response.status)
 					})
-					.andThen((response) => this.parseResponse<T>(response))
-					.andTee((data) => {
-						span?.setAttribute('bilibili.code', data.code)
-					})
-					.andThen((data) => this.unwrapResponse<T>(endpoint, data)),
+					.andThen((response) => handle(response, span)),
+			this.traceParent,
 		)
 	}
 
@@ -277,34 +295,35 @@ export class ApiClient {
 			...headers,
 		}
 
-		return ResultAsync.fromPromise(
-			fetch(requestUrl, {
+		return this.traceFetch(
+			requestUrl,
+			{
 				method: 'GET',
 				headers: requestHeaders,
 				signal,
 				credentials: 'omit',
-			}),
-			toRequestError,
-		).andThen((response) => {
-			if (!response.ok) {
-				return errAsync(
-					new BilibiliApiError({
-						message: `请求 bilibili API 失败: ${response.status} ${response.statusText}`,
-						msgCode: response.status,
-						type: 'RequestFailed',
-					}),
-				)
-			}
+			},
+			(response) => {
+				if (!response.ok) {
+					return errAsync(
+						new BilibiliApiError({
+							message: `请求 bilibili API 失败: ${response.status} ${response.statusText}`,
+							msgCode: response.status,
+							type: 'RequestFailed',
+						}),
+					)
+				}
 
-			return ResultAsync.fromPromise(
-				response.arrayBuffer(),
-				(error) =>
-					new BilibiliApiError({
-						message: error instanceof Error ? error.message : String(error),
-						type: 'ResponseFailed',
-					}),
-			)
-		})
+				return ResultAsync.fromPromise(
+					response.arrayBuffer(),
+					(error) =>
+						new BilibiliApiError({
+							message: error instanceof Error ? error.message : String(error),
+							type: 'ResponseFailed',
+						}),
+				)
+			},
+		)
 	}
 
 	/**

@@ -1,9 +1,10 @@
 package expo.modules.orpheus.util
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.util.Log
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.BitmapLoader
 import com.bumptech.glide.Glide
@@ -11,6 +12,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.google.common.util.concurrent.MoreExecutors
+import expo.modules.orpheus.telemetry.LogTags
 import java.util.concurrent.Executors
 
 @androidx.media3.common.util.UnstableApi
@@ -37,7 +39,14 @@ class GlideBitmapLoader(private val context: Context) : BitmapLoader {
 
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
         return executorService.submit<Bitmap> {
-            Log.d("GlideBitmapLoader", "load image $uri")
+            NativeLog.debug(
+                LogTags.COVER,
+                "cover.load.started",
+                mapOf(
+                    "http.scheme" to uri.scheme,
+                    "http.host" to uri.host,
+                ),
+            )
             val glideBitmap = Glide.with(context)
                 .asBitmap()
                 .load(uri)

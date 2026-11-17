@@ -155,9 +155,9 @@ export const downloadManifestAssets = ({
 }): ResultAsync<DownloadManifestResult, ServiceError> => {
 	const urls = collectRemoteUrls(manifest)
 
-	log.debug('[download] collected remote URLs', {
-		count: urls.length,
-		remoteCount: urls.filter((u) => /^https?:\/\//.test(u)).length,
+	log.debug('theme.download.urls_collected', {
+		'theme.count': urls.length,
+		'theme.remote_count': urls.filter((u) => /^https?:\/\//.test(u)).length,
 	})
 
 	const plan = urls.map((url, index) => ({
@@ -219,7 +219,10 @@ export const downloadManifestAssets = ({
 			),
 		),
 	).map(() => {
-		log.debug('[download] all assets downloaded', { count: completed, total })
+		log.debug('theme.download.completed', {
+			'theme.count': completed,
+			'theme.total': total,
+		})
 
 		return { mapping }
 	})

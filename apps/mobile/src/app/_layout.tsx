@@ -5,8 +5,7 @@ import {
 } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
-import * as Application from 'expo-application'
-import { Observe, ObserveRoot } from 'expo-observe'
+import { AppMetricsRoot } from 'expo-app-metrics'
 import { router, Stack } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useRef, useState } from 'react'
@@ -26,8 +25,8 @@ import {
 } from '@/components/navigation/NavigationRail'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import AppProviders from '@/components/providers'
-import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
+import { useDataCollectionSync } from '@/hooks/app/useDataCollectionSync'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import {
 	nowPlayingBarStore$,
@@ -42,13 +41,18 @@ import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import { runAfterStartup } from '@/lib/performance'
 import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
-import { analyticsService } from '@/lib/services/analyticsService'
 import { getLyricService } from '@/lib/services/getLyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
 import {
 	reportUpdateActivity,
 	reportUpdateLaunch,
 } from '@/lib/services/updateTelemetry'
+import {
+	endStartupPhase,
+	flushStartupPhases,
+	measureStartupPhase,
+	startStartupPhase,
+} from '@/lib/startupTrace'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
@@ -58,11 +62,6 @@ import { isActuallyOffline } from '@/utils/network'
 import migrations from '../../drizzle/migrations'
 
 const logger = log.extend('UI.RootLayout')
-
-Observe.configure({
-	dispatchingEnabled: useAppStoreObj.getState().settings.enableDataCollection,
-	integrations: { 'expo-router': true },
-})
 
 // 初始化 Sentry
 initializeSentry()
@@ -109,18 +108,20 @@ function runDeferredAppInit() {
 		cleanOldLogFiles(7)
 			.andTee((deleted) => {
 				if (deleted > 0) {
-					logger.info(`已清理 ${deleted} 个旧日志文件`)
+					logger.info('logs.cleanup.completed', {
+						'logs.deleted_count': deleted,
+					})
 				}
 			})
 			.orTee((e) => {
-				logger.warning('清理旧日志失败', { error: e.message })
+				logger.warning('logs.cleanup.failed', { 'error.message': e.message })
 			})
 
 		void getLyricService().migrateFromOldFormat()
 
 		void checkOverlayPermissionOnStart()
 	} catch (error) {
-		logger.error('延后的初始化任务失败:', error)
+		logger.error('app.deferred_initialize_failed', {}, error)
 		reportErrorToSentry(error, '延后的初始化任务失败', ProjectScope.UI)
 	}
 }
@@ -148,17 +149,17 @@ function runAppInit() {
 			const cookie = useAppStoreObj.getState().bilibiliCookie
 
 			if (cookie) {
-				logger.debug('初始化 orpheus bilibili cookie')
+				logger.debug('player.cookie.initialize')
 				Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
 			} else {
-				logger.info('没有 bilibili cookie，跳过播放器初始化')
+				logger.info('player.initialize.cookie_missing')
 			}
 		} catch (error) {
-			logger.error('播放器初始化失败: ', error)
+			logger.error('player.initialize.failed', {}, error)
 			reportErrorToSentry(error, '播放器初始化失败', ProjectScope.Player)
 		}
 	} catch (error) {
-		logger.error('初始化失败:', error)
+		logger.error('app.initialize.failed', {}, error)
 		reportErrorToSentry(error, '初始化失败', ProjectScope.UI)
 	}
 }
@@ -179,6 +180,7 @@ function settleNowPlayingBar(routeName: string) {
 }
 
 function RootLayout() {
+	startStartupPhase('app.startup.root_mount')
 	const nativelyPoppingToRef = useRef<string | null>(null)
 	const [isReady, setIsReady] = useState(false)
 
@@ -186,7 +188,7 @@ function RootLayout() {
 		useFastMigrations(drizzleDb, migrations)
 
 	useCheckUpdate()
-	useFeatureTracking()
+	useDataCollectionSync()
 
 	onlineManager.setEventListener((setOnline) => {
 		void fetchNetInfo().then((state) => {
@@ -199,22 +201,7 @@ function RootLayout() {
 	})
 
 	useEffect(() => {
-		const logAppInfo = async () => {
-			if (
-				Application.nativeApplicationVersion &&
-				Application.nativeBuildVersion
-			) {
-				await analyticsService.logAppInfo(
-					Application.nativeApplicationVersion,
-					Application.nativeBuildVersion,
-				)
-			}
-		}
-
-		runAfterStartup(() => {
-			void logAppInfo()
-			reportUpdateActivity()
-		})
+		runAfterStartup(reportUpdateActivity)
 
 		const subscription = AppState.addEventListener('change', onAppStateChange)
 
@@ -222,7 +209,10 @@ function RootLayout() {
 	}, [])
 
 	useEffect(() => {
-		runAppInit()
+		endStartupPhase('app.startup.root_mount')
+		measureStartupPhase('app.startup.init', runAppInit)
+		// 首屏没能在超时前可交互（例如直接落地在非标签页）时，也把已经记下的阶段补记上去
+		runAfterStartup(flushStartupPhases)
 		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state, set-state-in-effect
 		setIsReady(true)
 	}, [])
@@ -236,14 +226,16 @@ function RootLayout() {
 			Updates.checkForUpdateAsync()
 				.then((result) => {
 					if (result.isAvailable) {
-						logger.debug('有新的热更新，开始下载', result)
+						logger.debug('update.ota.available', {
+							'update.available': result.isAvailable,
+						})
 						Updates.fetchUpdateAsync().catch((e) => {
-							logger.error('热更新下载失败', e)
+							logger.error('update.ota.download_failed', {}, e)
 						})
 					}
 				})
 				.catch((error: Error) => {
-					logger.error('检查热更新失败', error)
+					logger.error('update.ota.check_failed', {}, error)
 				})
 		})
 
@@ -256,7 +248,7 @@ function RootLayout() {
 				reportUpdateLaunch()
 				// 恢复上次被中断的同步任务（syncing → pending），并触发同步
 				playlistSyncWorker.recoverStuckRows().catch((error) => {
-					logger.error('恢复同步任务失败:', error)
+					logger.error('playlist.sync.restore_failed', {}, error)
 				})
 			})
 
@@ -271,7 +263,7 @@ function RootLayout() {
 	useEffect(() => {
 		if (migrationsError) {
 			void hideBootSplash({ fade: true })
-			logger.error('数据库迁移失败：', migrationsError)
+			logger.error('database.migration.failed', {}, migrationsError)
 		}
 	}, [migrationsError])
 
@@ -282,6 +274,11 @@ function RootLayout() {
 				<Text>建议截图报错信息，发到项目 issues 反馈</Text>
 			</View>
 		)
+	}
+
+	// 在渲染路由前计时，子页面的 effect 可能先于本组件的 effect 报告可交互。
+	if (migrationsSuccess && isReady) {
+		startStartupPhase('app.startup.first_screen')
 	}
 
 	return (
@@ -481,7 +478,7 @@ function RootLayout() {
 // 用户点击追踪（ui.action.touch）与触摸面包屑以 testID 作为元素标识。
 // 同一节点上 testID 优先于 accessibilityLabel 与子节点文本；都没有时保留原始文本，
 // 点击 transaction 名即 `{路由}.{元素标识}`
-export default Sentry.wrap(ObserveRoot.wrap(RootLayout), {
+export default Sentry.wrap(AppMetricsRoot.wrap(RootLayout), {
 	touchEventBoundaryProps: { labelName: 'testID' },
 })
 

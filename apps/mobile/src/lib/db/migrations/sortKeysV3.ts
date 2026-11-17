@@ -52,11 +52,11 @@ export function migrateSortKeysV3(): void {
 			}
 
 			migration.markAsApplied()
-			logger.info(
-				`[v3] 非 local 播放列表 sort_key 翻转迁移完成，共处理 ${totalUpdated} 行`,
-			)
+			logger.info('database.sort_keys_v3.migrated', {
+				'database.row_count': totalUpdated,
+			})
 		})
 	} catch (error) {
-		logger.error('[v3] 迁移过程中发生错误，事务已回滚:', error)
+		logger.error('database.sort_keys_v3.failed', {}, error)
 	}
 }

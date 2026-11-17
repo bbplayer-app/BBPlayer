@@ -1,16 +1,18 @@
 package expo.modules.orpheus.manager
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.media3.common.C
 import expo.modules.orpheus.model.LyricsData
 import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.service.OrpheusMusicService
+import expo.modules.orpheus.telemetry.LogTags
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ConnectionStatus
@@ -20,7 +22,7 @@ import io.github.proify.lyricon.lyric.model.LyricWord
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.service.addConnectionListener
 
-private const val TAG = "LyriconBackend"
+private const val TAG = LogTags.LYRICS
 
 /**
  * Lyricon implementation for status bar lyrics.
@@ -52,7 +54,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
                 if (destroyed || provider !== current) return@onConnected
                 cancelConnectionCheck()
                 connected = true
-                Log.d(TAG, "Lyricon connected - syncing state")
+                NativeLog.debug(TAG, "lyrics.lyricon.connected")
                 syncState()
                 notifyStatusChanged()
             }
@@ -60,20 +62,20 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
                 if (destroyed || provider !== current) return@onReconnected
                 cancelConnectionCheck()
                 connected = true
-                Log.d(TAG, "Lyricon reconnected - syncing state")
+                NativeLog.debug(TAG, "lyrics.lyricon.reconnected")
                 syncState()
                 notifyStatusChanged()
             }
             onDisconnected {
                 if (provider !== current) return@onDisconnected
                 connected = false
-                Log.d(TAG, "Lyricon disconnected")
+                NativeLog.debug(TAG, "lyrics.lyricon.disconnected")
                 failConnection()
             }
             onConnectTimeout {
                 if (provider !== current) return@onConnectTimeout
                 connected = false
-                Log.w(TAG, "Lyricon connection timeout")
+                NativeLog.warning(TAG, "lyrics.lyricon.timeout")
                 failConnection()
             }
         }
@@ -96,7 +98,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
             }
             if (provider === current && !connected) mainHandler.postDelayed(check, CONNECTION_CHECK_INTERVAL_MS)
         } catch (e: Exception) {
-            Log.e(TAG, "[connect] Failed: ${e.message}")
+            NativeLog.warning(TAG, "lyrics.lyricon.connect_failed", error = e)
             failConnection()
         }
     }
@@ -125,7 +127,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         try {
             current?.player?.setPlaybackState(false)
         } catch (e: Exception) {
-            Log.e(TAG, "[disconnect] Failed to send pause: ${e.message}")
+            NativeLog.warning(TAG, "lyrics.lyricon.disconnect_failed", error = e)
         } finally {
             // Destroy also cancels the provider's retry scope and unregisters its connection.
             current?.destroy()
@@ -154,9 +156,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
                 song?.let { provider?.player?.setSong(it) }
                 frame?.let { provider?.player?.setPosition(it.positionMs.coerceAtLeast(0L)) }
                 provider?.player?.setPlaybackState(lastIsPlaying)
-                Log.d(TAG, "[syncState] Restored song and state ($lastIsPlaying)")
+                NativeLog.debug(TAG, "lyrics.lyricon.state_restored", mapOf("player.is_playing" to lastIsPlaying))
             } catch (e: Exception) {
-                Log.e(TAG, "[syncState] Failed: ${e.message}")
+                NativeLog.warning(TAG, "lyrics.lyricon.state_restore_failed", error = e)
             }
         }
     }
@@ -187,9 +189,16 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
             try {
                 provider?.player?.setSong(song)
                 provider?.player?.setPlaybackState(lastIsPlaying)
-                Log.d(TAG, "[setLyricsData] Sent song lines=${richLines.size} id=${song.id}")
+                NativeLog.debug(
+                    TAG,
+                    "lyrics.lyricon.submitted",
+                    mapOf(
+                        "lyrics.line_count" to richLines.size,
+                        "track.id" to song.id,
+                    ),
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "[setLyricsData] Failed: ${e.message}")
+                NativeLog.warning(TAG, "lyrics.lyricon.submit_failed", error = e)
             }
         }
     }
@@ -218,9 +227,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
             try {
                 provider?.player?.setSong(Song(lyrics = emptyList()))
                 provider?.player?.setPlaybackState(false)
-                Log.d(TAG, "[clearLyrics] Lyrics cleared")
+                NativeLog.debug(TAG, "lyrics.lyricon.cleared")
             } catch (e: Exception) {
-                Log.e(TAG, "[clearLyrics] Failed: ${e.message}")
+                NativeLog.warning(TAG, "lyrics.lyricon.clear_failed", error = e)
             }
         }
     }
@@ -246,9 +255,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
             if (destroyed) return@post
             try {
                 provider?.player?.setPlaybackState(lastIsPlaying)
-                Log.d(TAG, "[setPlaybackState] $lastIsPlaying")
+                NativeLog.debug(TAG, "lyrics.lyricon.playback_changed", mapOf("player.is_playing" to lastIsPlaying))
             } catch (e: Exception) {
-                Log.e(TAG, "[setPlaybackState] Failed: ${e.message}")
+                NativeLog.warning(TAG, "lyrics.lyricon.playback_failed", error = e)
             }
         }
     }
@@ -279,7 +288,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
             provider?.player?.setPosition(positionMs.coerceAtLeast(0L))
         } catch (e: Exception) {
             if (logFailure) {
-                Log.e(TAG, "[position] Failed: ${e.message}")
+                NativeLog.warning(TAG, "lyrics.lyricon.position_failed", error = e)
             }
         }
     }

@@ -89,7 +89,7 @@ export function initPlaybackContextStore() {
 	const sync = () => {
 		if (restoringBackup) return
 		void syncPlaybackContext().catch((error: unknown) => {
-			log.warning('同步当前播放上下文失败', { error })
+			log.warning('playback.context.sync_failed', {}, error)
 		})
 	}
 

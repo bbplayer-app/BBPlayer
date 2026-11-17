@@ -24,7 +24,7 @@ export const usePlayerQueueStore = create<PlayerQueueState>((set) => ({
 
 			if (revision === syncRevision) set({ tracks })
 		} catch (e) {
-			logger.warning('Failed to sync player queue', { error: e })
+			logger.warning('player.queue.sync_failed', {}, e)
 		}
 	},
 }))

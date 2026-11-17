@@ -27,6 +27,7 @@ import {
 
 import {
 	getActiveUiSpan,
+	isAbortError,
 	markSpanCancelled,
 	markSpanError,
 	startSpanOrOperation,
@@ -48,8 +49,6 @@ import {
 
 const QUERY_OP = 'query'
 const MUTATION_OP = 'mutation'
-
-const MAX_CAUSE_DEPTH = 5
 
 export interface QuerySpanSpec {
 	/**
@@ -135,22 +134,6 @@ export type TracedMutationOptions<
 > & {
 	span: MutationSpanSpec<TVariables>
 	mutationFn: TracedMutationFunction<TData, TVariables>
-}
-
-// 请求被中止（组件卸载、手动 cancel）不算失败；中止错误可能被包在 cause 里
-function isAbortError(error: Error): boolean {
-	let current: Error = error
-
-	for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth++) {
-		if (current.name === 'AbortError' || current.name === 'CancelledError') {
-			return true
-		}
-
-		if (!(current.cause instanceof Error)) return false
-		current = current.cause
-	}
-
-	return false
 }
 
 async function runInTracedSpan<T>(

@@ -1,6 +1,6 @@
 package expo.modules.wavyslider.state
 
-import android.util.Log
+import expo.modules.bbplayernative.telemetry.NativeLog
 import expo.modules.kotlin.jni.worklets.Worklet
 import expo.modules.kotlin.sharedobjects.SharedObject
 
@@ -17,7 +17,7 @@ class WorkletCallback : SharedObject() {
         // A missing callback is an intentional disabled event, not an error.
         val worklet = worklet ?: return
         val runtime = appContext?.uiRuntime ?: run {
-            Log.w("ExpoWavySlider", "WorkletCallback.invoke: UI worklet runtime is not available, the callback will not run.")
+            NativeLog.warning("WavySlider", "slider.worklet.runtime_unavailable")
             return
         }
         worklet.execute(runtime, *arguments)

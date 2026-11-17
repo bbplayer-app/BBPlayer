@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { decode } from 'he'
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 
@@ -19,7 +19,6 @@ import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionRead
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { MAX_WIDTH } from '@/hooks/ui/useResponsiveLayout'
-import { analyticsService } from '@/lib/services/analyticsService'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
@@ -84,12 +83,6 @@ export default function SearchResultsPage() {
 		refetch,
 		fetchNextPage,
 	} = useSearchResults(query)
-
-	useEffect(() => {
-		if (query) {
-			void analyticsService.logSearch('global')
-		}
-	}, [query])
 
 	const { trackMenuItems, playTrack } = useSearchInteractions()
 

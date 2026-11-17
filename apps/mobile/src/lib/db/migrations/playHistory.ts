@@ -24,9 +24,7 @@ export function migratePlayHistory(): void {
 		)
 
 		if (!hasOldColumn) {
-			logger.info(
-				'[play_history] tracks 表中无 play_history 字段，无需执行数据迁移',
-			)
+			logger.info('database.play_history.skipped')
 			migration.markAsApplied()
 
 			return
@@ -37,7 +35,7 @@ export function migratePlayHistory(): void {
 		)
 
 		if (!tableExists) {
-			logger.warning('[play_history] play_history 表尚未创建，跳过本次数据迁移')
+			logger.warning('database.play_history.table_missing')
 
 			return
 		}
@@ -69,14 +67,14 @@ export function migratePlayHistory(): void {
 					}
 				}
 
-				logger.info(
-					`[play_history] 播放记录迁移完成，共处理 ${rows.length} 条歌曲记录`,
-				)
+				logger.info('database.play_history.migrated', {
+					'database.track_count': rows.length,
+				})
 			}
 
 			migration.markAsApplied()
 		})
 	} catch (error) {
-		logger.error('[play_history] 迁移过程中发生致命错误:', error)
+		logger.error('database.play_history.failed', {}, error)
 	}
 }

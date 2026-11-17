@@ -42,10 +42,11 @@ function createStickyEmitter<Events extends Record<string, any>>() {
 				try {
 					handler(stickyEvents.get(type) as Events[Key])
 				} catch (err) {
-					logger.error('Sticky Event Handler 处理器出错', {
-						type,
-						error: err,
-					})
+					logger.error(
+						'event.handler.failed',
+						{ 'event.type': String(type) },
+						err,
+					)
 				}
 			}
 		},

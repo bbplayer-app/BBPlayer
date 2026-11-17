@@ -1,14 +1,16 @@
 package expo.modules.orpheus.manager
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import expo.modules.orpheus.R
+import expo.modules.orpheus.telemetry.LogTags
 
-private const val TAG = "MeizuStatusBarLyrics"
+private const val TAG = LogTags.LYRICS
 
 /**
  * Flyme/Meizu status-bar lyric implementation.
@@ -60,9 +62,9 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
         try {
             sendLyricBroadcast(text)
             postTickerNotification(text, translation)
-            Log.d(TAG, "[render] text=\"$text\"")
+            NativeLog.debug(TAG, "lyrics.meizu.rendered", mapOf("lyrics.text_length" to text.length))
         } catch (e: Exception) {
-            Log.e(TAG, "[render] Failed: ${e.message}")
+            NativeLog.warning(TAG, "lyrics.meizu.render_failed", error = e)
         }
     }
 
@@ -76,7 +78,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
                 sendLyricBroadcast(text)
                 postTickerNotification(text, null)
             }.onFailure { e ->
-                Log.e(TAG, "[setPlaybackState] Failed: ${e.message}")
+                NativeLog.warning(TAG, "lyrics.meizu.playback_failed", error = e)
             }
         }
     }
@@ -92,7 +94,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
             sendFlymeBroadcast(intent)
             notificationManager.cancel(NOTIFICATION_ID)
         } catch (e: Exception) {
-            Log.e(TAG, "[onStop] Failed: ${e.message}")
+            NativeLog.warning(TAG, "lyrics.meizu.stop_failed", error = e)
         }
     }
 
@@ -186,7 +188,14 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
                 field.isAccessible = true
                 field.getInt(null)
             }.getOrElse {
-                Log.w(TAG, "Flyme ticker flag not found: $name, fallback=$fallback")
+                NativeLog.warning(
+                    TAG,
+                    "lyrics.meizu.flag_missing",
+                    mapOf(
+                        "lyrics.flag_name" to name,
+                        "lyrics.flag_fallback" to fallback,
+                    ),
+                )
                 fallback
             }
         }

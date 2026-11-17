@@ -23,4 +23,6 @@ android {
 }
 
 dependencies {
+  // 运行时由 @sentry/react-native 提供，版本随它走
+  compileOnly project(':sentry_react-native')
 }

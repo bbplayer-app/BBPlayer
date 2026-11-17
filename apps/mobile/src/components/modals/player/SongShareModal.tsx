@@ -147,7 +147,7 @@ const SongShareModal = () => {
 					}
 				})
 				.catch((e) => {
-					log.error('提取图片主题色失败', e)
+					log.error('share.theme.extract_failed', {}, e)
 					reportErrorToSentry(e, '提取图片主题色失败', 'SongShareModal')
 
 					return undefined

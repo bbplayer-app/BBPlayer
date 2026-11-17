@@ -64,18 +64,17 @@ class LyricService {
 		const priorityMatch = priorityRegex.exec(keyword)
 
 		if (priorityMatch) {
-			logger.debug(
-				'匹配到优先提取的标记，直接返回这段字符串作为 keyword：',
-				priorityMatch[1],
-				priorityMatch[2],
-			)
+			logger.debug('lyrics.keyword.priority_matched', {
+				'lyrics.keyword': priorityMatch[1],
+				'lyrics.marker': priorityMatch[2],
+			})
 
 			return priorityMatch[1] || priorityMatch[2]
 		}
 
 		const replacedKeyword = keyword.replace(/【.*?】|“.*?”/g, '').trim()
 		const result = replacedKeyword.length > 0 ? replacedKeyword : keyword
-		logger.debug('最终 keyword 清洗后：', result)
+		logger.debug('lyrics.keyword.cleaned', { 'lyrics.keyword': result })
 
 		return result
 	}
@@ -108,7 +107,9 @@ class LyricService {
 
 			return apiCall(controller.signal)
 				.map((res) => {
-					logger.debug(`${providerName} returned lyrics`)
+					logger.debug('lyrics.provider.completed', {
+						'lyrics.provider': providerName,
+					})
 					// If one succeeds, abort others
 					controllers.forEach((c) => {
 						if (c !== controller) {
@@ -322,7 +323,7 @@ class LyricService {
 			manualSkip: true,
 		}
 
-		logger.info('用户跳过歌词获取', { uniqueKey })
+		logger.info('lyrics.fetch.skipped', { 'track.unique_key': uniqueKey })
 
 		return this.saveLyricsToFile(payload, uniqueKey)
 	}
@@ -339,7 +340,7 @@ class LyricService {
 			updateTime: Date.now(),
 		}
 
-		logger.info('网络搜索歌词完成，正在写入缓存')
+		logger.info('lyrics.search.completed')
 
 		return this.saveLyricsToFile(lyricFileData, track.uniqueKey, parent)
 	}
@@ -459,7 +460,7 @@ class LyricService {
 				return
 			}
 
-			logger.info('检测到未迁移的歌词缓存，开始执行迁移...')
+			logger.info('lyrics.migration.started')
 			const lyricFiles = lyricsDir.list()
 			let migrationFailed = false
 
@@ -529,18 +530,22 @@ class LyricService {
 					if (saved.isErr()) throw saved.error
 				} catch (e) {
 					migrationFailed = true
-					logger.warning(`文件 ${file.name} 迁移失败`, e)
+					logger.warning(
+						'lyrics.migration.file_failed',
+						{ 'lyrics.file_name': file.name },
+						e,
+					)
 				}
 			}
 
 			if (migrationFailed) {
-				logger.warning('部分歌词迁移失败，下次启动将重试')
+				logger.warning('lyrics.migration.retry_pending')
 
 				return
 			}
 
 			migrationMarker.create()
-			logger.info('歌词格式迁移完成')
+			logger.info('lyrics.migration.completed')
 		} catch (e) {
 			toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
 		}
@@ -559,8 +564,8 @@ class LyricService {
 				}
 
 				const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
-				logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
-					music_title: res.bgm_info.music_title,
+				logger.debug('lyrics.music.recognized', {
+					'lyrics.music_title': res.bgm_info.music_title,
 				})
 
 				if (filteredResult?.[1]) {
@@ -589,7 +594,7 @@ class LyricService {
 
 		return Result.fromThrowable(() => {
 			if (!lyricsDir.exists) {
-				logger.debug('歌词目录不存在，无需清理')
+				logger.debug('lyrics.cache.absent')
 
 				return true as const
 			}
@@ -599,7 +604,7 @@ class LyricService {
 				intermediates: true,
 				idempotent: true,
 			})
-			logger.info('歌词缓存已清理')
+			logger.info('lyrics.cache.cleared')
 
 			return true as const
 		})()
@@ -665,9 +670,9 @@ class LyricService {
 			const currentOrpheusTrack = await Orpheus.getCurrentTrack()
 
 			if (currentOrpheusTrack && currentOrpheusTrack.id !== trackId) {
-				logger.debug('pushLyricsToOverlays: trackId 不再是当前曲目，跳过', {
-					trackId,
-					currentId: currentOrpheusTrack.id,
+				logger.debug('lyrics.overlay.stale_track', {
+					'track.id': trackId,
+					'lyrics.current_id': currentOrpheusTrack.id,
 				})
 
 				return
@@ -740,7 +745,7 @@ class LyricService {
 				await Orpheus.setLyrics(payload, consumers)
 			}
 		} catch (e) {
-			logger.warning('更新歌词显示失败', e)
+			logger.warning('lyrics.overlay.update_failed', {}, e)
 		}
 	}
 
@@ -763,15 +768,15 @@ class LyricService {
 					)
 
 					if (nextTrackResult.isOk() && nextTrackResult.value) {
-						logger.debug('预加载下一首歌词', {
-							title: nextTrackResult.value.title,
+						logger.debug('lyrics.preload.started', {
+							'lyrics.title': nextTrackResult.value.title,
 						})
 						void this.smartFetchLyrics(nextTrackResult.value)
 					}
 				}
 			}
 		} catch (e) {
-			logger.warning('预加载歌词失败', e)
+			logger.warning('lyrics.preload.failed', {}, e)
 		}
 	}
 }

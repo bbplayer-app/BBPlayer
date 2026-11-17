@@ -1,7 +1,9 @@
 package expo.modules.orpheus.manager
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
-import android.util.Log
+import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -13,7 +15,7 @@ import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
 
 object CoverDownloadManager {
-    private const val TAG = "CoverDownloadManager"
+    private const val TAG = LogTags.COVER
     private const val COVERS_DIR = "downloaded_covers"
 
     private val okHttpClient = OkHttpClient()
@@ -90,7 +92,7 @@ object CoverDownloadManager {
             withContext(Dispatchers.IO) {
                 // 如果已存在，跳过
                 if (getCoverFile(context, trackId) != null) {
-                    Log.d(TAG, "Cover already exists for $trackId, skipping")
+                    NativeLog.debug(TAG, "cover.download.skipped", mapOf("track.id" to trackId))
                     return@withContext
                 }
 
@@ -123,19 +125,21 @@ object CoverDownloadManager {
                     }
 
                     if (tempFile.renameTo(targetFile)) {
-                        Log.d(
-                            TAG,
-                            "Downloaded cover for $trackId ($artworkUrl) -> ${targetFile.absolutePath}"
-                        )
+                        NativeLog.debug(TAG, "cover.download.completed", mapOf("track.id" to trackId))
                         initCacheIfNeeded(context)
                         coverCache?.put(safeId, targetFile)
                     } else {
                         throw Exception("Failed to rename temp file to target file")
                     }
                 } catch (e: Exception) {
-                    Log.e(
+                    NativeLog.warning(
                         TAG,
-                        "Failed to download cover for $trackId, url=$artworkUrl: ${e.message}"
+                        "cover.download.failed",
+                        mapOf(
+                            "track.id" to trackId,
+                            "http.host" to android.net.Uri.parse(artworkUrl).host,
+                        ),
+                        e,
                     )
                     // 清理可能的部分文件
                     tempFile.delete()
@@ -153,7 +157,7 @@ object CoverDownloadManager {
         if (file != null && file.delete()) {
             val safeId = sanitizeTrackId(trackId)
             coverCache?.remove(safeId)
-            Log.d(TAG, "Deleted cover for $trackId")
+            NativeLog.debug(TAG, "cover.deleted", mapOf("track.id" to trackId))
         }
     }
 
@@ -165,7 +169,7 @@ object CoverDownloadManager {
         if (dir.exists()) {
             dir.deleteRecursively()
             coverCache?.clear()
-            Log.d(TAG, "Deleted all covers")
+            NativeLog.debug(TAG, "cover.cache.cleared")
         }
     }
 }

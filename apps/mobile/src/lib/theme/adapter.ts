@@ -77,10 +77,10 @@ const resolveComponent = (
 	return bilibiliApi
 		.fetchGarbBenefit({ itemId: componentId, signal })
 		.mapErr((error) => {
-			log.warning('[adapter] failed to resolve component', {
-				componentId,
-				componentName,
-				error: error.message,
+			log.warning('theme.component.resolve_failed', {
+				'theme.component_id': componentId,
+				'theme.component_name': componentName,
+				'error.message': error.message,
 			})
 
 			return createSkinFetchFailed(error.message, error)
@@ -325,9 +325,9 @@ const buildCollectionAssetDeclaration = (
 	return bilibiliApi
 		.fetchGarbAssetBag({ actId: item.actId, lotteryId: item.lotteryId, signal })
 		.mapErr((error) => {
-			log.error('[adapter] fetchGarbAssetBag failed', {
-				actId: item.actId,
-				error: error.message,
+			log.error('theme.collection.fetch_failed', {
+				'theme.act_id': item.actId,
+				'error.message': error.message,
 			})
 
 			return createSkinFetchFailed(error.message, error)
@@ -358,10 +358,10 @@ const buildCollectionAssetDeclaration = (
 				const result = parseSkinAssetDeclaration(table)
 
 				if (result.isErr()) return errAsync(result.error)
-				log.debug('[adapter] collection declaration built', {
-					cards: result.value.cards.length,
-					skins: result.value.skins.length,
-					thumbups: result.value.thumbups.length,
+				log.debug('theme.collection.built', {
+					'theme.cards': result.value.cards.length,
+					'theme.skins': result.value.skins.length,
+					'theme.thumbups': result.value.thumbups.length,
 				})
 
 				return okAsync(result.value)
@@ -380,9 +380,9 @@ const buildSuitAssetDeclaration = (
 	return bilibiliApi
 		.fetchGarbSuitDetail({ itemId: item.itemId, signal })
 		.mapErr((error) => {
-			log.error('[adapter] fetchGarbSuitDetail failed', {
-				error: error.message,
-				itemId: item.itemId,
+			log.error('theme.suit.fetch_failed', {
+				'error.message': error.message,
+				'theme.item_id': item.itemId,
 			})
 
 			return createSkinFetchFailed(error.message, error)
@@ -534,10 +534,10 @@ const buildSuitAssetDeclaration = (
 			const result = parseSkinAssetDeclaration(table)
 
 			if (result.isErr()) return errAsync(result.error)
-			log.debug('[adapter] suit declaration built', {
-				cards: result.value.cards.length,
-				skins: result.value.skins.length,
-				thumbups: result.value.thumbups.length,
+			log.debug('theme.suit.built', {
+				'theme.cards': result.value.cards.length,
+				'theme.skins': result.value.skins.length,
+				'theme.thumbups': result.value.thumbups.length,
 			})
 
 			return okAsync(result.value)
@@ -558,19 +558,19 @@ export const fetchGarbSkinAssetDeclaration = (
 ): ResultAsync<SkinAssetDeclaration, ServiceError> => {
 	switch (item.kind) {
 		case 'collection': {
-			log.debug('[adapter] building collection asset declaration', {
-				actId: item.actId,
-				lotteryId: item.lotteryId,
-				name: item.name,
+			log.debug('theme.collection.build_started', {
+				'theme.act_id': item.actId,
+				'theme.lottery_id': item.lotteryId,
+				'theme.name': item.name,
 			})
 
 			return buildCollectionAssetDeclaration(item, signal)
 		}
 
 		case 'suit': {
-			log.debug('[adapter] building suit asset declaration', {
-				itemId: item.itemId,
-				name: item.name,
+			log.debug('theme.suit.build_started', {
+				'theme.item_id': item.itemId,
+				'theme.name': item.name,
 			})
 
 			return buildSuitAssetDeclaration(item, signal)

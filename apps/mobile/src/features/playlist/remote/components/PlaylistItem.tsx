@@ -10,7 +10,6 @@ import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { VariantPlainText } from '@/components/common/VariantPlainText'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
-import { analyticsService } from '@/lib/services/analyticsService'
 import {
 	LIST_ITEM_BORDER_RADIUS,
 	LIST_ITEM_COVER_SIZE,
@@ -137,7 +136,6 @@ export const TrackListItem = memo(function TrackListItem({
 				}
 
 				if (isCurrentTrack) return
-				void analyticsService.logPlayerQueueAction('play_item')
 				onTrackPress()
 			}}
 			onLongPress={() => {

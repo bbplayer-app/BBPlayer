@@ -1,5 +1,7 @@
 package expo.modules.bbplayernative
 
+import expo.modules.bbplayernative.telemetry.NativeLog
+
 import android.content.Context
 import android.graphics.Matrix
 import android.graphics.SurfaceTexture
@@ -161,6 +163,14 @@ class BootSplashVideoView(context: Context, appContext: AppContext) : ExpoView(c
             if (!loop) onPlaybackEnd(emptyMap<String, Any>())
         }
         mediaPlayer.setOnErrorListener { _, what, extra ->
+            NativeLog.warning(
+                LogTags.BOOT_SPLASH,
+                "splash.playback.failed",
+                mapOf(
+                    "splash.error_code" to what,
+                    "splash.extra_code" to extra,
+                ),
+            )
             onPlaybackError(mapOf("what" to what, "extra" to extra))
             true
         }
@@ -174,6 +184,7 @@ class BootSplashVideoView(context: Context, appContext: AppContext) : ExpoView(c
             }
             mediaPlayer.prepareAsync()
         } catch (error: Exception) {
+            NativeLog.warning(LogTags.BOOT_SPLASH, "splash.load.failed", error = error)
             onPlaybackError(mapOf("message" to (error.message ?: "Unable to load video")))
             releasePlayer()
         }

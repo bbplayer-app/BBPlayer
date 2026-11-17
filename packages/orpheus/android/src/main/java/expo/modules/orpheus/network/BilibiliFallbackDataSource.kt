@@ -7,11 +7,16 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
+import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.bbplayernative.telemetry.NativeLog
+import expo.modules.orpheus.telemetry.PlaybackTracer
+import io.sentry.ISpan
+import io.sentry.SpanStatus
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
 
-internal data class BilibiliStreamUrls(val urls: List<String>)
+internal data class BilibiliStreamUrls(val urls: List<String>, val playbackUri: String?)
 
 /** Tries API-provided mirrors of the same audio representation without rewriting signed URLs. */
 @UnstableApi
@@ -22,6 +27,7 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
     private var candidates: List<String> = emptyList()
     private var nextCandidate = 0
     private var bytesRead = 0L
+    private var firstReadSpan: ISpan? = null
 
     override fun addTransferListener(transferListener: TransferListener) {
         listeners.add(transferListener)
@@ -37,6 +43,7 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
     }
 
     private fun openNext(previousError: IOException?): Long {
+        finishFirstRead(SpanStatus.CANCELLED)
         val spec = checkNotNull(originalSpec)
         var lastError = previousError
         do {
@@ -46,13 +53,33 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
             val nextSpec = spec.subrange(bytesRead).let {
                 if (candidates.isEmpty()) it else it.withUri(Uri.parse(candidates[nextCandidate++]))
             }
+            val playbackUri = (spec.customData as? BilibiliStreamUrls)?.playbackUri
+            val openSpan = PlaybackTracer.startDataSourceSpan(playbackUri, "playback.cdn.open", nextSpec.uri.host)
+            var openStatus = SpanStatus.INTERNAL_ERROR
             try {
-                return source.open(nextSpec)
+                val length = source.open(nextSpec)
+                openStatus = SpanStatus.OK
+                firstReadSpan = PlaybackTracer.startDataSourceSpan(
+                    playbackUri, "playback.cdn.first_read", nextSpec.uri.host, "playback",
+                )
+                return length
             } catch (error: IOException) {
                 lastError?.let(error::addSuppressed)
                 lastError = error
                 closeFailedSource(error)
-                if (!canRetry(error)) throw error
+                val retry = canRetry(error)
+                NativeLog.warning(
+                    LogTags.STREAM,
+                    "stream.mirror.open_failed",
+                    failureAttributes(error) + mapOf(
+                        "stream.host" to nextSpec.uri.host,
+                        "stream.retry" to retry,
+                    ),
+                    error,
+                )
+                if (!retry) throw error
+            } finally {
+                PlaybackTracer.finishDataSourceSpan(openSpan, openStatus)
             }
         } while (nextCandidate < candidates.size)
         throw checkNotNull(lastError)
@@ -68,9 +95,23 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
             try {
                 val count = checkNotNull(upstream).read(buffer, offset, length)
                 if (count > 0) bytesRead += count
+                if (count != 0) {
+                    finishFirstRead(SpanStatus.OK)
+                }
                 return count
             } catch (error: IOException) {
-                if (!canRetry(error)) throw error
+                finishFirstRead(SpanStatus.INTERNAL_ERROR)
+                val retry = canRetry(error)
+                NativeLog.warning(
+                    LogTags.STREAM,
+                    "stream.mirror.read_failed",
+                    failureAttributes(error) + mapOf(
+                        "stream.host" to upstream?.uri?.host,
+                        "stream.retry" to retry,
+                    ),
+                    error,
+                )
+                if (!retry) throw error
                 closeFailedSource(error)
                 // Keep the original byte range and cache key when switching mirrors mid-stream.
                 openNext(error)
@@ -88,6 +129,13 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
         return true
     }
 
+    private fun failureAttributes(error: IOException): Map<String, Any?> = mapOf(
+        "stream.mirror_index" to nextCandidate,
+        "stream.mirror_count" to candidates.size,
+        "stream.bytes_loaded_bytes" to bytesRead,
+        "http.status_code" to (error as? HttpDataSource.InvalidResponseCodeException)?.responseCode,
+    )
+
     private fun closeFailedSource(error: IOException) {
         val source = upstream
         upstream = null
@@ -104,10 +152,16 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
         upstream?.responseHeaders.orEmpty()
 
     override fun close() {
+        finishFirstRead(SpanStatus.CANCELLED)
         val source = upstream
         upstream = null
         originalSpec = null
         candidates = emptyList()
         source?.close()
+    }
+
+    private fun finishFirstRead(status: SpanStatus) {
+        PlaybackTracer.finishDataSourceSpan(firstReadSpan, status)
+        firstReadSpan = null
     }
 }
