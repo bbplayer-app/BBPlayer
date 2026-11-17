@@ -84,8 +84,10 @@ function toStartOptions(spec: TraceSpec) {
 	}
 }
 
+// status message 只能用 Sentry 认识的 span status（如 internal_error），
+// 其他值入库后会变成 ok，failure_rate() 就统计不到。具体的错误类型放在 error.type 上。
 function setSpanError(span: Span, type: string): void {
-	span.setStatus({ code: SPAN_STATUS_ERROR, message: type })
+	span.setStatus({ code: SPAN_STATUS_ERROR, message: 'internal_error' })
 	span.setAttribute('error.type', type)
 }
 
@@ -118,9 +120,28 @@ export function markSpanCancelled(span: Span): void {
 	span.setAttribute('bbplayer.cancelled', true)
 }
 
-/** 把 span 标记为超时失败 */
-export function markSpanTimeout(span: Span): void {
-	setSpanError(span, 'deadline_exceeded')
+/** 请求被中止（组件卸载、手动 cancel）不算失败；中止错误可能被包在 cause 里 */
+export function isAbortError(error: Error): boolean {
+	let current: Error = error
+
+	for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth++) {
+		if (current.name === 'AbortError' || current.name === 'CancelledError') {
+			return true
+		}
+
+		if (!(current.cause instanceof Error)) return false
+		current = current.cause
+	}
+
+	return false
+}
+
+function markSpanFailure(span: Span, error: Error): void {
+	if (isAbortError(error)) {
+		markSpanCancelled(span)
+	} else {
+		markSpanError(span, error)
+	}
 }
 
 /** 查找错误（或其 cause 链上的错误）失败时所在的 span */
@@ -147,7 +168,7 @@ async function runInSpan<T>(
 		return await fn(span)
 	} catch (error) {
 		if (error instanceof Error) {
-			markSpanError(span, error)
+			markSpanFailure(span, error)
 		} else {
 			setSpanError(span, 'internal_error')
 		}
@@ -168,7 +189,7 @@ function runResultInSpan<T, E extends Error>(
 			const result = await fn(s)
 
 			if (result.isErr()) {
-				markSpanError(s, result.error)
+				markSpanFailure(s, result.error)
 			}
 
 			return result

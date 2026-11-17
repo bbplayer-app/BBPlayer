@@ -2,6 +2,7 @@ import {
 	getApkSigningCertificateSha256,
 	getSentryInstallationId,
 	installNativeTelemetry,
+	setNativeTracesSampleRate,
 } from '@bbplayer/native'
 import { Orpheus } from '@bbplayer/orpheus'
 import * as Sentry from '@sentry/react-native'
@@ -134,6 +135,9 @@ logger.info('telemetry.sentry.configured', {
 
 const logRateLimiter = new LogRateLimiter()
 
+// 统一采样率；子 span 自动继承 parent 的采样决定，同一条 trace 要么全采要么全不采
+const TRACES_SAMPLE_RATE = 0.5
+
 export function initializeSentry() {
 	// 在 init 之前取得：放进 initialScope，启动阶段的 JS 事件和日志也能带上 user.id
 	diagnosticId = isSentryTelemetryEnabled() ? getSentryInstallationId() : null
@@ -141,8 +145,7 @@ export function initializeSentry() {
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
 		debug: false,
-		// 统一采样率；子 span 自动继承 parent 的采样决定，同一条 trace 要么全采要么全不采
-		tracesSampleRate: 0.5,
+		tracesSampleRate: TRACES_SAMPLE_RATE,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
 		// 点击带 testID 的元素会开启 ui.action.touch transaction，期间发起的 query / mutation 挂在它下面；
@@ -171,6 +174,8 @@ export function initializeSentry() {
 			if (!didCallNativeInit) return
 
 			const installationId = installNativeTelemetry(isSentryTelemetryEnabled())
+			// 原生请求（播放器解析音频地址等）的 span 与 JS 用同一采样率
+			setNativeTracesSampleRate(TRACES_SAMPLE_RATE)
 
 			// 播放服务通常比原生 SDK 先启动，补写那之前产生的播放器 context 和 tag
 			if (Platform.OS === 'android') Orpheus.syncTelemetry()

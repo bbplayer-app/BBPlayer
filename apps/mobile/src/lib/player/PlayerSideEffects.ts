@@ -4,14 +4,9 @@ import {
 	type PlaybackErrorEvent,
 } from '@bbplayer/orpheus'
 import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
-import { spanToJSON } from '@sentry/react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics/keys'
 import { queryClient } from '@/lib/config/queryClient'
-import {
-	failPendingPlaybackSpan,
-	takePendingPlaybackSpan,
-} from '@/lib/player/playbackSession'
 import { getLyricService } from '@/lib/services/getLyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
@@ -79,24 +74,6 @@ class PlayerSideEffects {
 	private registerHeadlessTask() {
 		registerOrpheusHeadlessTask(async (event) => {
 			if (event.eventName === 'onTrackStarted') {
-				// 结束由 startPlayback 创建的 playback.start transaction
-				const playbackSpan = takePendingPlaybackSpan()
-
-				if (playbackSpan) {
-					const expectedTrackId =
-						spanToJSON(playbackSpan).data?.['playback.expected_first_track_id']
-
-					// 校验事件归属：防止用户快速切歌时，A 的事件消耗 B 的 span
-					if (!expectedTrackId || expectedTrackId === event.trackId) {
-						playbackSpan.setAttribute('playback.first_track_id', event.trackId)
-						playbackSpan.end()
-					} else {
-						// 事件不属于此 span，丢弃 span
-						playbackSpan.setAttribute('playback.cancelled', true)
-						playbackSpan.end()
-					}
-				}
-
 				await getLyricService().pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
 				await finalizeAndRecordCurrentTrack(
@@ -300,10 +277,7 @@ class PlayerSideEffects {
 					event.platform === 'android' ? event.rootCauseMessage : undefined,
 			})
 
-			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败。
-			// 上报时复用同一个 Error 实例，beforeSend 才能把 issue 关联回这条 trace
 			const sentryError = this.toSentryError(event)
-			failPendingPlaybackSpan(sentryError)
 
 			let playerErrorInfo = {
 				message:

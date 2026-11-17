@@ -299,26 +299,11 @@ export class BilibiliApi {
 
 		const url = `https://s.search.bilibili.com/main/suggest?${params.toString()}`
 
-		return ResultAsync.fromPromise(
-			fetch(url, {
-				method: 'GET',
-				signal: signal,
-			}),
-			(e) => {
-				if (e instanceof Error && e.name === 'AbortError') {
-					return new BilibiliApiError({
-						message: '请求被取消',
-						type: 'RequestAborted',
-					})
-				}
-
-				return new BilibiliApiError({
-					message: e instanceof Error ? e.message : String(e),
-					type: 'RequestFailed',
-				})
-			},
-		)
-			.andThen((response) => {
+		// 这个接口的响应结构是 { code, result } 而不是 { code, data }，不能走 client.get
+		return this.client.traceFetch(
+			url,
+			{ method: 'GET', signal },
+			(response, span) => {
 				if (!response.ok) {
 					return errAsync(
 						new BilibiliApiError({
@@ -339,21 +324,23 @@ export class BilibiliApi {
 							message: error instanceof Error ? error.message : String(error),
 							type: 'ResponseFailed',
 						}),
-				)
-			})
-			.andThen((data) => {
-				if (data.code !== 0) {
-					return errAsync(
-						new BilibiliApiError({
-							message: `获取搜索建议失败: ${data.code}`,
-							msgCode: data.code,
-							type: 'RequestFailed',
-						}),
-					)
-				}
+				).andThen((data) => {
+					span.setAttribute('bilibili.code', data.code)
 
-				return okAsync(data.result.tag)
-			})
+					if (data.code !== 0) {
+						return errAsync(
+							new BilibiliApiError({
+								message: `获取搜索建议失败: ${data.code}`,
+								msgCode: data.code,
+								type: 'ResponseFailed',
+							}),
+						)
+					}
+
+					return okAsync(data.result.tag)
+				})
+			},
+		)
 	}
 
 	/**
