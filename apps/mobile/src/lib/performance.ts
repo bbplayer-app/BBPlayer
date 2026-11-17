@@ -11,6 +11,7 @@ import {
 	STARTUP_PROFILING_KEY,
 	startupProfilingStarted,
 } from '@/lib/startupProfiling'
+import { endStartupPhase, flushStartupPhases } from '@/lib/startupTrace'
 import { storage } from '@/utils/mmkv'
 
 export const PROFILING_DURATION_MS = 10_000
@@ -301,6 +302,8 @@ export function markPerfInteractive(): Promise<void> {
 	if (!markedInteractive) {
 		markedInteractive = true
 		AppMetrics.markInteractive()
+		endStartupPhase('app.startup.first_screen')
+		flushStartupPhases()
 	}
 
 	resolveStartupInteractive?.()

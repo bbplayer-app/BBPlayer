@@ -47,6 +47,12 @@ import {
 	reportUpdateActivity,
 	reportUpdateLaunch,
 } from '@/lib/services/updateTelemetry'
+import {
+	endStartupPhase,
+	flushStartupPhases,
+	measureStartupPhase,
+	startStartupPhase,
+} from '@/lib/startupTrace'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
@@ -159,6 +165,7 @@ function runAppInit() {
 }
 
 function RootLayout() {
+	startStartupPhase('app.startup.root_mount')
 	const [isReady, setIsReady] = useState(false)
 
 	const { success: migrationsSuccess, error: migrationsError } =
@@ -186,7 +193,10 @@ function RootLayout() {
 	}, [])
 
 	useEffect(() => {
-		runAppInit()
+		endStartupPhase('app.startup.root_mount')
+		measureStartupPhase('app.startup.init', runAppInit)
+		// 首屏没能在超时前可交互（例如直接落地在非标签页）时，也把已经记下的阶段补记上去
+		runAfterStartup(flushStartupPhases)
 		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state, set-state-in-effect
 		setIsReady(true)
 	}, [])
@@ -248,6 +258,11 @@ function RootLayout() {
 				<Text>建议截图报错信息，发到项目 issues 反馈</Text>
 			</View>
 		)
+	}
+
+	// 在渲染路由前计时，子页面的 effect 可能先于本组件的 effect 报告可交互。
+	if (migrationsSuccess && isReady) {
+		startStartupPhase('app.startup.first_screen')
 	}
 
 	return (

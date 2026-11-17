@@ -10,6 +10,7 @@ import {
 	migrateSortKeysV2,
 	migrateSortKeysV3,
 } from '@/lib/db/migrations'
+import { endStartupPhase, startStartupPhase } from '@/lib/startupTrace'
 import log from '@/utils/log'
 
 const logger = log.extend('useFastMigrations')
@@ -65,6 +66,7 @@ export const useFastMigrations = (
 	useEffect(() => {
 		const runMigration = async () => {
 			dispatch({ type: 'migrating' })
+			startStartupPhase('app.startup.db_migrate')
 
 			try {
 				await migrate(db, migrations)
@@ -74,6 +76,7 @@ export const useFastMigrations = (
 				migratePlayHistory()
 				migrateIndependentAccountReset()
 				migratePlayHistoryToMs()
+				endStartupPhase('app.startup.db_migrate')
 				dispatch({ type: 'migrated', payload: true })
 			} catch (error) {
 				logger.error('database.migration.failed', {}, error)
