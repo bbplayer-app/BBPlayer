@@ -169,6 +169,8 @@ object PlaybackTracer {
         transaction.setData("track.id", mediaId)
         transaction.setData("playback.reason", reason)
         transaction.setData("bbplayer.source", "native")
+        // 先写 false，命中缓存的起播也能按这个属性筛选，而不是缺失
+        transaction.setData("playback.resolved_url", false)
 
         active = Active(transaction, mediaId, uri)
         nextPhase(checkNotNull(active), "playback.prepare")

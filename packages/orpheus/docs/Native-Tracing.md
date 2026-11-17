@@ -21,7 +21,7 @@ Orpheus 在原生侧记录两类 span：
 | 30 秒内没出声                        | `deadline_exceeded` | `playback.timed_out`               |
 
 - `playback.reason`：ExoPlayer 的切歌原因（`AUTO`、`SEEK`、`PLAYLIST_CHANGED`），按下播放时为 `PLAY`。单曲循环回到开头不算。
-- 等待期间如果为这首歌请求了地址，请求 span 会挂在它下面，并带上 `playback.resolved_url: true`。判断方式是取流的 URI 和当前等待的 URI 一致；预加载下一首、下载触发的请求仍然各自是独立的 transaction。
+- 等待期间如果为这首歌请求了地址，请求 span 会挂在它下面，并把 `playback.resolved_url` 设为 `true`（默认 `false`，表示直接用了缓存的地址）。它是布尔属性，在 Explore 里要写成 `tags[playback.resolved_url,boolean]:true` 才能筛选。判断方式是取流的 URI 和当前等待的 URI 一致；预加载下一首、下载触发的请求仍然各自是独立的 transaction。
 - 和 JS 侧是独立的 trace。JS 的 `playback.submit` 只记录校验、查歌单、调用原生这几步，它的 `playback.starting_track_id` 对应这里的 `track.id`。
 
 ### 起播阶段
