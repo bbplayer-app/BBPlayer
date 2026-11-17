@@ -355,8 +355,15 @@ export default function TestPage() {
 
 							expoDb.closeSync()
 
-							if (dbFile.exists) {
-								dbFile.delete()
+							// WAL 模式下旧的 -wal/-shm 会被套用到新文件上，必须一起删掉
+							for (const file of [
+								dbFile,
+								new File(dbDir, 'db.db-wal'),
+								new File(dbDir, 'db.db-shm'),
+							]) {
+								if (file.exists) {
+									file.delete()
+								}
 							}
 
 							pickedFile.copySync(dbFile)
