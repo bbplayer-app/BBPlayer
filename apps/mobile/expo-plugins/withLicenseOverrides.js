@@ -15,8 +15,8 @@ const APACHE_HASH = 'Apache-2.0'
  * AboutLibraries 会按 uniqueId 把 `android/config/libraries` 里的条目合并进自动收集的结果
  * （react-native-legal 也把 JS 依赖写在这个目录，不会清空它）。合并时许可证是追加而不是替换。
  *
- * - media3-ffmpeg-decoder：Jellyfin 的包在 POM 里标注 GPL-3.0（保留），其中分发的 FFmpeg 以 LGPL 2.1+ 发布，
- *   见 THIRD_PARTY_NOTICES.md
+ * - media3-ffmpeg-decoder：Jellyfin 的包在 POM 里标注 GPL-3.0（保留），其中分发的 FFmpeg 以 LGPL 2.1+ 发布。
+ *   LGPL 要求说明的来源、编译配置和可替换方式都写在说明里，显示在「关于 → 第三方组件许可」
  * - JitPack 上的包没有 POM 许可证信息，按源码仓库的许可证补上
  */
 const OVERRIDES = [
@@ -24,7 +24,7 @@ const OVERRIDES = [
 		uniqueId: 'org.jellyfin.media3:media3-ffmpeg-decoder',
 		name: 'FFmpeg（media3-ffmpeg-decoder）',
 		description:
-			'Jellyfin 用 AndroidX Media3 的 decoder_ffmpeg 模块和 FFmpeg 6.0.2 编译，只启用了音频解码器，未启用 GPL 与 nonfree 组件。FFmpeg 以 LGPL 2.1 或更高版本发布，Maven 包本身标注为 GPL-3.0',
+			'不走音频 offload 时用于在应用内解码 AAC、FLAC、MP3。由 Jellyfin 用 AndroidX Media3 的 decoder_ffmpeg 模块和 FFmpeg 6.0.2（提交 37c90f5）编译，只启用了 flac alac pcm_mulaw pcm_alaw mp3 aac ac3 eac3 dca mlp truehd 解码器，未启用 GPL 与 nonfree 组件。FFmpeg 以 LGPL 2.1 或更高版本发布，源码见 https://git.ffmpeg.org/ffmpeg.git；以动态库 libffmpegJNI.so 的形式链接，可以替换为自行编译的同名动态库。Maven 包本身标注为 GPL-3.0',
 		website: 'https://github.com/jellyfin/jellyfin-androidx-media',
 		licenses: [LGPL_HASH],
 	},

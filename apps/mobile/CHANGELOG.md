@@ -14,7 +14,7 @@
 - 适配平板与大屏：宽屏下用侧边导航栏替代底部标签栏，播放器、歌单详情、设置等页面改为左右分栏
 - 新增音频调试页（设置 → 通用 → 开发者 → 音频调试），可以查看音频格式、解码器、音频输出与 offload 状态
 - 性能页新增「启动图消失」耗时（仅冷启动）
-- 关于页新增「第三方组件许可」页面：构建时用 react-native-legal 和 AboutLibraries 汇总 JS 与原生依赖的许可证，FFmpeg 的 LGPL 说明见 `THIRD_PARTY_NOTICES.md`
+- 关于页新增「第三方组件许可」页面：构建时用 react-native-legal 和 AboutLibraries 汇总 JS 与原生依赖的许可证
 - 通过 Sentry metrics 上报应用启动耗时
 - 原生侧记录 `playback.wait_for_audio` 起播 trace（取地址、连 CDN、解码等阶段）与 B 站接口请求的 span
 - 冷启动 trace 拆出 `app.startup.*` 各阶段 span
