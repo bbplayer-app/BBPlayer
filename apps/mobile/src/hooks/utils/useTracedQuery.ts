@@ -220,8 +220,13 @@ export function tracedQueryOptions<
 /**
  * `useQueries` 本身不做任何包装，每一项都需要用 {@link tracedQueryOptions} 构造，
  * 这样才能保留 `useQueries` 对每一项结果类型的推断。
+ *
+ * 不能写成 `export const useTracedQueries = useQueries`：Babel 会把这种直接转导出编译成
+ * 带普通 `require()` 的 getter，Metro 按 `require` 条件解析到 react-query 的 CJS 构建，
+ * 与其他地方用到的 ESM 构建各自持有一份 QueryClientContext，导致 "No QueryClient set"。
  */
-export const useTracedQueries = useQueries
+export const useTracedQueries: typeof useQueries = (options, queryClient) =>
+	useQueries(options, queryClient)
 
 export function useTracedQuery<
 	TQueryFnData = unknown,
