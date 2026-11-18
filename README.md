@@ -4,8 +4,7 @@
 
 <h1>BBPlayer</h1>
 
-逐字歌词、封面取色的播放器、系统级歌词，<br />
-听长节目时还有记得进度、能跟着字幕读的播客模式。
+**B 站上想听的，值得一个专门的播放器。**
 
 [![Release](https://img.shields.io/github/v/release/bbplayer-app/BBPlayer?style=flat-square&label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=9db8ff)](https://github.com/bbplayer-app/BBPlayer/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/bbplayer-app/BBPlayer/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD%E9%87%8F&color=b5a6ff)](https://github.com/bbplayer-app/BBPlayer/releases)
