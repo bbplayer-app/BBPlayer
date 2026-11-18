@@ -1,4 +1,7 @@
 name: Build and Release
+run-name: ${{ inputs.buildType == 'cache-keepalive' && 'Gradle cache keepalive (release)' || 'Build and Release' }} (${{ github.ref_name }})
+
+# BBPlayer Gradle cache keepalive v1: this mode restores caches without building.
 
 on:
   workflow_dispatch:
@@ -13,6 +16,7 @@ on:
           - dev
           - preview
           - blank-test
+          - cache-keepalive
 
   pull_request:
     types: [closed]
@@ -55,7 +59,7 @@ jobs:
         run: |
           BUILD_TYPE="${{ steps.set-vars.outputs.buildType }}"
 
-          if [[ "$BUILD_TYPE" == "prod" ]]; then
+          if [[ "$BUILD_TYPE" == "prod" || "$BUILD_TYPE" == "cache-keepalive" ]]; then
             echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"},{\"arch\":\"armeabi-v7a\"},{\"arch\":\"x86_64\"},{\"arch\":\"x86\"}]}" >> $GITHUB_OUTPUT
             echo "profile=prod-ci" >> $GITHUB_OUTPUT
           elif [[ "$BUILD_TYPE" == "blank-test" ]]; then
@@ -70,6 +74,7 @@ jobs:
   build:
     needs: setup
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: ${{ inputs.buildType == 'cache-keepalive' && 5 || 360 }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
@@ -90,20 +95,23 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ needs.setup.outputs.commitSha }}
-          fetch-depth: 0 # 获取完整历史记录以计算 commit 数量
+          fetch-depth: ${{ inputs.buildType == 'cache-keepalive' && 1 || 0 }} # 正常构建需要完整历史计算 commit 数量
 
       - name: 🟢 Setup Node
+        if: env.BUILD_TYPE != 'cache-keepalive'
         uses: actions/setup-node@v6
         with:
           node-version: 26.x
 
       - uses: pnpm/setup@v2
+        if: env.BUILD_TYPE != 'cache-keepalive'
         with:
           # version: 11 -- use packageManager in package.json
           cache: true
           install: true
 
       - name: 🏗 Setup EAS
+        if: env.BUILD_TYPE != 'cache-keepalive'
         uses: expo/expo-github-action@v9
         with:
           eas-version: latest
@@ -114,11 +122,25 @@ jobs:
       # and task-output caches independently, including builds on master.
       - name: ♻️ Setup Gradle cache
         if: env.BUILD_TYPE != 'blank-test'
+        # Preserve normal fallbacks so a new ABI can reuse shared cache state.
         uses: gradle/actions/setup-gradle@v5
         with:
-          cache-read-only: false
+          cache-read-only: ${{ env.BUILD_TYPE == 'cache-keepalive' }}
+          cache-cleanup: on-success
+
+      - name: Configure Gradle cache retention
+        if: env.BUILD_TYPE != 'blank-test' && env.BUILD_TYPE != 'cache-keepalive'
+        run: |
+          GRADLE_INIT_DIR="${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          mkdir -p "$GRADLE_INIT_DIR"
+          cp .github/gradle/cache-retention.gradle "$GRADLE_INIT_DIR/bbplayer-cache-retention.gradle"
+
+      - name: Report cache keepalive
+        if: env.BUILD_TYPE == 'cache-keepalive'
+        run: bash .github/scripts/report-gradle-cache.sh
 
       - name: ⚙️ Prepare Variables
+        if: env.BUILD_TYPE != 'cache-keepalive'
         id: prepare-vars
         run: |
           APP_VERSION=$(node -p "require('./apps/mobile/package.json').version")
@@ -140,7 +162,7 @@ jobs:
           echo "artifactDir=${ARTIFACT_DIR}" >> $GITHUB_OUTPUT
 
       - name: 🚀 Build APK
-        if: env.BUILD_TYPE != 'blank-test'
+        if: env.BUILD_TYPE != 'blank-test' && env.BUILD_TYPE != 'cache-keepalive'
         run: cd apps/mobile && eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output="$APK_TEMP_PATH"
 
       - name: 🧪 Create Dummy APK
@@ -149,6 +171,7 @@ jobs:
           echo "Dummy APK $APK_NAME" > "$APK_TEMP_PATH"
 
       - name: 🚀 Upload Artifact
+        if: env.BUILD_TYPE != 'cache-keepalive'
         uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.prepare-vars.outputs.apkName }}

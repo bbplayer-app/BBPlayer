@@ -1,0 +1,9 @@
+// CI only: retain expensive generated artifacts and task outputs for 30 days.
+// Keep Gradle's automatic cleanup enabled. setup-gradle also prunes unused
+// restored files after normal builds; read-only keepalive jobs do neither.
+beforeSettings { settings ->
+    settings.caches {
+        createdResources.removeUnusedEntriesAfterDays = 30
+        buildCache.removeUnusedEntriesAfterDays = 30
+    }
+}

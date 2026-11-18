@@ -1,0 +1,61 @@
+name: Keep Gradle caches alive
+
+on:
+  schedule:
+    # Monday and Thursday, 10:17 China time. Leave margin before 7-day eviction.
+    - cron: '17 2 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: gradle-cache-keepalive
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Dispatch the ORIGINAL workflow on its original branch. setup-gradle keys
+      # include the workflow name, job ID and full matrix; changing those would
+      # touch a different cache. Branch protection also requires this per-ref run.
+      - name: Keep build caches alive on their own branches
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = 'BBPlayer Gradle cache keepalive v1';
+            const branches = [...new Set([context.payload.repository.default_branch, 'master'])];
+            const rows = [];
+            for (const ref of branches) {
+              for (const workflow of ['build.yml', 'build-test.yml']) {
+                let source;
+                try {
+                  const { data } = await github.rest.repos.getContent({
+                    ...context.repo, path: `.github/workflows/${workflow}`, ref,
+                  });
+                  source = Buffer.from(data.content, 'base64').toString('utf8');
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                }
+                if (!source?.includes(marker)) {
+                  core.notice(`Skipping ${workflow}@${ref}: merge keepalive support into this branch first.`);
+                  rows.push([ref, workflow, 'Skipped: keepalive support not deployed']);
+                  continue;
+                }
+                await github.rest.actions.createWorkflowDispatch({
+                  ...context.repo, workflow_id: workflow, ref,
+                  inputs: { buildType: 'cache-keepalive' },
+                });
+                rows.push([ref, workflow, 'Dispatched: restore-only, no build']);
+              }
+            }
+            await core.summary
+              .addHeading('Gradle cache keepalive')
+              .addTable([
+                [{ data: 'Branch', header: true }, { data: 'Workflow', header: true }, { data: 'Result', header: true }],
+                ...rows,
+              ])
+              .write();
