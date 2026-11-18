@@ -28,7 +28,7 @@ pnpm install
 - **EXPO_PUBLIC_SENTRY_DSN**: (可选) Sentry 事件上报地址。
   - 不设置时 Sentry 完全关闭：不会初始化 SDK，也不会上报任何事件。
   - 只在官方构建流程中通过 CI Secret 注入；fork 或自行构建无需配置，请勿复用官方 DSN。
-- **EXPO_PUBLIC_SENTRY_RELEASE**: (无需配置) 只由热更新 CI 设置，为每次热更新指定独立的 Sentry release。
+- **EXPO_PUBLIC_OTA_COMMIT**: (无需配置) 只由热更新 CI 设置，写入 Sentry 的 `app.ota.commit` 属性，用来区分热更新（Sentry release 固定跟原生包走）。
 
 ### 4. 构建基座 (Development Build)
 

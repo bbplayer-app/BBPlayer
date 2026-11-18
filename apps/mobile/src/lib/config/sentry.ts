@@ -30,10 +30,18 @@ const development = process.env.NODE_ENV === 'development'
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() ?? ''
 const hasSentryDsn = SENTRY_DSN.length > 0
 
-// 只有热更新包会在 expo export 时内联它（见 .github/workflows/update.yml），让每次热更新
-// 有独立的 release。内嵌 bundle 没有这个值，回落到原生 SDK 的 `包名@版本+versionCode`。
+// release 固定为原生包的 `包名@版本+versionCode`（与原生 SDK 默认值一致），热更新不改 release，
+// 改用 OTA_ATTRIBUTES 区分。必须在 JS 侧显式传：不传的话只走 JS 的 metrics 不会带 release。
+// 热更新的 source map 按 debug ID 匹配，多个热更新共用一个 release 不会对错 source map。
 const SENTRY_RELEASE =
-	process.env.EXPO_PUBLIC_SENTRY_RELEASE?.trim() || undefined
+	identifier &&
+	Application.nativeApplicationVersion &&
+	Application.nativeBuildVersion
+		? `${identifier}@${Application.nativeApplicationVersion}+${Application.nativeBuildVersion}`
+		: undefined
+
+// 只有热更新包会在 expo export 时内联它（见 .github/workflows/update.yml），内嵌 bundle 没有
+const OTA_COMMIT = process.env.EXPO_PUBLIC_OTA_COMMIT?.trim() || 'embedded'
 
 // 仅在官方应用包名上启用 Sentry，其他标识（Expo Go、第三方套壳等）一律忽略
 // 忽略最后一个字母，允许用户改包名共存（其实是我有时候要测试）
@@ -83,14 +91,25 @@ const getEnv = () => {
 	return 'production'
 }
 
-export type ExpoLaunchSource = 'emergency' | 'embedded' | 'ota'
+type ExpoLaunchSource = 'emergency' | 'embedded' | 'ota'
 
-export function getExpoLaunchSource(): ExpoLaunchSource {
+function getExpoLaunchSource(): ExpoLaunchSource {
 	if (Updates.isEmergencyLaunch) {
 		return 'emergency'
 	}
 
 	return Updates.isEmbeddedLaunch ? 'embedded' : 'ota'
+}
+
+// 热更新相关属性统一用 app.ota.* 命名，同时设为全局 scope 的 tag（errors / transactions）
+// 和 attribute（logs / metrics），两者都会同步到原生 SDK；JS 子 span 在 beforeSendTransaction 里补上。
+// SDK 自带的 expo.updates.* tag 只加在 JS event 上，原生 event 没有，所以不依赖它
+const OTA_ATTRIBUTES = {
+	'app.ota.commit': OTA_COMMIT,
+	'app.ota.update_id': Updates.updateId ?? 'none',
+	'app.ota.launch_source': getExpoLaunchSource(),
+	'app.ota.channel': configuredChannel(),
+	'app.ota.runtime_version': Updates.runtimeVersion ?? 'unknown',
 }
 
 // 与 Sentry.init 的 enabled 口径保持一致，并读取当前设置：
@@ -154,7 +173,6 @@ export function initializeSentry() {
 
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
-		// 同时传给原生 SDK，热更新后的原生崩溃和会话也归到这个 release
 		release: SENTRY_RELEASE,
 		debug: false,
 		tracesSampleRate: TRACES_SAMPLE_RATE,
@@ -247,7 +265,14 @@ export function initializeSentry() {
 			return sentryLog
 		},
 		beforeSendTransaction(event) {
-			return isSentryTelemetryEnabled() ? event : null
+			if (!isSentryTelemetryEnabled()) return null
+
+			// transaction 上的 tag 不会落到子 span，按热更新筛 span 需要每个子 span 自己带上
+			for (const span of event.spans ?? []) {
+				span.data = { ...span.data, ...OTA_ATTRIBUTES }
+			}
+
+			return event
 		},
 		beforeSend(event, hint) {
 			// 用户可能在本次会话中途关闭数据采集
@@ -279,11 +304,8 @@ export function initializeSentry() {
 
 	const scope = Sentry.getGlobalScope()
 
-	scope.setTag('expo-update-id', Updates.updateId ?? 'none')
-	scope.setTag('expo-is-embedded-update', String(Updates.isEmbeddedLaunch))
-	scope.setTag('expo-channel', configuredChannel())
-	scope.setTag('expo-runtime-version', Updates.runtimeVersion ?? 'unknown')
-	scope.setTag('expo-launch-source', getExpoLaunchSource())
+	scope.setTags(OTA_ATTRIBUTES)
+	scope.setAttributes(OTA_ATTRIBUTES)
 
 	// 设置全局错误处理器，捕获未被处理的 JS 错误
 	if (!development) {

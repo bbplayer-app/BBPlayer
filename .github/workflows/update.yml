@@ -29,8 +29,8 @@ jobs:
           # runtimeVersion 用 appVersion 策略，热更新只会下发给同一版本号的原生包
           APP_VERSION=$(node -p "require('./apps/mobile/package.json').version")
           SHORT_SHA=$(git rev-parse --short=7 HEAD)
-          # 同一个 runtimeVersion 可能装在多个原生构建上，所以不带 versionCode，用 commit 区分
-          echo "SENTRY_RELEASE=com.roitium.bbplayer@${APP_VERSION}+ota.${SHORT_SHA}" >> $GITHUB_ENV
+          # Sentry release 固定跟原生包走，热更新用 app.ota.commit 属性区分
+          echo "OTA_COMMIT=${SHORT_SHA}" >> $GITHUB_ENV
           echo "OTA_TAG=ota-v${APP_VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "UPDATE_MESSAGE=$(git log -1 --format=%s)" >> $GITHUB_ENV
@@ -42,7 +42,7 @@ jobs:
           # expo export 会把 EXPO_PUBLIC_* 内联进 JS bundle，热更新包也必须带上
           # DSN，否则热更新后的应用会静默停止上报。
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-          EXPO_PUBLIC_SENTRY_RELEASE: ${{ env.SENTRY_RELEASE }}
+          EXPO_PUBLIC_OTA_COMMIT: ${{ env.OTA_COMMIT }}
         run: |
           cd apps/mobile
           pnpm hot-update publish \
@@ -54,15 +54,24 @@ jobs:
         run: cd apps/mobile && npx sentry-expo-upload-sourcemaps dist
 
       # 以下两步只做记录，失败不影响已经发布的热更新
-      - name: 🔗 Create Sentry release
+      - name: 🔗 Associate commits with Sentry release
         continue-on-error: true
         run: |
-          echo "Sentry release: $SENTRY_RELEASE"
+          # Sentry release 固定跟原生包走（见 apps/mobile/src/lib/config/sentry.ts），热更新不再单独建 release。
+          # 对同一版本号的原生 release 重新 set-commits，commit 范围延到这次热更新的 HEAD，
+          # suspect commits 和 release 页面的 commit 列表才能覆盖热更新带来的改动。
           # 不能用 npx：装完依赖后 npm 会把 pnpm 布局里的 @sentry/cli 当成已安装，
           # 跳过下载，但根目录 .bin 里并没有 sentry-cli，结果报 command not found
-          pnpm dlx @sentry/cli releases new "$SENTRY_RELEASE"
-          pnpm dlx @sentry/cli releases set-commits "$SENTRY_RELEASE" --auto --ignore-missing
-          pnpm dlx @sentry/cli releases finalize "$SENTRY_RELEASE"
+          RELEASES=$(pnpm dlx @sentry/cli releases list --raw \
+            | grep -E "^com\.roitium\.bbplayer@${APP_VERSION//./\\.}\+[0-9]+$" || true)
+          if [ -z "$RELEASES" ]; then
+            echo "No native Sentry release found for ${APP_VERSION}, skipping"
+            exit 0
+          fi
+          for RELEASE in $RELEASES; do
+            echo "Sentry release: $RELEASE"
+            pnpm dlx @sentry/cli releases set-commits "$RELEASE" --auto --ignore-missing
+          done
 
       - name: 🎁 Create GitHub release
         continue-on-error: true
@@ -78,5 +87,5 @@ jobs:
             --title "Hot update v${APP_VERSION} (${GITHUB_SHA::7})" \
             --prerelease \
             --latest=false \
-            --notes "$(printf '%s\n\n- Channel: production\n- Runtime version: %s\n- Commit: %s\n- Sentry release: `%s`' \
-              "$UPDATE_MESSAGE" "$APP_VERSION" "$GITHUB_SHA" "$SENTRY_RELEASE")"
+            --notes "$(printf '%s\n\n- Channel: production\n- Runtime version: %s\n- Commit: %s\n- Sentry: `app.ota.commit:%s`' \
+              "$UPDATE_MESSAGE" "$APP_VERSION" "$GITHUB_SHA" "$OTA_COMMIT")"

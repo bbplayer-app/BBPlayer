@@ -3,10 +3,7 @@ import * as Sentry from '@sentry/react-native'
 import AppMetrics from 'expo-app-metrics'
 import { startProfiling, stopProfiling } from 'react-native-release-profiler'
 
-import {
-	getExpoLaunchSource,
-	isSentryTelemetryEnabled,
-} from '@/lib/config/sentry'
+import { isSentryTelemetryEnabled } from '@/lib/config/sentry'
 import {
 	STARTUP_PROFILING_KEY,
 	startupProfilingStarted,
@@ -139,14 +136,13 @@ function persistMetrics() {
 function reportStartupMetrics() {
 	if (!isSentryTelemetryEnabled()) return
 
-	const attributes = { launch_source: getExpoLaunchSource() }
+	// 启动来源由全局 scope 的 app.ota.launch_source 带上，见 lib/config/sentry.ts
 	const launchTime = metrics.coldLaunchTime ?? metrics.warmLaunchTime
 
 	if (launchTime !== null) {
 		Sentry.metrics.distribution('app.startup.duration', launchTime, {
 			unit: 'millisecond',
 			attributes: {
-				...attributes,
 				launch_type: metrics.coldLaunchTime !== null ? 'cold' : 'warm',
 			},
 		})
@@ -156,7 +152,7 @@ function reportStartupMetrics() {
 		Sentry.metrics.distribution(
 			'app.startup.bundle_load',
 			metrics.bundleLoadTime,
-			{ unit: 'millisecond', attributes },
+			{ unit: 'millisecond' },
 		)
 	}
 
@@ -164,7 +160,7 @@ function reportStartupMetrics() {
 		Sentry.metrics.distribution(
 			'app.startup.time_to_first_render',
 			metrics.timeToFirstRender,
-			{ unit: 'millisecond', attributes },
+			{ unit: 'millisecond' },
 		)
 	}
 
@@ -172,7 +168,7 @@ function reportStartupMetrics() {
 		Sentry.metrics.distribution(
 			'app.startup.time_to_interactive',
 			metrics.timeToInteractive,
-			{ unit: 'millisecond', attributes },
+			{ unit: 'millisecond' },
 		)
 	}
 
@@ -180,7 +176,7 @@ function reportStartupMetrics() {
 		Sentry.metrics.distribution(
 			'app.startup.splash_hidden',
 			metrics.splashHiddenTime,
-			{ unit: 'millisecond', attributes },
+			{ unit: 'millisecond' },
 		)
 	}
 }
