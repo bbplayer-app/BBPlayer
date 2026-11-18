@@ -1,0 +1,305 @@
+---
+import {
+	ArrowRight,
+	ArrowUpRight,
+	CloudUpload,
+	Download,
+	Flame,
+	Gauge,
+	MessageSquareText,
+	Mic,
+	Palette,
+	Users,
+} from '@lucide/astro'
+import { Image } from 'astro:assets'
+
+import GithubIcon from '../components/GithubIcon.astro'
+import icon from '../assets/icon.png'
+import library from '../assets/landing/library.webp'
+import lyrics from '../assets/landing/lyrics.webp'
+import player from '../assets/landing/player.webp'
+import playlist from '../assets/landing/playlist.webp'
+import search from '../assets/landing/search.webp'
+import '../styles/landing.css'
+
+const REPO = 'https://github.com/bbplayer-app/BBPlayer'
+const RELEASES = `${REPO}/releases/latest`
+
+const features = [
+	{
+		index: '01',
+		label: 'Search',
+		title: '粘贴链接，直接开听',
+		body: '关键词、BV / AV 号、b23.tv 短链和完整视频链接都能在同一个搜索框里识别。多 P 视频按分集展开，不必再翻视频页。',
+		points: ['BV / AV / b23.tv 自动解析', '相关 UP 主与视频聚合', '分 P 展开为独立曲目'],
+		image: search,
+		alt: 'BBPlayer 搜索结果页，显示相关 UP 主与视频列表',
+		href: '/guides/search/',
+	},
+	{
+		index: '02',
+		label: 'Library',
+		title: '收藏夹，变成歌单',
+		body: '把 Bilibili 收藏夹、订阅合集和稍后再看同步到本地，或从零开始整理自己的歌单。网易云音乐与 QQ 音乐的歌单也能匹配导入。',
+		points: ['收藏夹 / 合集 / 稍后再看同步', '网易云、QQ 音乐歌单导入', '整单下载，离线收听'],
+		image: playlist,
+		alt: 'BBPlayer 歌单详情页，显示封面、同步与下载按钮和曲目列表',
+		href: '/guides/playlist/',
+	},
+	{
+		index: '03',
+		label: 'Lyrics',
+		title: '歌词，逐字对齐',
+		body: '自动匹配多个歌词源，支持逐字进度、翻译与罗马音，也可以手动编辑并校准时间轴。Android 上还能显示为桌面、状态栏和车载歌词。',
+		points: ['逐字 · 翻译 · 罗马音', '基于 LRC 的 SPL 歌词格式', '桌面 / 状态栏 / 车载歌词'],
+		image: lyrics,
+		alt: 'BBPlayer 歌词页，显示日文歌词与中文翻译',
+		href: '/guides/lyrics/',
+	},
+]
+
+const details = [
+	{ icon: Mic, title: '播客模式', body: '断点续播、倍速、章节跳转与 B 站字幕，适合访谈与长音频。', href: '/guides/podcast/' },
+	{ icon: Download, title: '下载与导出', body: '缓存单曲或整个歌单，Android 可导出带封面和歌词的 m4a。', href: '/guides/download/' },
+	{ icon: Users, title: '共享歌单', body: '一条链接邀请订阅或协同编辑，独立账号，无需 B 站 Cookie。', href: '/guides/shared-playlist/' },
+	{ icon: Flame, title: '听歌记录', body: '本地播放热力图、每日历史和曲目排行，数据只在你的设备上。', href: '/guides/leaderboard/' },
+	{ icon: CloudUpload, title: 'WebDAV 备份', body: '导出 .bbplayer 备份文件，或直接备份到自己的 WebDAV 服务器。', href: '/guides/settings/' },
+	{ icon: MessageSquareText, title: '评论区', body: '在播放器里浏览当前视频的评论与回复，不用切回 B 站。', href: '/guides/comments/' },
+	{ icon: Gauge, title: 'CDN 测速', body: '测速并选择首选 Bilibili CDN 节点，缓冲少一点。', href: '/guides/settings/' },
+	{ icon: Palette, title: 'Material Design 3', body: '从封面提取主题色，播放器背景随歌曲变化。', href: '/guides/settings/' },
+]
+
+const stack = [
+	{ name: '@bbplayer/orpheus', desc: '基于 Media3 / ExoPlayer 的音频引擎，原生处理 B 站音频流，双层缓存', tag: 'Kotlin' },
+	{ name: '@bbplayer/splash', desc: 'LRC / SPL 歌词解析，并把 YRC 等格式转换为逐字歌词', tag: 'TypeScript' },
+	{ name: '@bbplayer/image-theme-colors', desc: '零拷贝读取 ImageRef，用 Android Palette 提取封面主题色', tag: 'Kotlin' },
+	{ name: 'expo-wavy-slider', desc: 'Jetpack Compose 实现的 Material 3 波浪进度条', tag: 'Compose' },
+]
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="dark" />
+		<meta name="theme-color" content="#08090c" />
+		<title>BBPlayer · 开源的 Bilibili 音频播放器</title>
+		<meta name="description" content="BBPlayer 是一个开源的 Bilibili 音频播放器：链接解析、收藏夹同步、逐字歌词、离线缓存与播客模式。" />
+		<meta property="og:title" content="BBPlayer · 开源的 Bilibili 音频播放器" />
+		<meta property="og:description" content="把 Bilibili 当作你的音乐库。搜索、歌单、逐字歌词、离线缓存与播客模式。" />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://bbplayer.roitium.com/" />
+		<link rel="icon" href="/favicon.ico" />
+	</head>
+	<body class="landing">
+		<header class="nav">
+			<div class="nav-inner">
+				<a href="/" class="brand">
+					<Image src={icon} alt="" width={28} height={28} class="brand-icon" />
+					<span>BBPlayer</span>
+				</a>
+				<nav class="nav-links" aria-label="主导航">
+					<a href="/guides/">指南</a>
+					<a href="/SPL/">歌词规范</a>
+					<a href={REPO} class="nav-github" aria-label="GitHub">
+						<GithubIcon size={16} />
+						<span>GitHub</span>
+					</a>
+				</nav>
+				<a href={RELEASES} class="btn btn-sm btn-primary">下载</a>
+			</div>
+		</header>
+
+		<main>
+			<section class="hero">
+				<div class="hero-grid" aria-hidden="true"></div>
+				<div class="hero-glow" aria-hidden="true"></div>
+
+				<div class="container hero-copy">
+					<a href={RELEASES} class="pill">
+						<span class="pill-dot"></span>
+						<span class="mono">v2.8</span>
+						<span class="pill-sep"></span>
+						<span>播客字幕、更低的后台功耗</span>
+						<ArrowRight size={14} />
+					</a>
+					<h1>
+						把 Bilibili<br />
+						当作你的<span class="accent">音乐库</span>。
+					</h1>
+					<p class="lede">
+						BBPlayer 是一个开源的 Bilibili 音频播放器。只保留声音：搜索、歌单、逐字歌词、离线缓存和播客模式，界面里没有多余的东西。
+					</p>
+					<div class="cta">
+						<a href={RELEASES} class="btn btn-primary">
+							<Download size={16} />
+							下载 Android 版
+						</a>
+						<a href="/guides/" class="btn btn-ghost">
+							阅读指南
+							<ArrowRight size={16} />
+						</a>
+					</div>
+					<p class="meta mono">MIT License · React Native + Expo · Media3</p>
+				</div>
+
+				<div class="container hero-stage">
+					<figure class="phone phone-side phone-left">
+						<Image src={library} alt="BBPlayer 音乐库页，显示本地播放列表" widths={[360, 540]} sizes="(max-width: 720px) 0px, 260px" loading="eager" />
+					</figure>
+					<figure class="phone phone-main">
+						<Image src={player} alt="BBPlayer 播放器，显示圆形封面与波浪进度条" widths={[400, 640]} sizes="(max-width: 720px) 72vw, 300px" loading="eager" fetchpriority="high" />
+					</figure>
+					<figure class="phone phone-side phone-right">
+						<Image src={lyrics} alt="BBPlayer 歌词页，显示逐行歌词与翻译" widths={[360, 540]} sizes="(max-width: 720px) 0px, 260px" loading="eager" />
+					</figure>
+				</div>
+			</section>
+
+			<section class="strip">
+				<div class="container strip-grid">
+					<div>
+						<span class="strip-k mono">INPUT</span>
+						<span class="strip-v">BV · AV · b23.tv · 链接</span>
+					</div>
+					<div>
+						<span class="strip-k mono">LYRICS</span>
+						<span class="strip-v">逐字 · 翻译 · 罗马音</span>
+					</div>
+					<div>
+						<span class="strip-k mono">OFFLINE</span>
+						<span class="strip-v">缓存 · m4a 导出</span>
+					</div>
+					<div>
+						<span class="strip-k mono">SOURCE</span>
+						<span class="strip-v">MIT 开源</span>
+					</div>
+				</div>
+			</section>
+
+			<section class="features" id="features">
+				<div class="container">
+					{features.map((f, i) => (
+						<article class:list={['feature', { 'feature-flip': i % 2 === 1 }]}>
+							<div class="feature-copy">
+								<p class="eyebrow mono">
+									<span>{f.index}</span>
+									<span class="eyebrow-line"></span>
+									<span>{f.label}</span>
+								</p>
+								<h2>{f.title}</h2>
+								<p class="feature-body">{f.body}</p>
+								<ul class="points">
+									{f.points.map((p) => <li>{p}</li>)}
+								</ul>
+								<a href={f.href} class="link">
+									了解更多
+									<ArrowRight size={14} />
+								</a>
+							</div>
+							<div class="feature-visual">
+								<div class="visual-frame">
+									<figure class="phone">
+										<Image src={f.image} alt={f.alt} widths={[400, 640]} sizes="(max-width: 720px) 72vw, 300px" />
+									</figure>
+								</div>
+							</div>
+						</article>
+					))}
+				</div>
+			</section>
+
+			<section class="details">
+				<div class="container">
+					<div class="section-head">
+						<p class="eyebrow mono">
+							<span>04</span>
+							<span class="eyebrow-line"></span>
+							<span>Details</span>
+						</p>
+						<h2>藏在细节里的部分</h2>
+						<p class="section-sub">长音频、离线、备份和协作。用得越久，越能感觉到。</p>
+					</div>
+					<div class="bento">
+						{details.map((d) => (
+							<a href={d.href} class="cell">
+								<d.icon size={18} class="cell-icon" />
+								<h3>{d.title}</h3>
+								<p>{d.body}</p>
+							</a>
+						))}
+					</div>
+				</div>
+			</section>
+
+			<section class="engine">
+				<div class="container engine-grid">
+					<div class="engine-copy">
+						<p class="eyebrow mono">
+							<span>05</span>
+							<span class="eyebrow-line"></span>
+							<span>Engineering</span>
+						</p>
+						<h2>不止是一层壳</h2>
+						<p class="section-sub">
+							播放、歌词和取色都由自己维护的原生模块完成。整个项目是一个 monorepo，代码全部公开，欢迎提交 Issue 或 Pull Request。
+						</p>
+						<a href={REPO} class="btn btn-ghost">
+							<GithubIcon size={16} />
+							bbplayer-app/BBPlayer
+							<ArrowUpRight size={16} />
+						</a>
+					</div>
+					<div class="terminal" role="list">
+						<div class="terminal-bar" aria-hidden="true">
+							<span></span><span></span><span></span>
+							<code class="mono">packages/</code>
+						</div>
+						{stack.map((s) => (
+							<div class="pkg" role="listitem">
+								<div class="pkg-head">
+									<code class="mono">{s.name}</code>
+									<span class="pkg-tag mono">{s.tag}</span>
+								</div>
+								<p>{s.desc}</p>
+							</div>
+						))}
+					</div>
+				</div>
+			</section>
+
+			<section class="final">
+				<div class="hero-glow final-glow" aria-hidden="true"></div>
+				<div class="container final-inner">
+					<Image src={icon} alt="" width={64} height={64} class="final-icon" />
+					<h2>安静地听。</h2>
+					<p class="section-sub">从 GitHub Releases 下载 APK，大多数设备选择 arm64-v8a。</p>
+					<div class="cta">
+						<a href={RELEASES} class="btn btn-primary">
+							<Download size={16} />
+							下载最新版本
+						</a>
+						<a href="/guides/install/" class="btn btn-ghost">安装说明</a>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<footer class="footer">
+			<div class="container footer-inner">
+				<div class="footer-brand">
+					<span>BBPlayer</span>
+					<span class="mono dim">MIT · 由 Roitium 与贡献者构建</span>
+				</div>
+				<nav class="footer-links" aria-label="页脚导航">
+					<a href="/guides/">指南</a>
+					<a href="/SPL/">SPL 歌词规范</a>
+					<a href={`${REPO}/issues`}>问题反馈</a>
+					<a href={REPO}>GitHub</a>
+				</nav>
+			</div>
+			<p class="container disclaimer dim">BBPlayer 是第三方开源项目，与哔哩哔哩没有关联。音视频内容版权归原作者所有。</p>
+		</footer>
+	</body>
+</html>
