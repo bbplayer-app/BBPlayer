@@ -299,7 +299,7 @@ function AudienceContent({ data, days }: { data: Audience; days: number }) {
 				data={data}
 				latest={latest}
 			/>
-			<div className='grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]'>
+			<div className='grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]'>
 				<NewUsersCard data={data} />
 				<VersionsCard
 					activeUsers={current.active_users}
@@ -327,7 +327,7 @@ function ActivityCard({
 					ending on each day.
 				</CardDescription>
 			</CardHeader>
-			<CardContent className='grid gap-6 lg:grid-cols-[minmax(0,1fr)_11rem]'>
+			<CardContent className='grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_11rem]'>
 				<ChartContainer
 					className='h-72 w-full'
 					config={activityChart}
@@ -380,7 +380,7 @@ function ActivityCard({
 								/>
 								{activityChart[key].label.toUpperCase()}
 							</dt>
-							<dd className='mt-1 text-2xl font-semibold tabular-nums'>
+							<dd className='mt-1 text-xl font-semibold tabular-nums sm:text-2xl'>
 								{number(latest[key])}
 							</dd>
 						</div>

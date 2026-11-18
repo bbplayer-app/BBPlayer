@@ -306,7 +306,7 @@ function FleetRowView({ row, total }: { row: FleetRow; total: number }) {
 	const reach = ratio(row.head_users, row.active_users)
 
 	return (
-		<div className='grid gap-3 px-6 py-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)_5rem] md:items-center md:gap-4'>
+		<div className='grid grid-cols-1 gap-3 px-6 py-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)_5rem] md:items-center md:gap-4'>
 			<div className='min-w-0'>
 				<div className='flex items-baseline gap-2'>
 					<span className='font-semibold'>
