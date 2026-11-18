@@ -47,6 +47,14 @@
 	margin: 0;
 }
 
+:where(.landing) :is(h1, h2, h3, .lede, .section-sub) {
+	text-wrap: balance;
+}
+
+:where(.landing) p {
+	text-wrap: pretty;
+}
+
 :where(.landing) img {
 	display: block;
 	max-width: 100%;
@@ -324,49 +332,41 @@
 	align-items: flex-start;
 	gap: 0;
 	margin-top: 72px;
-	height: 560px;
+	height: 600px;
 	mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 	-webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
 
-/* ── Phone frame ─────────────────────────────────────────────────────── */
-.phone {
-	position: relative;
-	padding: 7px;
-	border-radius: 34px;
-	background: linear-gradient(180deg, #1d2028, #121419);
-	box-shadow:
-		0 0 0 1px rgba(255, 255, 255, 0.08),
-		inset 0 1px 0 rgba(255, 255, 255, 0.08),
-		0 40px 80px -20px rgba(0, 0, 0, 0.7),
-		0 20px 40px -20px rgba(70, 90, 180, 0.25);
+/* ── Device shots ───────────────────────────────────────────────────── */
+/* 截图本身带有设备外壳和透明边距，这里只负责尺寸与投影 */
+.shot {
+	flex: none;
+	filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.55))
+		drop-shadow(0 16px 40px rgba(70, 90, 180, 0.18));
 }
 
-.phone img {
+.shot img {
 	width: 100%;
-	border-radius: 27px;
 }
 
-.phone-main {
+.shot-main {
 	z-index: 2;
-	width: 300px;
-	flex: none;
+	width: 320px;
 }
 
-.phone-side {
+.shot-side {
 	z-index: 1;
-	width: 260px;
-	flex: none;
-	margin-top: 64px;
-	opacity: 0.55;
+	width: 270px;
+	margin-top: 72px;
+	opacity: 0.5;
 }
 
-.phone-left {
-	margin-right: -28px;
+.shot-left {
+	margin-right: -36px;
 }
 
-.phone-right {
-	margin-left: -28px;
+.shot-right {
+	margin-left: -36px;
 }
 
 /* ── Spec strip ──────────────────────────────────────────────────────── */
@@ -468,7 +468,7 @@
 }
 
 .feature-copy {
-	max-width: 440px;
+	max-width: 480px;
 }
 
 .feature-body {
@@ -557,8 +557,57 @@
 	pointer-events: none;
 }
 
-.visual-frame .phone {
+.visual-frame .shot {
 	width: 280px;
+}
+
+/* ── Podcast ─────────────────────────────────────────────────────────── */
+.podcast {
+	padding: 120px 0;
+	border-top: 1px solid var(--border);
+}
+
+.section-head-center {
+	margin-right: auto;
+	margin-left: auto;
+	text-align: center;
+}
+
+.section-head-center .eyebrow {
+	justify-content: center;
+}
+
+.podcast-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 32px;
+}
+
+.podcast-item {
+	display: flex;
+	flex-direction: column;
+	gap: 28px;
+}
+
+.podcast-item .visual-frame {
+	max-width: none;
+}
+
+.podcast-item h3 {
+	font-size: 18px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.podcast-item p {
+	margin-top: 8px;
+	font-size: 15px;
+	color: var(--text-2);
+}
+
+.center-link {
+	display: flex;
+	justify-content: center;
 }
 
 /* ── Details bento ───────────────────────────────────────────────────── */
@@ -834,14 +883,20 @@
 		margin-top: 56px;
 	}
 
-	.phone-side {
+	.shot-side {
 		display: none;
 	}
 
-	.phone-main {
-		width: min(72vw, 300px);
+	.shot-main {
+		width: min(74vw, 320px);
 	}
 
+	.podcast-grid {
+		grid-template-columns: 1fr;
+		gap: 56px;
+	}
+
+	.podcast,
 	.details,
 	.engine {
 		padding: 88px 0;
@@ -855,8 +910,8 @@
 		padding: 32px 0;
 	}
 
-	.visual-frame .phone {
-		width: min(64vw, 260px);
+	.visual-frame .shot {
+		width: min(66vw, 260px);
 	}
 }
 
