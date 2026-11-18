@@ -1,158 +1,168 @@
 <div align="center">
-<img src="./apps/mobile/assets/images/icon_large.png" alt="logo" width="50" />
-<h1>BBPlayer</h1>
 
-一款使用 React Native 构建的本地优先的 Bilibili 音频播放器。更轻量 & 舒服的听歌体验，远离臃肿卡顿的 Bilibili 客户端。
+<img src="./assets/readme/banner.jpg" alt="BBPlayer：B 站上想听的，值得一个专门的播放器" />
 
-[![GitHub Release](https://img.shields.io/github/v/release/yanyao2333/bbplayer?style=flat-square)](https://github.com/bbplayer-app/bbplayer/releases)
-![React Native](https://img.shields.io/badge/React%20Native-20232A?style=flat-square&logo=react&logoColor=sky)
-[![Website](https://img.shields.io/badge/Website-bbplayer.roitium.com-blue?style=flat-square)](https://bbplayer.roitium.com)
+<h3>开源的 Bilibili 音频播放器</h3>
+
+逐字歌词、封面取色的播放器、系统级歌词，<br />
+听长节目时还有记得进度、能跟着字幕读的播客模式。
+
+[![Release](https://img.shields.io/github/v/release/bbplayer-app/BBPlayer?style=flat-square&label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=9db8ff)](https://github.com/bbplayer-app/BBPlayer/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/bbplayer-app/BBPlayer/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD%E9%87%8F&color=b5a6ff)](https://github.com/bbplayer-app/BBPlayer/releases)
+[![Android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white)](#下载)
+[![License](https://img.shields.io/github/license/bbplayer-app/BBPlayer?style=flat-square&label=%E8%AE%B8%E5%8F%AF&color=lightgrey)](./LICENSE)
+[![Stars](https://img.shields.io/github/stars/bbplayer-app/BBPlayer?style=flat-square&label=Stars&color=ffcb47)](https://github.com/bbplayer-app/BBPlayer/stargazers)
+
+[![下载 APK](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD%20APK-GitHub%20Releases-24292f?style=for-the-badge&logo=github&logoColor=white)](https://github.com/bbplayer-app/BBPlayer/releases/latest)
+[![使用指南](https://img.shields.io/badge/%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97-bbplayer.roitium.com-4c6ef5?style=for-the-badge&logo=readthedocs&logoColor=white)](https://bbplayer.roitium.com/guides/)
+
+[官网](https://bbplayer.roitium.com) · [使用指南](https://bbplayer.roitium.com/guides/) · [更新日志](https://github.com/bbplayer-app/BBPlayer/releases) · [问题反馈](https://github.com/bbplayer-app/BBPlayer/issues)
 
 </div>
 
----
+## 截图
 
-**[前往官网查看更多详情和上手指南 ➔](https://bbplayer.roitium.com)**
+<p align="center">
+  <img src="./assets/readme/player.png" alt="播放器：封面周围的实时音频频谱与波浪进度条" width="16%" />
+  <img src="./assets/readme/lyrics.png" alt="逐字歌词：日文歌词逐字高亮，下方显示中文翻译" width="16%" />
+  <img src="./assets/readme/library.png" alt="音乐库：本地歌单与 B 站收藏夹、合集、分 P" width="16%" />
+  <img src="./assets/readme/podcast.png" alt="播客模式：章节、快退快进、倍速与定时关闭" width="16%" />
+  <img src="./assets/readme/subtitles.png" alt="播客字幕：B 站字幕随播放定位并高亮当前句子" width="16%" />
+  <img src="./assets/readme/profile.png" alt="我的：累计听歌时长、完整播放次数与听歌热力图" width="16%" />
+</p>
 
-## 界面预览
+<p align="center"><sub>播放器 · 逐字歌词 · 音乐库 · 播客 · 字幕阅读 · 听歌记录</sub></p>
 
-<table>
-  <tr>
-    <th align="center" width="50%">首页</th>
-    <th align="center" width="50%">音乐库</th>
-  </tr>
-  <tr>
-    <td align="center"><img src="./assets/screenshots/home.jpg" alt="首页：搜索入口、最近搜索与底部播放栏" width="280" /></td>
-    <td align="center"><img src="./assets/screenshots/library.jpg" alt="音乐库：播放列表、收藏夹、合集和分 P 分类" width="280" /></td>
-  </tr>
-  <tr>
-    <td align="center">搜索入口 · 最近搜索 · 快捷播放</td>
-    <td align="center">本地歌单 · B 站收藏夹 · 合集管理</td>
-  </tr>
-  <tr>
-    <th align="center">我的</th>
-    <th align="center">搜索结果</th>
-  </tr>
-  <tr>
-    <td align="center"><img src="./assets/screenshots/profile.jpg" alt="我的：账号管理、累计听歌时长与听歌记录热力图" width="280" /></td>
-    <td align="center"><img src="./assets/screenshots/search.jpg" alt="搜索结果：相关 UP 主与视频列表" width="280" /></td>
-  </tr>
-  <tr>
-    <td align="center">账号管理 · 听歌统计 · 历史热力图</td>
-    <td align="center">发现音乐 · 查找 UP 主 · 快速播放</td>
-  </tr>
-  <tr>
-    <th align="center">音乐播放</th>
-    <th align="center">逐字歌词</th>
-  </tr>
-  <tr>
-    <td align="center"><img src="./assets/screenshots/music-player.jpg" alt="音乐播放器：封面取色背景、唱片封面与波形进度条" width="280" /></td>
-    <td align="center"><img src="./assets/screenshots/lyrics.jpg" alt="逐字歌词：日文歌词进度高亮与中文翻译对照" width="280" /></td>
-  </tr>
-  <tr>
-    <td align="center">封面取色背景 · 波形进度条</td>
-    <td align="center">逐字高亮 · 翻译对照 · 自动跟随</td>
-  </tr>
-  <tr>
-    <th align="center">播客模式</th>
-    <th align="center">字幕阅读与搜索</th>
-  </tr>
-  <tr>
-    <td align="center"><img src="./assets/screenshots/podcast-player.jpg" alt="播客播放器：字幕预览、前后跳转、倍速和定时关闭" width="280" /></td>
-    <td align="center"><img src="./assets/screenshots/podcast-search.gif" alt="播客字幕搜索演示：搜索“数据”、高亮关键词并切换匹配结果" width="280" /></td>
-  </tr>
-  <tr>
-    <td align="center">倍速播放 · 定时关闭 · 前后跳转</td>
-    <td align="center">全文阅读 · 关键词搜索 · 结果定位</td>
-  </tr>
-</table>
+## 功能
 
-<p align="center"><sub>以上为 Android 端界面。歌词演示使用 BV1auGwzMEs1；播客素材来自硅谷 101《对话 Maxinsights》。<a href="https://bbplayer.roitium.com/guides/podcast/">查看播客使用指南 →</a></sub></p>
+### 听歌
 
-## 主要功能
+- **逐字歌词**：自动从网易云音乐、QQ 音乐、酷狗匹配歌词，支持逐字进度、翻译与罗马音；对不上时可以手动搜索、编辑或调整时间轴。歌词格式基于 [SPL 规范](https://bbplayer.roitium.com/SPL/)。
+- **系统级歌词**：桌面悬浮歌词、状态栏歌词（词幕 Lyricon、SuperLyric、魅族 Flyme）和车载歌词。
+- **会变色的播放器**：从封面提取主题色，背景是流动的渐变；可选波浪进度条和封面周围的实时音频频谱。
+- **完整的播放控制**：随机、循环、播放队列、定时关闭、响度均衡、启动时恢复进度。
 
-### 核心播放体验
+### 播客
 
-- **Bilibili 登录**: 支持通过**扫码**、**手机号（短信验证码）**或手动设置 Cookie 登录。
-- **播放源**: 自由添加本地播放列表，登录账号后也可直接访问账号内收藏夹、订阅合集等，兼顾快速与方便。
-- **导入外部歌单**: 支持从 **网易云音乐** 和 **QQ 音乐** 的歌单自动匹配到 B 站视频并保存为播放列表。
-- **全功能播放器**: 提供播放/暂停、循环、随机、播放队列、响度均衡、断点续播、启动自动播放等功能。
-- **搜索**: 智能搜索，支持 BV/AV 号、b23.tv 短链解析。同时提供收藏夹和本地播放列表内搜索。
+- **断点续播**：每段音频单独记住播放进度。
+- **为长内容准备的控制**：快退快进 15 秒、倍速、定时关闭、章节列表。
+- **字幕跟读**：B 站字幕随播放定位并高亮当前句子，可以搜索关键词、点句跳转、导出 LRC。
 
-### 歌词系统
+### 音乐库
 
-- **支持 SPL**: 基于 [SPL 规范](https://bbplayer.roitium.com/SPL)，支持**逐字进度**、**罗马音注音**及**翻译歌词**展示。
-- **智能获取**: 支持自动匹配歌词（网易云/QQ 音乐/酷狗音乐），并支持手动搜索、粘贴 LRC/SPL 文本及偏移量调整。
-- **多样展示**: 支持桌面歌词（悬浮窗）、状态栏歌词。
+- **多种来源**：B 站收藏夹、订阅合集、稍后再看、关注的 UP 主投稿和分 P 视频都能直接浏览播放。
+- **一键同步到本地**：值得留下的内容同步成本地歌单，自由改名、拖动排序、批量整理，也能反向同步到 B 站。
+- **导入外部歌单**：粘贴网易云音乐或 QQ 音乐歌单链接，自动在 B 站匹配对应曲目。
+- **链接直达**：搜索框直接识别 BV / AV 号、b23.tv 短链和完整视频链接。
+- **共享歌单**：一条链接邀请朋友订阅或一起编辑。
 
-### 主题系统
+### 离线与数据
 
-可以在软件内搜索并应用**任意**b 站主题装扮，支持：
+- **下载与导出**：整个歌单一键缓存，离线播放；Android 可导出带封面、元数据和歌词的 `.m4a` 文件。
+- **听歌记录**：听歌热力图、每日历史与播放排行，只保存在本地。
+- **备份**：导出 `.bbplayer` 备份文件，或直接备份到自己的 WebDAV。
 
-- 导航栏
-- 开屏动画
-- 进度条拖拽图标
-- 点赞动画
-- 页面头部背景
-- 头像框
+### 个性化
 
-### 其他特性
+- **B 站装扮**：搜索并下载 B 站主题装扮和收藏集，换上对应的标题栏、进度滑块、点赞动画、头像框和开屏动画。
+- **Material Design 3**：浅色 / 深色模式，墨水屏可用的纯白背景，平板上使用侧边导航和双栏布局。
 
-- **下载与导出**: 支持缓存歌曲并离线播放，提供简单实用的下载管理。同时支持将已缓存的歌曲导出为带封面、元数据、内嵌歌词的 `.m4a` 文件到本地存储。
-- **UI**: 支持浅色/深色模式，UI 深度适配 Material Design 3 且支持莫奈取色。
-- **实用工具**: 提供定时关闭、播放历史统计（排行榜）等功能。
+更多功能和使用方法请看[使用指南](https://bbplayer.roitium.com/guides/)。
 
-还有更多功能和惊喜，欢迎到[官网](https://bbplayer.roitium.com)查看喵！
+## 下载
 
-## 技术栈
+前往 [GitHub Releases](https://github.com/bbplayer-app/BBPlayer/releases/latest) 下载 APK，需要 **Android 8.0** 及以上：
 
-- **框架**: React Native, Expo
-- **状态管理**: Zustand
-- **数据请求**: React Query
-- **UI**: Material Design 3 (React Native Paper + ExpoUI)
-- **播放库**: [@bbplayer/orpheus](./packages/orpheus) (基于 Media3)
-- **ORM**: Drizzle ORM
+| 安装包           | 适用设备                             |
+| ---------------- | ------------------------------------ |
+| `arm64-v8a`      | 绝大多数近几年的手机，不确定就选这个 |
+| `armeabi-v7a`    | 较老的 32 位 ARM 设备                |
+| `x86_64` / `x86` | 模拟器和少数 x86 设备                |
 
-## 项目结构 (Monorepo)
+安装后可以在「设置 → 通用 → 检查更新」中获取新版本。详细步骤见[安装指南](https://bbplayer.roitium.com/guides/install/)。
 
-- **[apps/mobile](./apps/mobile)**: BBPlayer 移动端应用核心代码。
-- **[apps/backend](./apps/backend)**: 后端服务，提供歌单共享与软件更新查询（Cloudflare Worker）。
-- **[apps/docs](./apps/docs)**: 项目文档站点。
-- **[apps/update-publisher](./apps/update-publisher)**: 用于发布更新的工具。
-- **[packages/](./packages)**: 共享库与工具包。
-  - **[@bbplayer/splash](./packages/splash)**: 歌词解析与转换核心库。
-  - **[@bbplayer/eslint-plugin](./packages/eslint-plugin)**: BBPlayer 专用 lint 规则（通过 oxlint jsPlugins 运行）。
-  - **[@bbplayer/orpheus](./packages/orpheus)**: 基于 Media3 的音频播放引擎。
-  - **[@bbplayer/logs](./packages/logs)**: 日志库。
-  - **[@bbplayer/image-theme-colors](./packages/image-theme-colors)**: 封面颜色提取工具。
-  - **[@bbplayer/native](./packages/native)**: BBPlayer 原生能力集成模块。
-  - **[@bbplayer/heatmap](./packages/heatmap)**: 基于 SVG 的日期热力图组件。
-  - **[expo-wavy-slider](./packages/expo-wavy-slider)**: Jetpack Compose WavySlider 的 Expo 模块封装。
+## 常见问题
 
-## IOS 支持
+<details>
+<summary><b>这是 B 站官方的应用吗？</b></summary>
+<br />
 
-曾经对 IOS 进行了基础适配，但现在重心依旧在 Android 端上，IOS 端没有同步开发，不保证可以编译成功。
+不是。BBPlayer 是第三方开源项目，与哔哩哔哩没有任何关联。
 
-## 隐私与数据统计
+</details>
 
-为了持续改进 BBPlayer，应用内集成了一套轻量级的匿名数据收集系统（基于 Sentry）。
+<details>
+<summary><b>必须登录 B 站账号吗？</b></summary>
+<br />
 
-### 我们收集什么？
+不必。选择「游客模式」也能使用搜索、本地歌单、查看合集等大部分功能。访问自己的收藏夹、稍后再看等内容需要登录，支持扫码、手机验证码和手动填写 Cookie 三种方式。Cookie 只保存在设备上，只会发送给 B 站。
 
-1. **使用与性能数据**：应用会话（用于统计活跃用户数），以及 Bilibili 接口请求、开始播放等操作的耗时与成功率。
-2. **崩溃与错误报告**：应用崩溃或出错时的堆栈信息、设备型号与系统版本，帮助我们修复 Bug。
-3. **运行日志**：应用与播放器的运行日志（例如正在播放的歌曲标题与 BV 号、使用的音质与解码器、网络错误），用于排查播放失败等问题。
+共享歌单使用独立的 BBPlayer 账号，与 B 站账号无关。
 
-### 隐私承诺
+</details>
 
-- **匿名**：上报数据只关联一个随机生成的匿名 ID（可在「设置 -> 关于 BBPlayer」中查看「诊断 ID」），不关联你的 Bilibili 账号。反馈问题时你可以主动提供这个 ID，方便我们定位日志。
-- **脱敏**：数据在离开设备前会自动移除 Bilibili 登录凭据（Cookie、Token 等）、账号 ID（mid）、设备标识以及音频链接中的签名与 IP 信息。
-- **透明**：所有统计与上报代码均开源可见。
-- **控制权**：你可以随时在「设置 -> 通用设置」中关闭「分享数据（崩溃报告 & 匿名统计）」开关，关闭后崩溃报告、错误报告与运行日志都会立即停止上传。
+<details>
+<summary><b>支持 iOS 吗？</b></summary>
+<br />
 
-## 捐赠支持
+目前只发布 Android 版。仓库中保留了早期的 iOS 适配，但没有同步开发，不保证能编译通过。
 
-如果你觉得 BBPlayer 对你有所帮助，欢迎考虑捐赠支持，你的所有捐赠都将用于让 Roitium 吃顿疯狂星期四或是买一部 GalGame！
+</details>
+
+<details>
+<summary><b>换手机或重装后，数据还在吗？</b></summary>
+<br />
+
+歌单、设置、播放记录都保存在本地。迁移前请在「设置 → 数据与备份」中导出备份，或者配置 WebDAV 云端备份。
+
+</details>
+
+<details>
+<summary><b>应用会收集哪些数据？</b></summary>
+<br />
+
+官方构建会通过 Sentry 上报脱敏后的崩溃报告、性能数据和运行日志，只关联随机生成的匿名 ID，不关联 B 站账号。你可以随时在「设置 → 通用设置」中关闭。完整说明见[隐私政策](./PRIVACY.md)。
+
+</details>
+
+## 参与开发
+
+BBPlayer 是一个 pnpm monorepo，移动端基于 React Native + Expo，播放引擎 [@bbplayer/orpheus](./packages/orpheus) 基于 Media3（ExoPlayer）。
+
+```bash
+pnpm install                              # 只能用 pnpm
+pnpm --filter @bbplayer/mobile android    # 构建并运行 Android 开发版
+pnpm lint && pnpm type-check              # 提交前检查
+```
+
+欢迎通过 [Issue](https://github.com/bbplayer-app/BBPlayer/issues) 反馈问题、提出建议，或直接提交 Pull Request。
+
+<details>
+<summary><b>项目结构</b></summary>
+<br />
+
+| 目录                                                         | 说明                                                                        |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| [apps/mobile](./apps/mobile)                                 | 移动端应用（Expo、Drizzle ORM、Zustand、TanStack Query、Material Design 3） |
+| [apps/backend](./apps/backend)                               | 歌单共享与更新查询服务（Hono、Cloudflare Workers）                          |
+| [apps/docs](./apps/docs)                                     | 官网与使用指南（Astro、Starlight）                                          |
+| [apps/update-server](./apps/update-server)                   | 自托管的 Expo Updates 热更新服务                                            |
+| [apps/update-publisher](./apps/update-publisher)             | 发布版本更新信息的 TUI 工具                                                 |
+| [apps/hot-update-cli](./apps/hot-update-cli)                 | 发布与管理热更新的命令行工具                                                |
+| [packages/orpheus](./packages/orpheus)                       | 基于 Media3 的音频播放引擎                                                  |
+| [packages/splash](./packages/splash)                         | LRC / SPL 歌词解析与转换                                                    |
+| [packages/image-theme-colors](./packages/image-theme-colors) | 封面主题色提取                                                              |
+| [packages/expo-wavy-slider](./packages/expo-wavy-slider)     | Jetpack Compose 波浪进度条的 Expo 封装                                      |
+| [packages/heatmap](./packages/heatmap)                       | 基于 SVG 的日期热力图组件                                                   |
+| [packages/native](./packages/native)                         | BBPlayer 原生能力集成                                                       |
+| [packages/logs](./packages/logs)                             | 日志库                                                                      |
+| [packages/eslint-plugin](./packages/eslint-plugin)           | 项目自定义 lint 规则（经 oxlint 运行）                                      |
+
+</details>
+
+## 捐赠
+
+如果 BBPlayer 对你有帮助，欢迎请 Roitium 吃顿疯狂星期四，或者买一部 Galgame！
 
 <table>
 <tr>
@@ -160,31 +170,29 @@
 <details>
 <summary>微信支付</summary>
 <br />
-<img src="./apps/mobile/assets/images/wechat.png" alt="WeChat Donation" width="200" />
+<img src="./apps/mobile/assets/images/wechat.png" alt="微信支付收款码" width="200" />
 </details>
 </td>
 <td align="center">
 <details>
 <summary>支付宝</summary>
 <br />
-<img src="./apps/mobile/assets/images/alipay.jpg" alt="Alipay Donation" width="200" />
+<img src="./apps/mobile/assets/images/alipay.jpg" alt="支付宝收款码" width="200" />
 </details>
 </td>
 </tr>
 </table>
 
-## 感谢
+## 致谢
 
-本项目开发过程中很多功能和设计的灵感都来自前辈们，包括但不限于：
+BBPlayer 的许多功能和设计都受到了这些项目的启发：
 
 - [AzusaPlayer](https://github.com/lovegaoshi/azusa-player-mobile)
 - [BiliSound](https://github.com/bilisound/client-mobile)
 - [Salt Player](https://github.com/Moriafly/SaltPlayerSource)
 - [Spotify](https://spotify.com)
 
-以及最重要的：[Bilibili](https://www.bilibili.com/)
-
-在此表示感谢！（鞠躬）
+以及最重要的：[Bilibili](https://www.bilibili.com/)。在此表示感谢！（鞠躬）
 
 ## Star History
 
@@ -196,6 +204,10 @@
  </picture>
 </a>
 
-## 开源许可
+## 免责声明
 
-本项目采用 MIT 许可。
+BBPlayer 是第三方开源项目，与哔哩哔哩（Bilibili）及文中提到的其他平台没有任何关联。BBPlayer 本身不提供、不托管任何音视频内容，所有内容均来自 Bilibili，版权归原作者所有。
+
+## 许可
+
+[MIT](./LICENSE) © Roitium
