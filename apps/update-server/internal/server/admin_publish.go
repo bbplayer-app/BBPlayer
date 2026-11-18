@@ -51,8 +51,8 @@ type exportMeta struct {
 const publishUploadConcurrency = 8
 
 type publishObject struct {
-	key, object, contentType string
-	body                     []byte
+	key, object, contentType, fileExtension string
+	body                                    []byte
 }
 
 type publishPlatform struct {
@@ -173,7 +173,7 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 		if e != nil {
 			return nil, huma.Error400BadRequest("bundle missing")
 		}
-		p := publishPlatform{name: platform, launch: publishObject{key: path.Base(m.Bundle), object: path.Join("updates", gid.String(), platform, m.Bundle), contentType: "application/javascript", body: bundle}}
+		p := publishPlatform{name: platform, launch: publishObject{key: path.Base(m.Bundle), object: path.Join("updates", gid.String(), platform, m.Bundle), contentType: "application/javascript", fileExtension: path.Ext(m.Bundle), body: bundle}}
 		for _, a := range m.Assets {
 			b, e := read(a.Path)
 			if e != nil {
@@ -183,7 +183,7 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 			if ct == "" {
 				ct = "application/octet-stream"
 			}
-			p.assets = append(p.assets, publishObject{key: path.Base(a.Path), object: path.Join("updates", gid.String(), platform, a.Path), contentType: ct, body: b})
+			p.assets = append(p.assets, publishObject{key: path.Base(a.Path), object: path.Join("updates", gid.String(), platform, a.Path), contentType: ct, fileExtension: "." + a.Ext, body: b})
 		}
 		platforms = append(platforms, p)
 		uploads = append(uploads, p.launch)
@@ -235,12 +235,12 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 		if e != nil {
 			return nil, s.dbError("publish: insert update", e, "group_id", gid.String(), "platform", platform)
 		}
-		e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: p.launch.key, ObjectKey: p.launch.object, Sha256: sha(p.launch.body), ContentType: p.launch.contentType, SizeBytes: int64(len(p.launch.body)), IsLaunch: true})
+		e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: p.launch.key, ObjectKey: p.launch.object, Sha256: sha(p.launch.body), ContentType: p.launch.contentType, FileExtension: p.launch.fileExtension, SizeBytes: int64(len(p.launch.body)), IsLaunch: true})
 		if e != nil {
 			return nil, s.dbError("publish: insert launch asset", e, "group_id", gid.String(), "platform", platform)
 		}
 		for _, a := range p.assets {
-			e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: a.key, ObjectKey: a.object, Sha256: sha(a.body), ContentType: a.contentType, SizeBytes: int64(len(a.body))})
+			e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: a.key, ObjectKey: a.object, Sha256: sha(a.body), ContentType: a.contentType, FileExtension: a.fileExtension, SizeBytes: int64(len(a.body))})
 			if e != nil {
 				return nil, s.dbError("publish: insert asset", e, "group_id", gid.String(), "platform", platform, "object", a.object)
 			}

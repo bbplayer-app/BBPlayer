@@ -114,11 +114,17 @@ func TestE2EExpoProtocol(t *testing.T) {
 			URL  string `json:"url"`
 			Hash string `json:"hash"`
 		} `json:"launchAsset"`
+		Assets []struct {
+			FileExtension *string `json:"fileExtension"`
+		} `json:"assets"`
 	}
 	if err := json.NewDecoder(manifest.Body).Decode(&decoded); err != nil {
 		t.Fatal(err)
 	}
 	_ = manifest.Body.Close()
+	if len(decoded.Assets) != 1 || decoded.Assets[0].FileExtension == nil || *decoded.Assets[0].FileExtension != ".png" {
+		t.Fatalf("manifest assets must carry fileExtension: %+v", decoded.Assets)
+	}
 	if decoded.Extra.ExpoClient.Scheme != "bbplayer" {
 		t.Fatalf("manifest expo client scheme: %q", decoded.Extra.ExpoClient.Scheme)
 	}

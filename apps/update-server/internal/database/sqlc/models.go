@@ -9,14 +9,15 @@ import (
 )
 
 type Asset struct {
-	ID          int64
-	UpdateID    pgtype.UUID
-	AssetKey    string
-	ObjectKey   string
-	Sha256      string
-	ContentType string
-	SizeBytes   int64
-	IsLaunch    bool
+	ID            int64
+	UpdateID      pgtype.UUID
+	AssetKey      string
+	ObjectKey     string
+	Sha256        string
+	ContentType   string
+	SizeBytes     int64
+	IsLaunch      bool
+	FileExtension string
 }
 
 type ChannelHead struct {

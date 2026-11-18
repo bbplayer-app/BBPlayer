@@ -308,7 +308,7 @@ func (s *Server) republishOTA(ctx context.Context, input *adminRepublishInput) (
 		return uuid.Nil, s.dbError("republish: insert update", err, "group_id", groupID.String())
 	}
 	for _, asset := range assets {
-		if err = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&updateID), AssetKey: asset.AssetKey, ObjectKey: asset.ObjectKey, Sha256: asset.Sha256, ContentType: asset.ContentType, SizeBytes: asset.SizeBytes, IsLaunch: asset.IsLaunch}); err != nil {
+		if err = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&updateID), AssetKey: asset.AssetKey, ObjectKey: asset.ObjectKey, Sha256: asset.Sha256, ContentType: asset.ContentType, FileExtension: asset.FileExtension, SizeBytes: asset.SizeBytes, IsLaunch: asset.IsLaunch}); err != nil {
 			return uuid.Nil, s.dbError("republish: reuse asset", err, "group_id", groupID.String(), "object", asset.ObjectKey)
 		}
 	}

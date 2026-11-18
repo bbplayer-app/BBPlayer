@@ -108,17 +108,18 @@ func (q *Queries) GetUpdateForGroupPlatform(ctx context.Context, arg GetUpdateFo
 }
 
 const insertAsset = `-- name: InsertAsset :exec
-INSERT INTO assets(update_id,asset_key,object_key,sha256,content_type,size_bytes,is_launch) VALUES($1,$2,$3,$4,$5,$6,$7)
+INSERT INTO assets(update_id,asset_key,object_key,sha256,content_type,file_extension,size_bytes,is_launch) VALUES($1,$2,$3,$4,$5,$6,$7,$8)
 `
 
 type InsertAssetParams struct {
-	UpdateID    pgtype.UUID
-	AssetKey    string
-	ObjectKey   string
-	Sha256      string
-	ContentType string
-	SizeBytes   int64
-	IsLaunch    bool
+	UpdateID      pgtype.UUID
+	AssetKey      string
+	ObjectKey     string
+	Sha256        string
+	ContentType   string
+	FileExtension string
+	SizeBytes     int64
+	IsLaunch      bool
 }
 
 func (q *Queries) InsertAsset(ctx context.Context, arg InsertAssetParams) error {
@@ -128,6 +129,7 @@ func (q *Queries) InsertAsset(ctx context.Context, arg InsertAssetParams) error 
 		arg.ObjectKey,
 		arg.Sha256,
 		arg.ContentType,
+		arg.FileExtension,
 		arg.SizeBytes,
 		arg.IsLaunch,
 	)
@@ -135,17 +137,18 @@ func (q *Queries) InsertAsset(ctx context.Context, arg InsertAssetParams) error 
 }
 
 const listAssetsForUpdate = `-- name: ListAssetsForUpdate :many
-SELECT id,asset_key,object_key,sha256,content_type,size_bytes,is_launch FROM assets WHERE update_id=$1 ORDER BY is_launch DESC,id
+SELECT id,asset_key,object_key,sha256,content_type,file_extension,size_bytes,is_launch FROM assets WHERE update_id=$1 ORDER BY is_launch DESC,id
 `
 
 type ListAssetsForUpdateRow struct {
-	ID          int64
-	AssetKey    string
-	ObjectKey   string
-	Sha256      string
-	ContentType string
-	SizeBytes   int64
-	IsLaunch    bool
+	ID            int64
+	AssetKey      string
+	ObjectKey     string
+	Sha256        string
+	ContentType   string
+	FileExtension string
+	SizeBytes     int64
+	IsLaunch      bool
 }
 
 func (q *Queries) ListAssetsForUpdate(ctx context.Context, updateID pgtype.UUID) ([]ListAssetsForUpdateRow, error) {
@@ -163,6 +166,7 @@ func (q *Queries) ListAssetsForUpdate(ctx context.Context, updateID pgtype.UUID)
 			&i.ObjectKey,
 			&i.Sha256,
 			&i.ContentType,
+			&i.FileExtension,
 			&i.SizeBytes,
 			&i.IsLaunch,
 		); err != nil {

@@ -71,6 +71,9 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 			launch = a
 			continue
 		}
+		// expo-updates (Android and iOS) requires fileExtension on every
+		// non-launch asset and silently skips assets that lack it.
+		a["fileExtension"] = row.FileExtension
 		assets = append(assets, a)
 	}
 	if launch == nil {
