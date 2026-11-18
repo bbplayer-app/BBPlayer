@@ -5,10 +5,10 @@ import {
 	Captions,
 	CloudUpload,
 	Download,
-	Flame,
-	FolderSync,
+	Gauge,
 	Import,
 	Link,
+	MessageSquareText,
 	Share2,
 	Shirt,
 	TabletSmartphone,
@@ -19,8 +19,10 @@ import { Image } from 'astro:assets'
 
 import GithubIcon from '../components/GithubIcon.astro'
 import icon from '../assets/icon.png'
+import library from '../assets/landing/library.webp'
 import podcastPlayer from '../assets/landing/podcast_player.webp'
 import podcastSubtitles from '../assets/landing/podcast_subtitles.webp'
+import profile from '../assets/landing/profile.webp'
 import songLyrics from '../assets/landing/song_lyrics.webp'
 import songPlayer from '../assets/landing/song_player.webp'
 import songPlayerSpectrum from '../assets/landing/song_player_spectrum.webp'
@@ -50,19 +52,63 @@ const features = [
 		alt: 'BBPlayer 深色播放器，蓝色流体背景、圆形封面与波浪进度条',
 		href: '/guides/player/',
 	},
+	{
+		index: '03',
+		label: 'Library',
+		title: '各处的收藏，收进同一个库',
+		body: 'B 站收藏夹、订阅合集、稍后再看、关注的 UP 主投稿和多 P 视频，都能直接打开浏览和播放。值得留下的一键同步成本地歌单，下载后离线也能听；之后改名、拖动排序、批量整理都随你，还能反向同步到 B 站。',
+		points: ['收藏夹 · 合集 · 稍后再看 · UP 主投稿', '一键同步到本地，下载后离线播放', '拖动排序、批量管理，可同步回 B 站'],
+		image: library,
+		alt: 'BBPlayer 音乐库，列出日常循环、中文 VOCALOID、Girls Band Cry 等本地歌单',
+		href: '/guides/playlist/',
+	},
+	{
+		index: '04',
+		label: 'Records',
+		title: '听过的，都记得',
+		body: '每一次完整播放都记在你的设备上。累计时长、播放次数和按天排列的热力图就在「我的」页最上方，点开日期能回看那天听了什么，「全部统计」里还有你的播放排行。',
+		points: ['听歌热力图与每日历史', '累计时长与完整播放次数', '记录只保存在本地'],
+		image: profile,
+		alt: 'BBPlayer「我的」页面，显示累计听歌时长、完整播放次数与按周排列的听歌热力图',
+		href: '/guides/leaderboard/',
+	},
+]
+
+const duos = [
+	{
+		index: '05',
+		label: 'Podcast',
+		title: '播客，也一样好用',
+		sub: '访谈、课程、长视频。切到播客模式，播放器会换成更适合长内容的一套控制。',
+		link: { href: '/guides/podcast/', text: '了解播客模式' },
+		items: [
+			{
+				image: podcastPlayer,
+				alt: 'BBPlayer 播客播放器，显示章节名、快退快进 15 秒、倍速、定时与章节入口',
+				title: '记住每一期听到哪',
+				body: '每段音频单独保存进度，再次打开从上次的位置继续。倍速、定时关闭、章节列表都在手边，进度条上方显示当前章节。',
+			},
+			{
+				image: podcastSubtitles,
+				alt: 'BBPlayer 播客字幕页，按时间分段显示 B 站字幕并高亮当前句子',
+				title: '跟着字幕读',
+				body: 'B 站字幕随播放自动定位并高亮当前句子。可以搜索关键词、点句子跳转，或者把整份字幕导出成 LRC。',
+			},
+		],
+	},
 ]
 
 const details = [
 	{ icon: Captions, title: '系统级歌词', body: '桌面悬浮歌词、状态栏歌词（词幕、SuperLyric、Flyme），车机上也能看到当前歌词。', href: '/guides/lyrics/#desktop-lyrics' },
 	{ icon: Shirt, title: 'B 站装扮', body: '搜索并下载 B 站主题装扮与收藏集，换上对应的标题栏、进度滑块、点赞动画、头像框和开屏动画。', href: '/guides/settings/#skins' },
-	{ icon: FolderSync, title: '收藏夹即歌单', body: '收藏夹、订阅合集、稍后再看和分 P 视频，一键同步成本地歌单。', href: '/guides/playlist/' },
+	{ icon: MessageSquareText, title: '评论区', body: '在播放器里浏览当前视频的评论和回复，不用切回 B 站。', href: '/guides/comments/' },
 	{ icon: UserCheck, title: '关注的 UP 主', body: '浏览关注列表，直接收听他们的投稿，不用再一个个翻主页。', href: '/guides/playlist/' },
 	{ icon: Import, title: '导入外部歌单', body: '粘贴网易云或 QQ 音乐歌单链接，自动在 B 站匹配对应曲目。', href: '/guides/external-playlist/' },
 	{ icon: Link, title: '链接直达', body: 'BV / AV 号、b23.tv 短链和完整视频链接，粘贴进搜索框就能播放。', href: '/guides/search/' },
 	{ icon: Download, title: '离线与导出', body: '整个歌单一键缓存；Android 可导出带封面和歌词的 m4a 文件。', href: '/guides/download/' },
 	{ icon: Share2, title: '分享卡片', body: '用封面主题色生成歌曲卡片或歌词卡片，保存或直接分享。', href: '/guides/player/' },
 	{ icon: Users, title: '共享歌单', body: '一条链接邀请朋友订阅或一起编辑，使用独立账号，不碰 B 站 Cookie。', href: '/guides/shared-playlist/' },
-	{ icon: Flame, title: '听歌记录', body: '听歌热力图、每日历史与播放排行，数据只保存在你的设备上。', href: '/guides/leaderboard/' },
+	{ icon: Gauge, title: 'CDN 测速', body: '测速并选择首选 Bilibili CDN 节点，加载慢的时候换一个试试。', href: '/guides/settings/' },
 	{ icon: CloudUpload, title: '备份与迁移', body: '导出 .bbplayer 备份文件，或者直接备份到自己的 WebDAV。', href: '/guides/settings/' },
 	{ icon: TabletSmartphone, title: '平板与大屏', body: '宽屏下切换为侧边导航栏，较大的屏幕上使用双栏布局。', href: '/guides/' },
 ]
@@ -82,10 +128,10 @@ const stack = [
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="color-scheme" content="dark" />
 		<meta name="theme-color" content="#08090c" />
-		<title>BBPlayer · 为音乐设计的 Bilibili 播放器</title>
+		<title>BBPlayer · 专心收听的 Bilibili 播放器</title>
 		<meta name="description" content="BBPlayer 是一个开源的 Bilibili 音频播放器：逐字歌词、封面取色的流体播放器、桌面与状态栏歌词，以及支持断点续播和字幕跟读的播客模式。" />
-		<meta property="og:title" content="BBPlayer · 为音乐设计的 Bilibili 播放器" />
-		<meta property="og:description" content="B 站上的音乐，值得一个专门的播放器。逐字歌词、流体播放器、系统级歌词，播客也一样好用。" />
+		<meta property="og:title" content="BBPlayer · 专心收听的 Bilibili 播放器" />
+		<meta property="og:description" content="B 站上想听的，值得一个专门的播放器。逐字歌词、流体播放器、系统级歌词，播客也一样好用。" />
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content="https://bbplayer.roitium.com/" />
 		<link rel="icon" href="/favicon.ico" />
@@ -124,11 +170,11 @@ const stack = [
 						<ArrowRight size={14} />
 					</a>
 					<h1>
-						B 站上的音乐，<br />
+						B 站上想听的，<br />
 						值得一个<span class="accent">专门的播放器</span>。
 					</h1>
 					<p class="lede">
-						BBPlayer 把 Bilibili 变成你的音乐库：逐字歌词、随封面流动的播放器、桌面与状态栏歌词。听长节目时，播客模式会记住进度、标出章节，还能跟着字幕读。
+						BBPlayer 把 Bilibili 上的歌和节目都收进一个专心收听的播放器：逐字歌词、随封面流动的界面、桌面与状态栏歌词。听长节目时，它会记住进度、标出章节，还能跟着字幕读。
 					</p>
 					<div class="cta">
 						<a href={RELEASES} class="btn btn-primary">
@@ -145,19 +191,19 @@ const stack = [
 
 				<div class="container hero-stage" data-deck>
 					<figure class="shot shot-side shot-left" data-pos="2">
-						<Image src={podcastPlayer} alt="BBPlayer 播客模式播放器，显示节目封面、章节名与快退快进按钮" widths={[360, 600]} sizes="(max-width: 720px) 0px, 270px" loading="eager" />
+						<Image src={profile} alt="BBPlayer「我的」页面，显示听歌时长、播放次数与听歌热力图" widths={[360, 600]} sizes="(max-width: 720px) 70vw, 270px" loading="eager" />
 					</figure>
 					<figure class="shot shot-main" data-pos="0">
 						<Image src={songPlayerSpectrum} alt="BBPlayer 播放器，圆形封面周围环绕实时音频频谱，下方是波浪进度条" widths={[400, 720]} sizes="(max-width: 720px) 74vw, 320px" loading="eager" fetchpriority="high" />
 					</figure>
 					<figure class="shot shot-side shot-right" data-pos="1">
-						<Image src={songLyrics} alt="BBPlayer 歌词页，逐字高亮的日文歌词与中文翻译" widths={[360, 600]} sizes="(max-width: 720px) 0px, 270px" loading="eager" />
+						<Image src={songLyrics} alt="BBPlayer 歌词页，逐字高亮的日文歌词与中文翻译" widths={[360, 600]} sizes="(max-width: 720px) 70vw, 270px" loading="eager" />
 					</figure>
 				</div>
 				<div class="deck-nav" aria-label="切换截图">
 					<button type="button" class="deck-dot is-active" data-deck-dot="0" aria-label="播放器"></button>
 					<button type="button" class="deck-dot" data-deck-dot="1" aria-label="逐字歌词"></button>
-					<button type="button" class="deck-dot" data-deck-dot="2" aria-label="播客"></button>
+					<button type="button" class="deck-dot" data-deck-dot="2" aria-label="我的"></button>
 					<span class="deck-hint mono">左右滑动</span>
 				</div>
 			</section>
@@ -215,55 +261,48 @@ const stack = [
 				</div>
 			</section>
 
-			<section class="podcast">
-				<div class="container">
-					<div class="section-head section-head-center" data-reveal>
-						<p class="eyebrow mono">
-							<span>03</span>
-							<span class="eyebrow-line"></span>
-							<span>Podcast</span>
-						</p>
-						<h2>播客，也一样好用</h2>
-						<p class="section-sub">访谈、课程、长视频。切到播客模式，播放器会换成更适合长内容的一套控制。</p>
+			{duos.map((duo) => (
+				<section class="duo">
+					<div class="container">
+						<div class="section-head section-head-center" data-reveal>
+							<p class="eyebrow mono">
+								<span>{duo.index}</span>
+								<span class="eyebrow-line"></span>
+								<span>{duo.label}</span>
+							</p>
+							<h2>{duo.title}</h2>
+							<p class="section-sub">{duo.sub}</p>
+						</div>
+						<div class="duo-grid">
+							{duo.items.map((item, i) => (
+								<figure class="duo-item" data-reveal style={i > 0 ? '--delay: 120ms' : undefined}>
+									<div class="visual-frame">
+										<div class="shot">
+											<Image src={item.image} alt={item.alt} widths={[400, 720]} sizes="(max-width: 720px) 66vw, 280px" />
+										</div>
+									</div>
+									<figcaption>
+										<h3>{item.title}</h3>
+										<p>{item.body}</p>
+									</figcaption>
+								</figure>
+							))}
+						</div>
+						<div class="center-link">
+							<a href={duo.link.href} class="link">
+								{duo.link.text}
+								<ArrowRight size={14} />
+							</a>
+						</div>
 					</div>
-					<div class="podcast-grid">
-						<figure class="podcast-item" data-reveal>
-							<div class="visual-frame">
-								<div class="shot">
-									<Image src={podcastPlayer} alt="BBPlayer 播客播放器，显示章节名、快退快进 15 秒、倍速、定时与章节入口" widths={[400, 720]} sizes="(max-width: 720px) 66vw, 280px" />
-								</div>
-							</div>
-							<figcaption>
-								<h3>记住每一期听到哪</h3>
-								<p>每段音频单独保存进度，再次打开从上次的位置继续。倍速、定时关闭、章节列表都在手边，进度条上方显示当前章节。</p>
-							</figcaption>
-						</figure>
-						<figure class="podcast-item" data-reveal style="--delay: 120ms">
-							<div class="visual-frame">
-								<div class="shot">
-									<Image src={podcastSubtitles} alt="BBPlayer 播客字幕页，按时间分段显示 B 站字幕并高亮当前句子" widths={[400, 720]} sizes="(max-width: 720px) 66vw, 280px" />
-								</div>
-							</div>
-							<figcaption>
-								<h3>跟着字幕读</h3>
-								<p>B 站字幕随播放自动定位并高亮当前句子。可以搜索关键词、点句子跳转，或者把整份字幕导出成 LRC。</p>
-							</figcaption>
-						</figure>
-					</div>
-					<div class="center-link">
-						<a href="/guides/podcast/" class="link">
-							了解播客模式
-							<ArrowRight size={14} />
-						</a>
-					</div>
-				</div>
-			</section>
+				</section>
+			))}
 
 			<section class="details">
 				<div class="container">
 					<div class="section-head" data-reveal>
 						<p class="eyebrow mono">
-							<span>04</span>
+							<span>06</span>
 							<span class="eyebrow-line"></span>
 							<span>Details</span>
 						</p>
@@ -286,7 +325,7 @@ const stack = [
 				<div class="container engine-grid">
 					<div class="engine-copy" data-reveal>
 						<p class="eyebrow mono">
-							<span>05</span>
+							<span>07</span>
 							<span class="eyebrow-line"></span>
 							<span>Engineering</span>
 						</p>

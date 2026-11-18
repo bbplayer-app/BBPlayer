@@ -325,6 +325,7 @@
 
 .lede {
 	max-width: 34em;
+	word-break: keep-all;
 	margin-top: 28px;
 	font-size: clamp(16px, 1.6vw, 18px);
 	color: var(--text-2);
@@ -581,8 +582,8 @@
 	width: 280px;
 }
 
-/* ── Podcast ─────────────────────────────────────────────────────────── */
-.podcast {
+/* ── Duo (播客、听歌记录) ─────────────────────────────────────────────────────────── */
+.duo {
 	padding: 120px 0;
 	border-top: 1px solid var(--border);
 }
@@ -597,29 +598,29 @@
 	justify-content: center;
 }
 
-.podcast-grid {
+.duo-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
 	gap: 32px;
 }
 
-.podcast-item {
+.duo-item {
 	display: flex;
 	flex-direction: column;
 	gap: 28px;
 }
 
-.podcast-item .visual-frame {
+.duo-item .visual-frame {
 	max-width: none;
 }
 
-.podcast-item h3 {
+.duo-item h3 {
 	font-size: 18px;
 	font-weight: 600;
 	letter-spacing: -0.01em;
 }
 
-.podcast-item p {
+.duo-item p {
 	margin-top: 8px;
 	font-size: 15px;
 	color: var(--text-2);
@@ -1047,12 +1048,12 @@
 		color: var(--text-3);
 	}
 
-	.podcast-grid {
+	.duo-grid {
 		grid-template-columns: 1fr;
 		gap: 56px;
 	}
 
-	.podcast,
+	.duo,
 	.details,
 	.engine {
 		padding: 88px 0;
