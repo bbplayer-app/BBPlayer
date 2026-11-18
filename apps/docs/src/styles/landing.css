@@ -234,6 +234,19 @@
 		);
 	filter: blur(20px);
 	pointer-events: none;
+	animation: glow-breathe 12s ease-in-out infinite alternate;
+}
+
+@keyframes glow-breathe {
+	from {
+		opacity: 0.75;
+		transform: translateX(-50%) scale(0.96);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateX(-50%) scale(1.04);
+	}
 }
 
 .hero-copy {
@@ -275,6 +288,13 @@
 	border-radius: 50%;
 	background: var(--accent);
 	box-shadow: 0 0 0 3px var(--accent-soft);
+	animation: dot-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+	50% {
+		box-shadow: 0 0 0 5px rgba(157, 184, 255, 0.04);
+	}
 }
 
 .pill-sep {
@@ -814,6 +834,70 @@
 	font-size: 12px;
 }
 
+/* ── Motion ───────────────────────────────────────────────────────────── */
+/* 首屏依次上浮；之后的区块进入视口时渐显（.js 由 head 里的内联脚本添加） */
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+}
+
+.hero-copy > * {
+	animation: rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.hero-copy > :nth-child(2) {
+	animation-delay: 80ms;
+}
+
+.hero-copy > :nth-child(3) {
+	animation-delay: 160ms;
+}
+
+.hero-copy > :nth-child(4) {
+	animation-delay: 240ms;
+}
+
+.hero-copy > :nth-child(5) {
+	animation-delay: 300ms;
+}
+
+.hero-stage .shot img {
+	animation: rise 1s cubic-bezier(0.2, 0.8, 0.2, 1) 360ms both;
+}
+
+.hero-stage .shot-side img {
+	animation-delay: 520ms;
+}
+
+.js [data-reveal] {
+	opacity: 0;
+	transform: translateY(20px);
+	transition:
+		opacity 0.8s ease,
+		transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+	transition-delay: var(--delay, 0ms);
+}
+
+.js [data-reveal].is-visible {
+	opacity: 1;
+	transform: none;
+}
+
+.cell-icon {
+	transition: transform 0.25s ease;
+}
+
+.cell:hover .cell-icon {
+	transform: translateY(-2px);
+}
+
+/* ── Deck (窄屏截图叠卡) ─────────────────────────────────────────────── */
+.deck-nav {
+	display: none;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
 	.bento {
@@ -879,16 +963,88 @@
 	}
 
 	.hero-stage {
-		height: 460px;
+		display: grid;
+		justify-items: center;
+		height: 500px;
 		margin-top: 56px;
+		touch-action: pan-y;
+		user-select: none;
+		mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+		-webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
 	}
 
-	.shot-side {
-		display: none;
+	.hero-stage .shot {
+		grid-area: 1 / 1;
+		width: min(70vw, 300px);
+		margin: 0;
+		opacity: 1;
+		transition:
+			transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+			filter 0.45s ease;
 	}
 
-	.shot-main {
-		width: min(74vw, 320px);
+	.hero-stage .shot img {
+		-webkit-user-drag: none;
+		pointer-events: none;
+	}
+
+	.hero-stage .shot[data-pos='0'] {
+		z-index: 3;
+		transform: none;
+		filter: brightness(1) drop-shadow(0 30px 40px rgba(0, 0, 0, 0.5));
+		cursor: grab;
+	}
+
+	.hero-stage .shot[data-pos='1'] {
+		z-index: 2;
+		transform: translateX(16%) rotate(6deg) scale(0.92);
+		filter: brightness(0.55) drop-shadow(0 30px 40px rgba(0, 0, 0, 0.5));
+	}
+
+	.hero-stage .shot[data-pos='2'] {
+		z-index: 1;
+		transform: translateX(-16%) rotate(-6deg) scale(0.86);
+		filter: brightness(0.35) drop-shadow(0 30px 40px rgba(0, 0, 0, 0.5));
+	}
+
+	.hero-stage .shot.is-dragging {
+		cursor: grabbing;
+		transition: none;
+	}
+
+	.js .deck-nav {
+		position: relative;
+		z-index: 4;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		margin-top: 12px;
+		padding-bottom: 48px;
+	}
+
+	.deck-dot {
+		width: 6px;
+		height: 6px;
+		padding: 0;
+		border: 0;
+		border-radius: 999px;
+		background: var(--border-strong);
+		cursor: pointer;
+		transition:
+			width 0.3s ease,
+			background-color 0.3s ease;
+	}
+
+	.deck-dot.is-active {
+		width: 18px;
+		background: var(--text-2);
+	}
+
+	.deck-hint {
+		margin-left: 8px;
+		font-size: 11px;
+		color: var(--text-3);
 	}
 
 	.podcast-grid {
@@ -945,5 +1101,11 @@
 @media (prefers-reduced-motion: reduce) {
 	.landing * {
 		transition: none !important;
+		animation: none !important;
+	}
+
+	.js [data-reveal] {
+		opacity: 1;
+		transform: none;
 	}
 }

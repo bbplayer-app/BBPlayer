@@ -23,6 +23,7 @@ import podcastPlayer from '../assets/landing/podcast_player.webp'
 import podcastSubtitles from '../assets/landing/podcast_subtitles.webp'
 import songLyrics from '../assets/landing/song_lyrics.webp'
 import songPlayer from '../assets/landing/song_player.webp'
+import songPlayerSpectrum from '../assets/landing/song_player_spectrum.webp'
 import '../styles/landing.css'
 
 const REPO = 'https://github.com/bbplayer-app/BBPlayer'
@@ -34,7 +35,7 @@ const features = [
 		label: 'Lyrics',
 		title: '逐字歌词，唱到哪亮到哪',
 		body: '从网易云音乐、QQ 音乐和酷狗自动匹配歌词，逐字进度、翻译与罗马音一起显示。对不上的时候，可以按 0.5 秒微调时间轴，或者直接动手编辑。',
-		points: ['网易云 / QQ 音乐 / 酷狗多源匹配', '逐字 · 翻译 · 罗马音', '手动搜索、编辑与时间轴偏移'],
+		points: ['歌词源可选网易云 / QQ 音乐 / 酷狗', '逐字 · 翻译 · 罗马音', '手动搜索、编辑与时间轴偏移'],
 		image: songLyrics,
 		alt: 'BBPlayer 深色歌词页，逐字高亮正在演唱的日文歌词，下方显示中文翻译',
 		href: '/guides/lyrics/',
@@ -88,6 +89,7 @@ const stack = [
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content="https://bbplayer.roitium.com/" />
 		<link rel="icon" href="/favicon.ico" />
+		<script is:inline>document.documentElement.classList.add('js')</script>
 	</head>
 	<body class="landing">
 		<header class="nav">
@@ -141,28 +143,34 @@ const stack = [
 					<p class="meta mono">免费 · 开源 · 无广告 · MIT License</p>
 				</div>
 
-				<div class="container hero-stage">
-					<figure class="shot shot-side shot-left">
+				<div class="container hero-stage" data-deck>
+					<figure class="shot shot-side shot-left" data-pos="2">
 						<Image src={podcastPlayer} alt="BBPlayer 播客模式播放器，显示节目封面、章节名与快退快进按钮" widths={[360, 600]} sizes="(max-width: 720px) 0px, 270px" loading="eager" />
 					</figure>
-					<figure class="shot shot-main">
-						<Image src={songPlayer} alt="BBPlayer 播放器，蓝色流体背景、圆形封面与波浪进度条" widths={[400, 720]} sizes="(max-width: 720px) 74vw, 320px" loading="eager" fetchpriority="high" />
+					<figure class="shot shot-main" data-pos="0">
+						<Image src={songPlayerSpectrum} alt="BBPlayer 播放器，圆形封面周围环绕实时音频频谱，下方是波浪进度条" widths={[400, 720]} sizes="(max-width: 720px) 74vw, 320px" loading="eager" fetchpriority="high" />
 					</figure>
-					<figure class="shot shot-side shot-right">
+					<figure class="shot shot-side shot-right" data-pos="1">
 						<Image src={songLyrics} alt="BBPlayer 歌词页，逐字高亮的日文歌词与中文翻译" widths={[360, 600]} sizes="(max-width: 720px) 0px, 270px" loading="eager" />
 					</figure>
+				</div>
+				<div class="deck-nav" aria-label="切换截图">
+					<button type="button" class="deck-dot is-active" data-deck-dot="0" aria-label="播放器"></button>
+					<button type="button" class="deck-dot" data-deck-dot="1" aria-label="逐字歌词"></button>
+					<button type="button" class="deck-dot" data-deck-dot="2" aria-label="播客"></button>
+					<span class="deck-hint mono">左右滑动</span>
 				</div>
 			</section>
 
 			<section class="strip">
-				<div class="container strip-grid">
+				<div class="container strip-grid" data-reveal>
 					<div>
 						<span class="strip-k mono">LYRICS</span>
 						<span class="strip-v">逐字 · 翻译 · 罗马音</span>
 					</div>
 					<div>
-						<span class="strip-k mono">SOURCES</span>
-						<span class="strip-v">网易云 · QQ 音乐 · 酷狗</span>
+						<span class="strip-k mono">LIBRARY</span>
+						<span class="strip-v">收藏夹 · 合集 · 稍后再看</span>
 					</div>
 					<div>
 						<span class="strip-k mono">SYSTEM</span>
@@ -179,7 +187,7 @@ const stack = [
 				<div class="container">
 					{features.map((f, i) => (
 						<article class:list={['feature', { 'feature-flip': i % 2 === 1 }]}>
-							<div class="feature-copy">
+							<div class="feature-copy" data-reveal>
 								<p class="eyebrow mono">
 									<span>{f.index}</span>
 									<span class="eyebrow-line"></span>
@@ -196,7 +204,7 @@ const stack = [
 								</a>
 							</div>
 							<div class="feature-visual">
-								<div class="visual-frame">
+								<div class="visual-frame" data-reveal style="--delay: 120ms">
 									<figure class="shot">
 										<Image src={f.image} alt={f.alt} widths={[400, 720]} sizes="(max-width: 720px) 66vw, 300px" />
 									</figure>
@@ -209,7 +217,7 @@ const stack = [
 
 			<section class="podcast">
 				<div class="container">
-					<div class="section-head section-head-center">
+					<div class="section-head section-head-center" data-reveal>
 						<p class="eyebrow mono">
 							<span>03</span>
 							<span class="eyebrow-line"></span>
@@ -219,7 +227,7 @@ const stack = [
 						<p class="section-sub">访谈、课程、长视频。切到播客模式，播放器会换成更适合长内容的一套控制。</p>
 					</div>
 					<div class="podcast-grid">
-						<figure class="podcast-item">
+						<figure class="podcast-item" data-reveal>
 							<div class="visual-frame">
 								<div class="shot">
 									<Image src={podcastPlayer} alt="BBPlayer 播客播放器，显示章节名、快退快进 15 秒、倍速、定时与章节入口" widths={[400, 720]} sizes="(max-width: 720px) 66vw, 280px" />
@@ -230,7 +238,7 @@ const stack = [
 								<p>每段音频单独保存进度，再次打开从上次的位置继续。倍速、定时关闭、章节列表都在手边，进度条上方显示当前章节。</p>
 							</figcaption>
 						</figure>
-						<figure class="podcast-item">
+						<figure class="podcast-item" data-reveal style="--delay: 120ms">
 							<div class="visual-frame">
 								<div class="shot">
 									<Image src={podcastSubtitles} alt="BBPlayer 播客字幕页，按时间分段显示 B 站字幕并高亮当前句子" widths={[400, 720]} sizes="(max-width: 720px) 66vw, 280px" />
@@ -253,7 +261,7 @@ const stack = [
 
 			<section class="details">
 				<div class="container">
-					<div class="section-head">
+					<div class="section-head" data-reveal>
 						<p class="eyebrow mono">
 							<span>04</span>
 							<span class="eyebrow-line"></span>
@@ -262,7 +270,7 @@ const stack = [
 						<h2>藏在细节里的部分</h2>
 						<p class="section-sub">从找歌、整理到离线和分享，B 站上听歌的每一步都考虑到了。</p>
 					</div>
-					<div class="bento">
+					<div class="bento" data-reveal style="--delay: 80ms">
 						{details.map((d) => (
 							<a href={d.href} class="cell">
 								<d.icon size={18} class="cell-icon" />
@@ -276,7 +284,7 @@ const stack = [
 
 			<section class="engine">
 				<div class="container engine-grid">
-					<div class="engine-copy">
+					<div class="engine-copy" data-reveal>
 						<p class="eyebrow mono">
 							<span>05</span>
 							<span class="eyebrow-line"></span>
@@ -292,7 +300,7 @@ const stack = [
 							<ArrowUpRight size={16} />
 						</a>
 					</div>
-					<div class="terminal" role="list">
+					<div class="terminal" role="list" data-reveal style="--delay: 120ms">
 						<div class="terminal-bar" aria-hidden="true">
 							<span></span><span></span><span></span>
 							<code class="mono">packages/</code>
@@ -312,7 +320,7 @@ const stack = [
 
 			<section class="final">
 				<div class="hero-glow final-glow" aria-hidden="true"></div>
-				<div class="container final-inner">
+				<div class="container final-inner" data-reveal>
 					<Image src={icon} alt="" width={64} height={64} class="final-icon" />
 					<h2>安静地听。</h2>
 					<p class="section-sub">从 GitHub Releases 下载 APK，大多数设备选择 arm64-v8a。</p>
@@ -342,5 +350,7 @@ const stack = [
 			</div>
 			<p class="container disclaimer dim">BBPlayer 是第三方开源项目，与哔哩哔哩没有关联。音视频内容版权归原作者所有。</p>
 		</footer>
+
+		<script src="../scripts/landing.ts"></script>
 	</body>
 </html>
