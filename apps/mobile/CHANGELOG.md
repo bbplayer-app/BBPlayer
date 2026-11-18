@@ -5,7 +5,7 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.8.2] - 2026-11-18
 
 ### Added
 
