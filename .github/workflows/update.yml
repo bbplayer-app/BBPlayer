@@ -58,9 +58,11 @@ jobs:
         continue-on-error: true
         run: |
           echo "Sentry release: $SENTRY_RELEASE"
-          npx -y @sentry/cli releases new "$SENTRY_RELEASE"
-          npx -y @sentry/cli releases set-commits "$SENTRY_RELEASE" --auto --ignore-missing
-          npx -y @sentry/cli releases finalize "$SENTRY_RELEASE"
+          # 不能用 npx：装完依赖后 npm 会把 pnpm 布局里的 @sentry/cli 当成已安装，
+          # 跳过下载，但根目录 .bin 里并没有 sentry-cli，结果报 command not found
+          pnpm dlx @sentry/cli releases new "$SENTRY_RELEASE"
+          pnpm dlx @sentry/cli releases set-commits "$SENTRY_RELEASE" --auto --ignore-missing
+          pnpm dlx @sentry/cli releases finalize "$SENTRY_RELEASE"
 
       - name: 🎁 Create GitHub release
         continue-on-error: true
