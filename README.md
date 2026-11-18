@@ -2,7 +2,7 @@
 
 <img src="./assets/readme/banner.jpg" alt="BBPlayer：B 站上想听的，值得一个专门的播放器" />
 
-<h3>开源的 Bilibili 音频播放器</h3>
+<h1>BBPlayer</h1>
 
 逐字歌词、封面取色的播放器、系统级歌词，<br />
 听长节目时还有记得进度、能跟着字幕读的播客模式。
