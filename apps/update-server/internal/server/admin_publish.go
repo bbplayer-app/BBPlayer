@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/sync/errgroup"
 )
 
 type publishRequest struct {
@@ -44,6 +45,20 @@ type exportMeta struct {
 			Ext  string `json:"ext"`
 		} `json:"assets"`
 	} `json:"fileMetadata"`
+}
+
+// publishUploadConcurrency bounds parallel R2 uploads during a publish.
+const publishUploadConcurrency = 8
+
+type publishObject struct {
+	key, object, contentType string
+	body                     []byte
+}
+
+type publishPlatform struct {
+	name   string
+	launch publishObject
+	assets []publishObject
 }
 
 func sha(b []byte) string { h := sha256.Sum256(b); return base64.RawURLEncoding.EncodeToString(h[:]) }
@@ -142,21 +157,65 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 		return nil, huma.Error400BadRequest("invalid expoConfig.json")
 	}
 	gid := uuid.New()
+	_ = cfg // JSON validation above intentionally precedes persistence.
+
+	// Read every object out of the archive and upload them all to R2 before the
+	// transaction opens. Uploads run concurrently: done one by one an export with
+	// many assets outlasts the reverse proxy's timeout, and holding a database
+	// transaction open across that many network round trips is wasteful anyway.
+	var platforms []publishPlatform
+	var uploads []publishObject
+	for platform, m := range meta.FileMetadata {
+		if platform != "android" && platform != "ios" {
+			continue
+		}
+		bundle, e := read(m.Bundle)
+		if e != nil {
+			return nil, huma.Error400BadRequest("bundle missing")
+		}
+		p := publishPlatform{name: platform, launch: publishObject{key: path.Base(m.Bundle), object: path.Join("updates", gid.String(), platform, m.Bundle), contentType: "application/javascript", body: bundle}}
+		for _, a := range m.Assets {
+			b, e := read(a.Path)
+			if e != nil {
+				return nil, huma.Error400BadRequest("asset missing")
+			}
+			ct := mime.TypeByExtension("." + a.Ext)
+			if ct == "" {
+				ct = "application/octet-stream"
+			}
+			p.assets = append(p.assets, publishObject{key: path.Base(a.Path), object: path.Join("updates", gid.String(), platform, a.Path), contentType: ct, body: b})
+		}
+		platforms = append(platforms, p)
+		uploads = append(uploads, p.launch)
+		uploads = append(uploads, p.assets...)
+	}
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(publishUploadConcurrency)
+	for _, o := range uploads {
+		g.Go(func() error {
+			if e := s.Objects.Put(gctx, o.object, o.contentType, o.body); e != nil {
+				s.Log.Error("publish: upload object", "error", e, "group_id", gid.String(), "object", o.object)
+				return e
+			}
+			return nil
+		})
+	}
+	if g.Wait() != nil {
+		return nil, huma.NewError(http.StatusBadGateway, "r2 upload")
+	}
+
 	tx, e := s.DB.Pool.Begin(ctx)
 	if e != nil {
 		return nil, s.dbError("publish: begin transaction", e, "group_id", gid.String())
 	}
 	defer tx.Rollback(ctx)
 	txq := s.DB.Queries.WithTx(tx)
-	_ = cfg // JSON validation above intentionally precedes persistence.
 	e = txq.InsertUpdateGroup(ctx, db.InsertUpdateGroupParams{ID: pgUUID(&gid), Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Message: req.Message, Source: req.Source, FingerprintHash: pgtype.Text{String: fingerprintHash, Valid: hasFingerprint}, FingerprintSources: fingerprintSources, ExpoConfig: cb, MetadataSha256: sha(mb)})
 	if e != nil {
 		return nil, s.dbError("publish: insert update group", e, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion)
 	}
-	for platform, m := range meta.FileMetadata {
-		if platform != "android" && platform != "ios" {
-			continue
-		}
+	for _, p := range platforms {
+		platform := p.name
 		// Capture the currently visible launch bundle before the channel pointer
 		// changes. The worker will create exactly this adjacent-head patch.
 		var previousUpdate *uuid.UUID
@@ -171,43 +230,19 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 			return nil, s.dbError("publish: query previous channel update", err, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "platform", platform)
 		}
 
-		bundle, e := read(m.Bundle)
-		if e != nil {
-			return nil, huma.Error400BadRequest("bundle missing")
-		}
 		uid := uuid.New()
-		launchKey := path.Base(m.Bundle)
-		object := path.Join("updates", gid.String(), platform, m.Bundle)
-		if e = s.Objects.Put(ctx, object, "application/javascript", bundle); e != nil {
-			s.Log.Error("publish: upload launch bundle", "error", e, "group_id", gid.String(), "platform", platform, "object", object)
-			return nil, huma.NewError(http.StatusBadGateway, "r2 upload")
-		}
-		e = txq.InsertUpdate(ctx, db.InsertUpdateParams{ID: pgUUID(&uid), GroupID: pgUUID(&gid), Platform: platform, LaunchKey: launchKey, LaunchHash: sha(bundle)})
+		e = txq.InsertUpdate(ctx, db.InsertUpdateParams{ID: pgUUID(&uid), GroupID: pgUUID(&gid), Platform: platform, LaunchKey: p.launch.key, LaunchHash: sha(p.launch.body)})
 		if e != nil {
 			return nil, s.dbError("publish: insert update", e, "group_id", gid.String(), "platform", platform)
 		}
-		e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: launchKey, ObjectKey: object, Sha256: sha(bundle), ContentType: "application/javascript", SizeBytes: int64(len(bundle)), IsLaunch: true})
+		e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: p.launch.key, ObjectKey: p.launch.object, Sha256: sha(p.launch.body), ContentType: p.launch.contentType, SizeBytes: int64(len(p.launch.body)), IsLaunch: true})
 		if e != nil {
 			return nil, s.dbError("publish: insert launch asset", e, "group_id", gid.String(), "platform", platform)
 		}
-		for _, a := range m.Assets {
-			b, e := read(a.Path)
+		for _, a := range p.assets {
+			e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: a.key, ObjectKey: a.object, Sha256: sha(a.body), ContentType: a.contentType, SizeBytes: int64(len(a.body))})
 			if e != nil {
-				return nil, huma.Error400BadRequest("asset missing")
-			}
-			k := path.Base(a.Path)
-			ct := mime.TypeByExtension("." + a.Ext)
-			if ct == "" {
-				ct = "application/octet-stream"
-			}
-			obj := path.Join("updates", gid.String(), platform, a.Path)
-			if e = s.Objects.Put(ctx, obj, ct, b); e != nil {
-				s.Log.Error("publish: upload asset", "error", e, "group_id", gid.String(), "platform", platform, "object", obj)
-				return nil, huma.NewError(http.StatusBadGateway, "r2 upload")
-			}
-			e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: k, ObjectKey: obj, Sha256: sha(b), ContentType: ct, SizeBytes: int64(len(b))})
-			if e != nil {
-				return nil, s.dbError("publish: insert asset", e, "group_id", gid.String(), "platform", platform, "object", obj)
+				return nil, s.dbError("publish: insert asset", e, "group_id", gid.String(), "platform", platform, "object", a.object)
 			}
 		}
 		if previousUpdate != nil {
