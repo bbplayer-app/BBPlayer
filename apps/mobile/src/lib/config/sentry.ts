@@ -158,6 +158,11 @@ export function initializeSentry() {
 		release: SENTRY_RELEASE,
 		debug: false,
 		tracesSampleRate: TRACES_SAMPLE_RATE,
+		// trace 按业务拆开后 envelope 数量多了一个数量级，默认 30 的发送队列和离线缓存
+		// 在弱网 / 刚恢复联网时会被打满（client_discard 的 queue_overflow / cache_overflow）。
+		// 两个值都会同时传给 JS transport 和原生 SDK
+		maxQueueSize: 100,
+		maxCacheItems: 100,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
 		// 点击带 testID 的元素会开启 ui.action.touch transaction，期间发起的 query / mutation 挂在它下面；
