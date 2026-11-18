@@ -68,9 +68,13 @@ jobs:
             echo "No native Sentry release found for ${APP_VERSION}, skipping"
             exit 0
           fi
+          # 显式给出「上一个原生版本 tag → HEAD」的范围。--auto 会拿最近一个有 commit 的 release
+          # 当起点，碰到旧的 +ota.* release 时范围只剩一两个 commit，还会覆盖掉原生构建时关联的 commit
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'v*' "v${APP_VERSION}^" 2>/dev/null || true)
+          RANGE="${PREV_TAG:+$(git rev-parse "$PREV_TAG")..}$(git rev-parse HEAD)"
           for RELEASE in $RELEASES; do
-            echo "Sentry release: $RELEASE"
-            pnpm dlx @sentry/cli releases set-commits "$RELEASE" --auto --ignore-missing
+            echo "Sentry release: $RELEASE ($PREV_TAG..HEAD)"
+            pnpm dlx @sentry/cli releases set-commits "$RELEASE" --commit "bbplayer-app/BBPlayer@${RANGE}"
           done
 
       - name: 🎁 Create GitHub release
