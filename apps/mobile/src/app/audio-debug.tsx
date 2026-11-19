@@ -80,6 +80,7 @@ export default function AudioDebugScreen() {
 	// 只在页面可见且 App 位于前台时轮询
 	useFocusEffect(
 		useCallback(() => {
+			setTestOptions(readTestOptions())
 			let timer: ReturnType<typeof setInterval> | null = null
 
 			const refresh = () => {

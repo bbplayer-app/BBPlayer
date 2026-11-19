@@ -9,7 +9,6 @@ import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
-import { alert } from '@/components/modals/AlertModal'
 import ThemeSection from '@/features/theme/ThemeSection'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -63,35 +62,6 @@ export default function AppearanceSettingsPage() {
 		},
 	])
 
-	const handleSpectrumToggle = () => {
-		if (enableSpectrumVisualizer) {
-			Orpheus.isSpectrumVisualizerEnabled = false
-
-			return
-		}
-
-		if (Platform.OS !== 'android') {
-			Orpheus.isSpectrumVisualizerEnabled = true
-
-			return
-		}
-
-		alert(
-			'开启音频频谱',
-			'频谱需要读取解码后的音频数据，开启后播放器无法再把解码交给手机的音频芯片（音频 offload），后台播放时会更耗电一些。\n\n切换时播放会短暂停顿一下。',
-			[
-				{ text: '取消' },
-				{
-					text: '开启',
-					onPress: () => {
-						Orpheus.isSpectrumVisualizerEnabled = true
-					},
-				},
-			],
-			{ cancelable: true },
-		)
-	}
-
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
@@ -135,12 +105,16 @@ export default function AppearanceSettingsPage() {
 							variant='bodySmall'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							在播放器封面周围显示实时音频频谱。开启后后台播放会更耗电
+							在播放器封面周围显示实时音频频谱。
+							{Platform.OS === 'android' &&
+								'开启频谱会暂停使用 offload；切换时播放可能短暂停顿。'}
 						</Text>
 					</View>
 					<UniversalSwitch
 						value={enableSpectrumVisualizer}
-						onValueChange={handleSpectrumToggle}
+						onValueChange={(value) => {
+							Orpheus.isSpectrumVisualizerEnabled = value
+						}}
 					/>
 				</View>
 				{Platform.OS === 'android' && (
