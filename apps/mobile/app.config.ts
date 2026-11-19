@@ -19,6 +19,7 @@ import { version } from './package.json'
 const IS_DEV = process.env.APP_VARIANT === 'development'
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
 const UPDATE_SERVER_URL = 'https://updates.bbplayer.roitium.com'
+const APP_ICON = './assets/images/icon.png'
 
 const UPDATE_CHANNEL = IS_DEV
 	? 'development'
@@ -90,7 +91,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		slug: 'bbplayer',
 		version: version,
 		orientation: 'default',
-		icon: './assets/images/icon.png',
+		icon: APP_ICON,
 		scheme: 'bbplayer',
 		userInterfaceStyle: 'automatic',
 		platforms: ['android', 'ios'],
@@ -286,6 +287,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		},
 		owner: 'roitium',
 		ios: {
+			icon: { light: APP_ICON, dark: APP_ICON },
 			supportsTablet: true,
 			bundleIdentifier: 'com.roitium.bbplayer',
 			runtimeVersion: {
