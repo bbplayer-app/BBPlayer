@@ -74,6 +74,13 @@ type DynamicPlaylistStats = {
 	totalDuration: number
 }
 
+export type PlaylistTracksCursor = {
+	lastSortKey: string
+	createdAt: number
+	lastId: number
+	isDynamic: boolean
+}
+
 /**
  * 对于内部 tracks 的增删改操作只有 local playlist 才可以，注意方法名。
  */
@@ -1511,22 +1518,12 @@ export class PlaylistService {
 		playlistId: number
 		initialLimit?: number
 		limit: number
-		cursor:
-			| {
-					lastSortKey: string
-					createdAt: number
-					lastId: number
-			  }
-			| undefined
+		cursor: PlaylistTracksCursor | undefined
 	}): ResultAsync<
 		{
 			tracks: Track[]
 			sortKeys: string[]
-			nextCursor?: {
-				lastSortKey: string
-				createdAt: number
-				lastId: number
-			}
+			nextCursor?: PlaylistTracksCursor
 			nextPageFirstSortKey?: string
 		},
 		DatabaseError | ServiceError
@@ -1537,24 +1534,33 @@ export class PlaylistService {
 
 		return ResultAsync.fromPromise(
 			(async () => {
-				const playlist = await traceSpan(
-					this.traceParent,
-					dbSpan('SELECT', 'playlists', 'playlist.type'),
-					() =>
-						this.db.query.playlists.findFirst({
-							columns: { type: true },
-							where: eq(schema.playlists.id, playlistId),
-						}),
-				)
+				let isDynamic: boolean
 
-				if (!playlist) throw createPlaylistNotFound(playlistId)
+				if (cursor) {
+					isDynamic = cursor.isDynamic
+				} else {
+					const playlist = await traceSpan(
+						this.traceParent,
+						dbSpan('SELECT', 'playlists', 'playlist.type'),
+						() =>
+							this.db.query.playlists.findFirst({
+								columns: { type: true },
+								where: eq(schema.playlists.id, playlistId),
+							}),
+					)
 
-				if (playlist.type === 'dynamic') {
-					return this.queryDynamicPlaylistTrackRows({
+					if (!playlist) throw createPlaylistNotFound(playlistId)
+					isDynamic = playlist.type === 'dynamic'
+				}
+
+				if (isDynamic) {
+					const rows = await this.queryDynamicPlaylistTrackRows({
 						playlistId,
 						limit: effectiveLimit + 1,
 						cursor,
 					})
+
+					return { rows, isDynamic }
 				}
 
 				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
@@ -1591,7 +1597,7 @@ export class PlaylistService {
 					)
 				}
 
-				const data = await traceSpan(
+				const rows = await traceSpan(
 					this.traceParent,
 					dbSpan('SELECT', 'playlist_tracks', 'playlist_tracks.paginated'),
 					() =>
@@ -1611,7 +1617,7 @@ export class PlaylistService {
 						}),
 				)
 
-				return data
+				return { rows, isDynamic }
 			})(),
 			(e) =>
 				e instanceof ServiceError
@@ -1619,11 +1625,11 @@ export class PlaylistService {
 					: new DatabaseError('分页获取播放列表歌曲的事务失败', {
 							cause: e,
 						}),
-		).andThen((data) => {
+		).andThen(({ rows, isDynamic }) => {
 			const newTracks: Track[] = []
 			const sortKeys: string[] = []
 
-			for (const pt of data) {
+			for (const pt of rows) {
 				const t = this.trackService.formatTrack(pt.track)
 
 				if (!t) {
@@ -1640,16 +1646,17 @@ export class PlaylistService {
 
 			let nextCursor
 			let nextPageFirstSortKey
-			const hasMore = data.length === effectiveLimit + 1
+			const hasMore = rows.length === effectiveLimit + 1
 
 			if (hasMore) {
-				const lastItem = data[effectiveLimit - 1]
+				const lastItem = rows[effectiveLimit - 1]
 				nextCursor = {
 					lastSortKey: lastItem.sortKey,
 					createdAt: lastItem.createdAt.getTime(),
 					lastId: lastItem.trackId,
+					isDynamic,
 				}
-				nextPageFirstSortKey = data[effectiveLimit].sortKey
+				nextPageFirstSortKey = rows[effectiveLimit].sortKey
 			}
 
 			return okAsync({

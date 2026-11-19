@@ -8,7 +8,10 @@ import {
 import { queryClient } from '@/lib/config/queryClient'
 import { ServiceError } from '@/lib/errors'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
-import { playlistService } from '@/lib/services/playlistService'
+import {
+	type PlaylistTracksCursor,
+	playlistService,
+} from '@/lib/services/playlistService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 queryClient.setQueryDefaults(['db', 'playlists'], {
@@ -195,9 +198,7 @@ export const usePlaylistContentsInfinite = (
 			return result.value
 		},
 		getNextPageParam: (lastPage) => lastPage.nextCursor,
-		initialPageParam: undefined as
-			| { lastSortKey: string; createdAt: number; lastId: number }
-			| undefined,
+		initialPageParam: undefined as PlaylistTracksCursor | undefined,
 		gcTime: 0,
 	})
 }
