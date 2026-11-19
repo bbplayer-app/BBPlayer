@@ -1,0 +1,23 @@
+#!/bin/bash
+# Container stand-in for xcrun. Answers SDK queries and stamps a prebuilt Mach-O stub for "clang -o X".
+developer="$BBPLAYER_IOS_SDK/Developer"
+args=("$@")
+case "$*" in
+  *--show-sdk-version*) echo 27.1; exit 0 ;;
+  *--show-sdk-path*)
+    case "$*" in
+      *macosx*) echo "$developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ;;
+      *) echo "$developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk" ;;
+    esac
+    exit 0 ;;
+  *--show-sdk-platform-path*) echo "$developer/Platforms/iPhoneOS.platform"; exit 0 ;;
+esac
+for ((i = 0; i < ${#args[@]}; i++)); do
+  if [ "${args[$i]}" = "-o" ]; then
+    cp "$BBPLAYER_IOS_STUB" "${args[$((i + 1))]}"
+    echo "xcrun shim: stamped stub -> ${args[$((i + 1))]}" >&2
+    exit 0
+  fi
+done
+echo "xcrun shim: ignored $*" >&2
+exit 0

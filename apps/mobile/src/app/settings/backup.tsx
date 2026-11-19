@@ -3,8 +3,9 @@ import * as Expo from 'expo'
 import * as DocumentPicker from 'expo-document-picker'
 import { File } from 'expo-file-system'
 import { useRouter } from 'expo-router'
+import * as Sharing from 'expo-sharing'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Divider,
@@ -53,13 +54,21 @@ async function exportLocalBackup() {
 	const backupFile = new File(uri)
 
 	try {
-		const downloadsUri = exportBackupToDownloads(
-			uri,
-			`backup-${Date.now()}.zip`,
-			'application/zip',
-		)
+		if (Platform.OS === 'ios') {
+			await Sharing.shareAsync(uri, {
+				mimeType: 'application/zip',
+				UTI: 'public.zip-archive',
+			})
+		} else {
+			const downloadsUri = exportBackupToDownloads(
+				uri,
+				`backup-${Date.now()}.zip`,
+				'application/zip',
+			)
 
-		if (!downloadsUri) throw new Error('无法写入文件')
+			if (!downloadsUri) throw new Error('无法写入文件')
+			toast.success('已导出到下载目录/bbplayer-backup')
+		}
 	} finally {
 		if (backupFile.exists) backupFile.delete()
 	}
@@ -149,7 +158,6 @@ export default function BackupSettingsPage() {
 
 		try {
 			await exportLocalBackup()
-			toast.success('已导出到下载目录/bbplayer-backup')
 		} catch (error) {
 			toastAndLogError('导出失败', error, 'UI.Settings.Backup')
 		}

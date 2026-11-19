@@ -1,5 +1,4 @@
 import { Orpheus } from '@bbplayer/orpheus'
-import { Host, Slider } from '@expo/ui/jetpack-compose'
 import { useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Dialog, Text } from 'react-native-paper'
@@ -7,6 +6,8 @@ import { Dialog, Text } from 'react-native-paper'
 import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
+
+import PlaybackSpeedSlider from './PlaybackSpeedSlider'
 
 const MIN_SPEED = 0.1
 const MAX_SPEED = 3.0
@@ -80,19 +81,14 @@ const PlaybackSpeedModal = () => {
 				</View>
 
 				<View style={styles.sliderContainer}>
-					<Host
-						matchContents={{ vertical: true }}
-						style={styles.sliderHost}
-					>
-						<Slider
-							value={speed}
-							min={MIN_SPEED}
-							max={MAX_SPEED}
-							steps={SPEED_STEPS}
-							onValueChange={handleValueChange}
-							onValueChangeFinished={handleValueChangeFinished}
-						/>
-					</Host>
+					<PlaybackSpeedSlider
+						value={speed}
+						min={MIN_SPEED}
+						max={MAX_SPEED}
+						steps={SPEED_STEPS}
+						onValueChange={handleValueChange}
+						onValueChangeFinished={handleValueChangeFinished}
+					/>
 				</View>
 			</Dialog.Content>
 			<Dialog.Actions>
@@ -118,9 +114,6 @@ const styles = StyleSheet.create({
 	},
 	sliderContainer: {
 		marginTop: 8,
-	},
-	sliderHost: {
-		width: '100%',
 	},
 })
 

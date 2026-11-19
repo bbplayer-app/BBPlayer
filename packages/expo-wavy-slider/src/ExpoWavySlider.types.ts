@@ -99,6 +99,11 @@ export type WavySliderProps = ViewProps & {
 	/** Visual chapter boundaries normalized to 0..1. These do not snap the thumb. */
 	chapterMarkers?: number[]
 	/**
+	 * iOS only: true while a gesture outside the slider is dragging it, which is
+	 * when the chapter markers show. Android tracks its own drag.
+	 */
+	dragging?: SharedValue<boolean>
+	/**
 	 * Current slider value.
 	 *
 	 * When `progress` is provided, `progress.value` takes precedence and this

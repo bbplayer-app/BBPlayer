@@ -1,0 +1,6 @@
+#!/bin/sh
+# Linux stand-in so RN/Expo Ruby scripts can read an Xcode version; nothing is built here.
+case "$1" in
+  -version) printf 'Xcode 27.1\nBuild version 27B5001\n' ;;
+  *) echo "xcodebuild shim: ignored $*" >&2 ;;
+esac
