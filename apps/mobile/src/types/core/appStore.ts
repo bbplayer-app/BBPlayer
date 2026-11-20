@@ -11,6 +11,7 @@ interface Settings {
 	nowPlayingBarStyle: 'float' | 'bottom'
 	lyricSource: 'auto' | 'netease' | 'qqmusic' | 'kugou'
 	enableVerbatimLyrics: boolean
+	enableAppleStyleLyrics: boolean // 实验性，仅 Android
 	enableDataCollection: boolean
 	downloadMaxParallelTasks: number
 	enableMinimalistMode: boolean

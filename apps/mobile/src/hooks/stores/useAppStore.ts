@@ -137,6 +137,7 @@ export const useAppStore = create<AppState>()(
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',
 					enableVerbatimLyrics: true,
+					enableAppleStyleLyrics: false,
 					enableDataCollection: true,
 					downloadMaxParallelTasks: 1,
 					enableMinimalistMode: false,

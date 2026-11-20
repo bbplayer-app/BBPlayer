@@ -48,6 +48,7 @@ pnpm type-check             # TypeScript type checking
 - heatmap — 基于 SVG 的日期热力图组件
 - image-theme-colors — 从图片中提取主题色的 Expo 原生模块
 - logs — React Native 日志库
+- lyrics-view — Apple Music 风格歌词视图（Jetpack Compose）的 Expo 模块封装，仅 Android
 - native — BBPlayer 原生能力集成模块
 - orpheus — BBPlayer 核心音频播放引擎
 - splash — 歌词转换与解析库

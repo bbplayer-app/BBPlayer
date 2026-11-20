@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [2.8.3] - 2026-11-20
+
+### Added
+
+- 新增 Apple Music 风格歌词（实验性，仅 Android，设置 → 歌词中开启）：用 Jetpack Compose 原生绘制，支持逐行弹簧滚动、按距离模糊、逐字渐变高亮、长音强调和间奏呼吸点
+
 ## [2.8.2] - 2026-11-18
 
 ### Added
