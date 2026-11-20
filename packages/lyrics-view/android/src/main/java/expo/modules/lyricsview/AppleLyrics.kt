@@ -375,6 +375,7 @@ private fun LyricLineItem(
 /** 单词在某一行上的片段：跨行的单词按主排版的实际换行拆开 */
 private class WordSegment(
     val charStart: Int,
+    val charEnd: Int,
     val layout: TextLayoutResult,
     /** 片段在整个单词宽度中的起点，用来让渐变跨行连续扫过 */
     val offsetInWord: Float,
@@ -446,7 +447,7 @@ private fun measureWord(
         val lineEnd = main.getLineEnd(main.getLineForOffset(start))
         val end = if (lineEnd in (start + 1)..spanEnd) lineEnd else spanEnd
         val layout = textMeasurer.measure(text.substring(start - spanStart, end - spanStart), textStyle, softWrap = false, maxLines = 1)
-        segments.add(WordSegment(start, layout, width))
+        segments.add(WordSegment(start, end, layout, width))
         width += layout.size.width
         start = end
     }
@@ -517,7 +518,7 @@ private fun DrawScope.drawLyricText(
             val floatT = clamp01(elapsed / max(WORD_FLOAT_MIN_DURATION_MS, duration))
             val lift = -CssEaseOut.transform(floatT) * WORD_FLOAT_EM * em * progress
             for (segment in word.segments) {
-                val x = main.getHorizontalPosition(segment.charStart, usePrimaryDirection = true)
+                val x = main.rangeLeft(segment.charStart, segment.charEnd)
                 val y = main.getLineBaseline(main.getLineForOffset(segment.charStart)) - segment.layout.firstBaseline
                 translate(left = x, top = y + lift) {
                     drawText(segment.layout, brush = brushAt(segment.offsetInWord))
@@ -529,11 +530,11 @@ private fun DrawScope.drawLyricText(
         // 长音强调：逐字依次放大、发光并互相推开，最后一个词效果更强
         val count = word.chars.size
         word.chars.forEachIndexed { k, (charOffset, glyph) ->
-            val charX = main.getHorizontalPosition(charOffset, usePrimaryDirection = true)
+            val charX = main.getBoundingBox(charOffset).left
             val charY = main.getLineBaseline(main.getLineForOffset(charOffset)) - glyph.firstBaseline
             val segment = word.segments.last { it.charStart <= charOffset }
             val positionInWord = segment.offsetInWord +
-                charX - main.getHorizontalPosition(segment.charStart, usePrimaryDirection = true)
+                charX - main.rangeLeft(segment.charStart, segment.charEnd)
             val charElapsed = elapsed - emphasis.durationMs / 2.5f / count * k
             val glowT = clamp01(charElapsed / emphasis.durationMs)
             val trans = emphasisEasing(glowT) * progress
@@ -555,6 +556,15 @@ private fun DrawScope.drawLyricText(
             }
         }
     }
+}
+
+/**
+ * 一段文字在主排版中的左边界。RTL 文本里起始字符在片段右侧，不能直接用它的位置当原点，
+ * 所以取首尾字符包围盒的较小值
+ */
+private fun TextLayoutResult.rangeLeft(start: Int, end: Int): Float {
+    val last = layoutInput.text.text.offsetByCodePoints(end, -1)
+    return min(getBoundingBox(start).left, getBoundingBox(last).left)
 }
 
 /** 强调动画的先升后降曲线 */
