@@ -1,3 +1,4 @@
+import { isNativeLyricsViewSupported } from '@bbplayer/lyrics-view'
 import { Orpheus } from '@bbplayer/orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
@@ -88,6 +89,10 @@ export default function LyricsSettingsPage() {
 
 	const enableOldSchoolStyleLyric = useAppStore(
 		(state) => state.settings.enableOldSchoolStyleLyric,
+	)
+
+	const enableAppleStyleLyrics = useAppStore(
+		(state) => state.settings.enableAppleStyleLyrics,
 	)
 
 	const setSettings = useAppStore((state) => state.setSettings)
@@ -288,6 +293,19 @@ export default function LyricsSettingsPage() {
 						}
 					/>
 				</View>
+				{isNativeLyricsViewSupported && (
+					<View style={styles.settingRow}>
+						<Text>Apple Music 风格歌词（实验性）</Text>
+						<UniversalSwitch
+							value={enableAppleStyleLyrics}
+							onValueChange={() =>
+								setSettings({
+									enableAppleStyleLyrics: !enableAppleStyleLyrics,
+								})
+							}
+						/>
+					</View>
+				)}
 				{Platform.OS === 'android' && (
 					<>
 						<SettingsSectionTitle title='系统歌词（仅 Android）' />

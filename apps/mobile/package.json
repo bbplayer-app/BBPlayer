@@ -13,6 +13,7 @@
 		"@bbplayer/heatmap": "workspace:*",
 		"@bbplayer/image-theme-colors": "workspace:*",
 		"@bbplayer/logs": "workspace:*",
+		"@bbplayer/lyrics-view": "workspace:*",
 		"@bbplayer/native": "workspace:*",
 		"@bbplayer/orpheus": "workspace:*",
 		"@bbplayer/splash": "workspace:*",

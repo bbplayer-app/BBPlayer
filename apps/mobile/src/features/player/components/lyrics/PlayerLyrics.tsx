@@ -1,3 +1,8 @@
+import {
+	isNativeLyricsViewSupported,
+	NativeLyricsView,
+	type NativeLyricLine,
+} from '@bbplayer/lyrics-view'
 import { parseAndMergeLyrics, type LyricLine } from '@bbplayer/splash'
 import MaskedView from '@react-native-masked-view/masked-view'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -87,6 +92,34 @@ function buildDisplayLyrics(lyrics: LyricFileData | undefined): DisplayLyrics {
 	return { lines, syncLines: parsedLines }
 }
 
+function buildNativeLines(
+	lines: LyricLine[],
+	preferredLyricType: 'translation' | 'romaji',
+	enableVerbatimLyrics: boolean,
+): NativeLyricLine[] {
+	return lines.map((line) => {
+		const subText =
+			preferredLyricType === 'romaji'
+				? line.romaji || line.translation || line.translations?.[0]
+				: line.translation || line.romaji || line.translations?.[0]
+
+		return {
+			startTime: line.startTime,
+			endTime: line.endTime,
+			content: line.content,
+			subText,
+			spans:
+				enableVerbatimLyrics && line.isDynamic
+					? line.spans.map((span) => ({
+							text: span.text,
+							startTime: span.startTime,
+							endTime: span.endTime,
+						}))
+					: [],
+		}
+	})
+}
+
 const Lyrics = memo(function Lyrics({
 	currentIndex,
 	onPressBackground,
@@ -104,7 +137,7 @@ const Lyrics = memo(function Lyrics({
 	const showControls =
 		!embedded && pageHeight - insets.bottom >= MIN_HEIGHT_WITH_CONTROLS
 
-	const colors = useTheme().colors
+	const { colors, dark: isDarkTheme } = useTheme()
 
 	const isFluidBackground = useAppStore(
 		(state) =>
@@ -138,6 +171,11 @@ const Lyrics = memo(function Lyrics({
 
 	const enableVerbatimLyrics = useAppStore(
 		(state) => state.settings.enableVerbatimLyrics,
+	)
+
+	const useNativeLyrics = useAppStore(
+		(state) =>
+			isNativeLyricsViewSupported && state.settings.enableAppleStyleLyrics,
 	)
 
 	const { position: currentTime } = useSmoothProgress()
@@ -186,7 +224,20 @@ const Lyrics = memo(function Lyrics({
 		onUserScrollEnd,
 		onUserScrollStart,
 		handleJumpToLyric,
-	} = useLyricSync(syncLines, scrollToIndex, -tempOffset, currentIndex === 1)
+	} = useLyricSync(
+		syncLines,
+		scrollToIndex,
+		-tempOffset,
+		currentIndex === 1 && !useNativeLyrics,
+	)
+
+	const nativeLines = useMemo(
+		() =>
+			useNativeLyrics
+				? buildNativeLines(syncLines, preferredLyricType, enableVerbatimLyrics)
+				: [],
+		[useNativeLyrics, syncLines, preferredLyricType, enableVerbatimLyrics],
+	)
 
 	const scrollHandler = useAnimatedScrollHandler({
 		onBeginDrag: () => {
@@ -377,6 +428,29 @@ const Lyrics = memo(function Lyrics({
 		)
 	}
 
+	const hasFluidControls = isFluidBackground && showControls
+
+	const renderNativeLyrics = () => (
+		<NativeLyricsView
+			style={{ flex: 1, pointerEvents: offsetMenuVisible ? 'none' : 'auto' }}
+			lines={nativeLines}
+			offset={tempOffset}
+			paused={currentIndex !== 1}
+			color={isDarkTheme ? '#FFFFFF' : '#000000'}
+			blendMode={isDarkTheme ? 'plus' : 'normal'}
+			fadeTop={60}
+			fadeBottom={60}
+			bottomInset={hasFluidControls ? LYRICS_CONTROLS_OVERLAY_HEIGHT - 60 : 0}
+			onLinePress={({ nativeEvent }) => {
+				void handleJumpToLyric(nativeEvent.index)
+			}}
+			onBackgroundPress={onPressBackground}
+		/>
+	)
+
+	const showNativeLyrics =
+		useNativeLyrics && !lyrics.errorMessage && !!lyrics.lrc && !!finalLyrics
+
 	return (
 		<View
 			style={styles.lyricsContainer}
@@ -384,51 +458,52 @@ const Lyrics = memo(function Lyrics({
 			onLayout={({ nativeEvent }) => setPageHeight(nativeEvent.layout.height)}
 		>
 			<View style={styles.lyricsContent}>
-				<MaskedView
-					style={{ flex: 1 }}
-					maskElement={
-						<View
-							style={{ flex: 1 }}
-							pointerEvents='none'
-						>
-							<LinearGradient
-								style={[styles.gradient]}
-								start={{ x: 0, y: 0 }}
-								end={{ x: 0, y: 1 }}
-								colors={['transparent', colors.background]}
-								locations={[0, 1]}
-							/>
-
+				{showNativeLyrics ? (
+					renderNativeLyrics()
+				) : (
+					<MaskedView
+						style={{ flex: 1 }}
+						maskElement={
 							<View
-								style={{
-									flex: 1,
-									backgroundColor: colors.background,
-								}}
-							/>
+								style={{ flex: 1 }}
+								pointerEvents='none'
+							>
+								<LinearGradient
+									style={[styles.gradient]}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 0, y: 1 }}
+									colors={['transparent', colors.background]}
+									locations={[0, 1]}
+								/>
 
-							<LinearGradient
-								style={[
-									styles.gradient,
-									isFluidBackground &&
-										showControls && {
+								<View
+									style={{
+										flex: 1,
+										backgroundColor: colors.background,
+									}}
+								/>
+
+								<LinearGradient
+									style={[
+										styles.gradient,
+										hasFluidControls && {
 											height: LYRICS_CONTROLS_OVERLAY_HEIGHT,
 										},
-								]}
-								start={{ x: 0, y: 0 }}
-								end={{ x: 0, y: 1 }}
-								colors={[colors.background, 'transparent']}
-								locations={[
-									0,
-									isFluidBackground && showControls
-										? 60 / LYRICS_CONTROLS_OVERLAY_HEIGHT
-										: 1,
-								]}
-							/>
-						</View>
-					}
-				>
-					{renderLyrics()}
-				</MaskedView>
+									]}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 0, y: 1 }}
+									colors={[colors.background, 'transparent']}
+									locations={[
+										0,
+										hasFluidControls ? 60 / LYRICS_CONTROLS_OVERLAY_HEIGHT : 1,
+									]}
+								/>
+							</View>
+						}
+					>
+						{renderLyrics()}
+					</MaskedView>
+				)}
 			</View>
 
 			{/* 播放器控件覆盖层 */}
