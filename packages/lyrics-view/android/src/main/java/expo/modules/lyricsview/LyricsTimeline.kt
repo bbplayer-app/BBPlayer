@@ -108,6 +108,15 @@ private fun isCjk(text: String): Boolean {
 internal class LyricsTimeline(private val lines: List<PreparedLine>) {
     val interludes: List<Interlude> = computeInterludes()
 
+    /** prefixMaxEnd[i] 为第 0 ~ i 行的最晚结束时间，用来判断还需不需要继续往前找重叠的行 */
+    private val prefixMaxEnd = LongArray(lines.size).also { arr ->
+        var maxEnd = Long.MIN_VALUE
+        lines.forEachIndexed { i, line ->
+            maxEnd = maxOf(maxEnd, line.endMs)
+            arr[i] = maxEnd
+        }
+    }
+
     fun snapshotAt(timeMs: Long): TimelineSnapshot {
         val interlude = interludes.firstOrNull { timeMs >= it.startMs && timeMs < it.endMs }
 
@@ -123,7 +132,8 @@ internal class LyricsTimeline(private val lines: List<PreparedLine>) {
         val highlighted = ArrayList<Int>(2)
         var isAnyPlaying = false
         var i = anchor
-        while (i >= 0 && anchor - i < MAX_OVERLAP_LOOKBACK) {
+        // 更早的行都已在锚点开始前结束时停止回扫
+        while (i >= 0 && prefixMaxEnd[i] > anchorStart) {
             val line = lines[i]
             if (line.endMs > anchorStart) {
                 highlighted.add(0, i)
@@ -176,7 +186,6 @@ internal class LyricsTimeline(private val lines: List<PreparedLine>) {
 
     private companion object {
         const val MIN_INTERLUDE_GAP_MS = 7000L
-        const val MAX_OVERLAP_LOOKBACK = 16
     }
 }
 

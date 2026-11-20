@@ -45,6 +45,8 @@ class LyricsView(context: Context, appContext: AppContext) : ExpoView(context, a
 
     override fun onDetachedFromWindow() {
         composeView?.let {
+            // 默认策略只在 Activity 销毁时释放，视图卸载后 composition 仍会逐帧运行
+            it.disposeComposition()
             removeView(it)
             composeView = null
         }

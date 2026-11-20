@@ -372,8 +372,17 @@ private fun LyricLineItem(
     }
 }
 
-private class WordGlyphs(
+/** 单词在某一行上的片段：跨行的单词按主排版的实际换行拆开 */
+private class WordSegment(
+    val charStart: Int,
     val layout: TextLayoutResult,
+    /** 片段在整个单词宽度中的起点，用来让渐变跨行连续扫过 */
+    val offsetInWord: Float,
+)
+
+private class WordGlyphs(
+    val segments: List<WordSegment>,
+    val width: Float,
     /** 强调词逐字拆开排版：每个字符在主文本中的偏移和对应排版 */
     val chars: List<Pair<Int, TextLayoutResult>>,
 )
@@ -382,6 +391,7 @@ private class KaraokeLayouts {
     var main: TextLayoutResult? = null
     var words: List<WordGlyphs> = emptyList()
     var wordsStyle: TextStyle? = null
+    var wordsWidth = -1
 }
 
 @Composable
@@ -409,31 +419,54 @@ private fun KaraokeText(
             constraints = Constraints(maxWidth = constraints.maxWidth),
         )
         layouts.main = main
-        // 单词单独排版一次，绘制时按主排版的位置摆放，方便逐词上浮、逐字强调
-        if (line.isDynamic && layouts.wordsStyle != metrics.textStyle) {
-            layouts.words = line.spans.map { span ->
-                val text = span.data.text
-                val chars = if (span.emphasis == null) {
-                    emptyList()
-                } else {
-                    buildList {
-                        var offset = 0
-                        while (offset < text.length) {
-                            val next = text.offsetByCodePoints(offset, 1)
-                            val char = text.substring(offset, next)
-                            if (char.isNotBlank()) {
-                                add(span.data.charStart + offset to textMeasurer.measure(char, metrics.textStyle, softWrap = false, maxLines = 1))
-                            }
-                            offset = next
-                        }
-                    }
-                }
-                WordGlyphs(textMeasurer.measure(text, metrics.textStyle, softWrap = false, maxLines = 1), chars)
-            }
+        // 单词单独排版，绘制时按主排版的位置摆放，方便逐词上浮、逐字强调；换行随宽度变化，所以宽度变了要重排
+        if (line.isDynamic && (layouts.wordsStyle != metrics.textStyle || layouts.wordsWidth != constraints.maxWidth)) {
+            layouts.words = line.spans.map { span -> measureWord(span, main, textMeasurer, metrics.textStyle) }
             layouts.wordsStyle = metrics.textStyle
+            layouts.wordsWidth = constraints.maxWidth
         }
         layout(main.size.width, main.size.height) {}
     }
+}
+
+private fun measureWord(
+    span: PreparedSpan,
+    main: TextLayoutResult,
+    textMeasurer: TextMeasurer,
+    textStyle: TextStyle,
+): WordGlyphs {
+    val text = span.data.text
+    val spanStart = span.data.charStart
+    val spanEnd = span.data.charEnd
+
+    val segments = mutableListOf<WordSegment>()
+    var width = 0f
+    var start = spanStart
+    while (start < spanEnd) {
+        val lineEnd = main.getLineEnd(main.getLineForOffset(start))
+        val end = if (lineEnd in (start + 1)..spanEnd) lineEnd else spanEnd
+        val layout = textMeasurer.measure(text.substring(start - spanStart, end - spanStart), textStyle, softWrap = false, maxLines = 1)
+        segments.add(WordSegment(start, layout, width))
+        width += layout.size.width
+        start = end
+    }
+
+    val chars = if (span.emphasis == null) {
+        emptyList()
+    } else {
+        buildList {
+            var offset = 0
+            while (offset < text.length) {
+                val next = text.offsetByCodePoints(offset, 1)
+                val char = text.substring(offset, next)
+                if (char.isNotBlank()) {
+                    add(spanStart + offset to textMeasurer.measure(char, textStyle, softWrap = false, maxLines = 1))
+                }
+                offset = next
+            }
+        }
+    }
+    return WordGlyphs(segments, width, chars)
 }
 
 private fun DrawScope.drawLyricText(
@@ -464,24 +497,31 @@ private fun DrawScope.drawLyricText(
 
     line.spans.forEachIndexed { i, span ->
         val word = words[i]
-        val lineIndex = main.getLineForOffset(span.data.charStart)
-        val x = main.getHorizontalPosition(span.data.charStart, usePrimaryDirection = true)
-        val y = main.getLineBaseline(lineIndex) - word.layout.firstBaseline
-        val width = word.layout.size.width.toFloat()
-        val fade = word.layout.size.height * WORD_FADE_WIDTH
+        val first = word.segments.firstOrNull() ?: return@forEachIndexed
+        val width = word.width
+        val fade = first.layout.size.height * WORD_FADE_WIDTH
         val duration = (span.data.endMs - span.data.startMs).coerceAtLeast(1L).toFloat()
         val elapsed = (now - span.data.startMs).toFloat()
 
-        // 渐变中心从词首匀速扫到词尾，两端各留出半个过渡宽度
+        // 渐变中心从词首匀速扫到词尾，两端各留出半个过渡宽度；跨行的词按片段宽度依次扫过
         val center = (elapsed / duration * width).coerceIn(-fade / 2f, width + fade / 2f)
+        fun brushAt(positionInWord: Float) = Brush.horizontalGradient(
+            0f to bright,
+            1f to dark,
+            startX = center - fade / 2f - positionInWord,
+            endX = center + fade / 2f - positionInWord,
+        )
 
         val emphasis = span.emphasis
         if (emphasis == null) {
             val floatT = clamp01(elapsed / max(WORD_FLOAT_MIN_DURATION_MS, duration))
             val lift = -CssEaseOut.transform(floatT) * WORD_FLOAT_EM * em * progress
-            val brush = Brush.horizontalGradient(0f to bright, 1f to dark, startX = center - fade / 2f, endX = center + fade / 2f)
-            translate(left = x, top = y + lift) {
-                drawText(word.layout, brush = brush)
+            for (segment in word.segments) {
+                val x = main.getHorizontalPosition(segment.charStart, usePrimaryDirection = true)
+                val y = main.getLineBaseline(main.getLineForOffset(segment.charStart)) - segment.layout.firstBaseline
+                translate(left = x, top = y + lift) {
+                    drawText(segment.layout, brush = brushAt(segment.offsetInWord))
+                }
             }
             return@forEachIndexed
         }
@@ -489,7 +529,11 @@ private fun DrawScope.drawLyricText(
         // 长音强调：逐字依次放大、发光并互相推开，最后一个词效果更强
         val count = word.chars.size
         word.chars.forEachIndexed { k, (charOffset, glyph) ->
-            val charX = main.getHorizontalPosition(charOffset, usePrimaryDirection = true) - x
+            val charX = main.getHorizontalPosition(charOffset, usePrimaryDirection = true)
+            val charY = main.getLineBaseline(main.getLineForOffset(charOffset)) - glyph.firstBaseline
+            val segment = word.segments.last { it.charStart <= charOffset }
+            val positionInWord = segment.offsetInWord +
+                charX - main.getHorizontalPosition(segment.charStart, usePrimaryDirection = true)
             val charElapsed = elapsed - emphasis.durationMs / 2.5f / count * k
             val glowT = clamp01(charElapsed / emphasis.durationMs)
             val trans = emphasisEasing(glowT) * progress
@@ -504,15 +548,9 @@ private fun DrawScope.drawLyricText(
             } else {
                 null
             }
-            val brush = Brush.horizontalGradient(
-                0f to bright,
-                1f to dark,
-                startX = center - fade / 2f - charX,
-                endX = center + fade / 2f - charX,
-            )
-            translate(left = x + charX + offsetX, top = y + offsetY + floatY) {
+            translate(left = charX + offsetX, top = charY + offsetY + floatY) {
                 scale(scale, pivot = Offset(glyph.size.width / 2f, glyph.size.height / 2f)) {
-                    drawText(glyph, brush = brush, shadow = shadow)
+                    drawText(glyph, brush = brushAt(positionInWord), shadow = shadow)
                 }
             }
         }
@@ -637,6 +675,7 @@ private class LyricsLayoutState(
     private val blurTargets = FloatArray(count)
     private val activeTargets = FloatArray(count)
     private var dotsJob: Job? = null
+    private var dotsAnchorIndex = Int.MIN_VALUE
 
     // 最近一次排版的结果，用于计算手动滚动边界
     private var lastBase = 0f
@@ -750,7 +789,6 @@ private class LyricsLayoutState(
 
         val overscan = OVERSCAN_DP * metrics.density + viewport * MOTION_BUFFER_RATIO
         val isNarrow = widthPx / metrics.density <= NARROW_VIEWPORT_DP
-        val movePositions = !autoAlignSuspended || reason == LayoutReason.Rebuild
 
         var delayMs = 0.0
         var step = if (reason.disableStagger) 0.0 else STAGGER_STEP_MS
@@ -761,7 +799,8 @@ private class LyricsLayoutState(
             val isActive = i in snap.highlighted || (i >= scrollTo && i < latest)
             val inViewport = target <= viewport + overscan && target + height >= -overscan
 
-            if (movePositions) animatePosition(i, target, delayMs.toLong(), posSpec, reason)
+            // 手动滚动挂起期间焦点已冻结，目标位置只会因行高变化或间奏插入而改变，照常更新不会触发自动滚动
+            animatePosition(i, target, delayMs.toLong(), posSpec, reason)
             animateScale(i, if (!isActive && isPlaying) INACTIVE_SCALE else 1f, delayMs.toLong())
             animateBlur(i, blurRadiusFor(i, isActive, inViewport, scrollTo, latest, isNarrow, metrics))
             animateActive(i, if (isActive) 1f else 0f)
@@ -773,11 +812,14 @@ private class LyricsLayoutState(
             }
         }
 
-        if (interludeAnchor != null && movePositions) {
+        if (interludeAnchor != null) {
             val target = base + prefix[interludeAnchor + 1] + metrics.dotMargin
+            // 新出现的间奏直接定位，避免从上一个间奏的位置飞过来
+            val isNewInterlude = interludeAnchor != dotsAnchorIndex
+            dotsAnchorIndex = interludeAnchor
             dotsJob?.cancel()
             dotsJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                if (reason == LayoutReason.PlaybackTick) dotsY.animateTo(target, posSpec) else dotsY.snapTo(target)
+                if (reason == LayoutReason.PlaybackTick && !isNewInterlude) dotsY.animateTo(target, posSpec) else dotsY.snapTo(target)
             }
         }
 

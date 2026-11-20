@@ -65,7 +65,7 @@ class LyricsViewModule : Module() {
                 view.setBlendPlus(blendMode == "plus")
             }
 
-            Prop("fontSize") { view: LyricsView, fontSize: Float ->
+            Prop("fontSize", 0f) { view: LyricsView, fontSize: Float ->
                 view.fontSize = fontSize
             }
 
