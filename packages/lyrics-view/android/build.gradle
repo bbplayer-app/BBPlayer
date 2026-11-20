@@ -1,0 +1,46 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath("org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:${kotlinVersion}")
+  }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'expo-module-gradle-plugin'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+import groovy.json.JsonSlurper
+
+def packageJsonFile = new File(projectDir, '../package.json')
+def packageJson = new JsonSlurper().parseText(packageJsonFile.text)
+
+group = 'expo.modules.lyricsview'
+version = packageJson.version
+
+android {
+    namespace "expo.modules.lyricsview"
+    defaultConfig {
+        versionCode 1
+        versionName packageJson.version
+    }
+    buildFeatures {
+        compose true
+    }
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+    // 直接从 Orpheus 的 ExoPlayer 读播放进度，不经过 JS
+    implementation project(':bbplayer-orpheus')
+    // OrpheusMusicService 继承自 MediaLibraryService，编译期需要能看到 media3 的类型
+    compileOnly "androidx.media3:media3-exoplayer:1.9.0"
+    compileOnly "androidx.media3:media3-session:1.9.0"
+    implementation 'com.facebook.react:react-android'
+    // Keep Compose aligned with @expo/ui in Expo SDK 58.
+    implementation 'androidx.compose.foundation:foundation-android:1.12.1'
+    implementation 'androidx.compose.ui:ui-android:1.12.1'
+}
