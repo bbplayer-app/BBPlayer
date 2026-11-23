@@ -51,8 +51,17 @@ func (s *Server) asset(w http.ResponseWriter, r *http.Request) {
 		gid := uuid.UUID(asset.GroupID.Bytes)
 		s.recordDeliveryMetric(r.Context(), deliveryMetricPatchFallback, deliveryMetricFallback, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, 0, 0)
 	}
-	served, size := s.writeObjectStatus(w, r, asset.ObjectKey, asset.ContentType, http.StatusOK, nil)
 	gid := uuid.UUID(asset.GroupID.Bytes)
+	// Without a patch the response is the immutable full bundle, so hand it to
+	// the R2 custom domain like every other asset. Streaming ~12MB through Go
+	// over long-haul links is what made clients time out or see HTTP/2 resets.
+	// The byte count is the object size: the actual transfer happens at R2.
+	if s.C.R2PublicBaseURL != "" {
+		http.Redirect(w, r, s.C.R2PublicBaseURL+"/"+asset.ObjectKey, http.StatusFound)
+		s.recordDeliveryMetric(r.Context(), deliveryMetricLaunchBundle, deliveryMetricServed, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, asset.SizeBytes, asset.SizeBytes)
+		return
+	}
+	served, size := s.writeObjectStatus(w, r, asset.ObjectKey, asset.ContentType, http.StatusOK, nil)
 	if served {
 		s.recordDeliveryMetric(r.Context(), deliveryMetricLaunchBundle, deliveryMetricServed, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, size, asset.SizeBytes)
 	} else {

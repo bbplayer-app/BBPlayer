@@ -68,7 +68,7 @@ func TestE2EExpoProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = spec.Body.Close()
-	if openAPI.OpenAPI != "3.1.0" || len(openAPI.Paths) != 17 {
+	if openAPI.OpenAPI != "3.1.0" || len(openAPI.Paths) != 23 {
 		t.Fatalf("admin OpenAPI document: version=%q paths=%d", openAPI.OpenAPI, len(openAPI.Paths))
 	}
 	for _, path := range []string{"/admin/publish", "/admin/updates/{id}", "/admin/channels/{channel}/republish", "/admin/channels/{channel}/embedded", "/admin/source/compare/{from}/{to}", "/admin/insights/groups/{groupID}/lifecycle", "/admin/metrics/delivery"} {
@@ -159,6 +159,20 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if fallback.StatusCode != http.StatusOK || !bytes.Equal(fallbackBody, b) {
 		t.Fatalf("pending patch should fall back to full asset: %s", fallback.Status)
 	}
+	// With an R2 custom domain configured, the full bundle is redirected there
+	// instead of being streamed through the API.
+	s.C.R2PublicBaseURL = "https://assets.example"
+	redirectReq, _ := http.NewRequest(http.MethodGet, decoded.LaunchAsset.URL, nil)
+	noFollow := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	redirect, err := noFollow.Do(redirectReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = redirect.Body.Close()
+	if location := redirect.Header.Get("Location"); redirect.StatusCode != http.StatusFound || !strings.HasPrefix(location, "https://assets.example/") {
+		t.Fatalf("full bundle should redirect to R2: status=%s location=%q", redirect.Status, location)
+	}
+	s.C.R2PublicBaseURL = ""
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
@@ -304,7 +318,7 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if err != nil || head.Mode != "embedded" || head.GroupID.Valid {
 		t.Fatalf("embedded head: mode=%q group=%s err=%v", head.Mode, uuid.UUID(head.GroupID.Bytes), err)
 	}
-	embeddedManifest := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test"})
+	embeddedManifest := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test", "Accept": "multipart/mixed"})
 	embeddedManifestBody, _ := io.ReadAll(embeddedManifest.Body)
 	_ = embeddedManifest.Body.Close()
 	if embeddedManifest.StatusCode != http.StatusOK || !bytes.Contains(embeddedManifestBody, []byte(`"type":"rollBackToEmbedded"`)) {

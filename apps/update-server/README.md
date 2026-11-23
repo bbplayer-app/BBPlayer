@@ -2,7 +2,7 @@
 
 自托管的 Expo Updates v1 服务。PostgreSQL 只保存分发状态、溯源信息与遥测数据；R2 保存所有不可变的 bundle、资源与 bsdiff 补丁。把 `.env.example` 复制到部署机的密钥存储处，并填好所有必填项。`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` 是 **R2 S3 API 凭据**，不是 Cloudflare API Token。`R2_PUBLIC_BASE_URL` 必须是 R2 存储桶上用于提供不可变对象的自定义域名。
 
-`R2_PUBLIC_BASE_URL` 用于所有普通资源。启动用的 Hermes bundle 特意使用 API 的 URL：Expo 只有在抓取该资源时才会发送 `A-IM: bsdiff`，因此 API 必须在不可变的完整对象与不可变的补丁对象之间做选择。这是标准的 HTTP 内容协商，不依赖 Cloudflare Worker。
+`R2_PUBLIC_BASE_URL` 用于所有普通资源。启动用的 Hermes bundle 特意使用 API 的 URL：Expo 只有在抓取该资源时才会发送 `A-IM: bsdiff`，因此 API 必须在不可变的完整对象与不可变的补丁对象之间做选择。补丁命中时 API 直接返回补丁（`226 IM Used`）；未命中时 API 以 `302` 把客户端重定向到 `R2_PUBLIC_BASE_URL` 上的完整 bundle，不经 Go 进程转发。这是标准的 HTTP 内容协商，不依赖 Cloudflare Worker。
 
 ## 部署
 
