@@ -33,6 +33,7 @@ import { usePlayerQueue, useShuffleMode } from '@/hooks/queries/orpheus'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
+import usePlayerStore from '@/hooks/stores/usePlayerStore'
 import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { clearPlaybackQueue } from '@/lib/player/playbackSession'
@@ -258,18 +259,17 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 		return queue.findIndex((t) => t.id === currentTrackId)
 	}, [currentTrackId, queue])
 
-	const switchTrackHandler = useCallback(
-		async (index: number) => {
-			if (index === -1) return
-			const target = queue[index]
+	// LegendList 按 item 身份缓存行元素（见 Container 的 renderedItemInfo），
+	// 切歌不会重建行，所以回调不能闭包 currentTrackId / queue，必须每次读取最新值。
+	const switchTrackHandler = useCallback(async (index: number) => {
+		if (index === -1) return
+		const target = queueRef.current[index]
 
-			if (!target) return
+		if (!target) return
 
-			if (target.id === currentTrackId) return
-			await Orpheus.skipTo(index)
-		},
-		[queue, currentTrackId],
-	)
+		if (target.id === usePlayerStore.getState().orpheusTrack?.id) return
+		await Orpheus.skipTo(index)
+	}, [])
 
 	const removeTrackHandler = useCallback(async (index: number) => {
 		await Orpheus.removeTrack(index)
@@ -551,6 +551,8 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 								renderItem={renderItem}
 								keyExtractor={keyExtractor}
 								recycleItems
+								// 行元素只在 item/extraData 变化时重建，isDragging 这类行内 props 得靠它刷新
+								extraData={drag?.from ?? -1}
 								showsVerticalScrollIndicator={false}
 								nestedScrollEnabled
 								scrollEnabled={drag === null}
