@@ -37,7 +37,16 @@ import { SharedPlaylistMembersSheet } from '@/features/playlist/local/components
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
 import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
+import { usePlaylistSort } from '@/features/playlist/local/hooks/usePlaylistSort'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
+import {
+	DEFAULT_PLAYLIST_SORT,
+	getPlaylistSortId,
+	getPlaylistSortLabel,
+	isCustomSort,
+	PLAYLIST_SORT_OPTIONS,
+	sortTracks,
+} from '@/features/playlist/local/sort'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
@@ -50,6 +59,7 @@ import {
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	useAllPlaylistsContainingTrack,
+	usePlaylistContents,
 	usePlaylistContentsInfinite,
 	usePlaylistMetadata,
 	useSearchTracksInPlaylist,
@@ -78,6 +88,11 @@ import toast from '@/utils/toast'
 const SORT_ICON = Icon.select({
 	ios: 'arrow.up.and.down.text.horizontal',
 	android: import('@expo/material-symbols/sort.xml'),
+})
+
+const REORDER_ICON = Icon.select({
+	ios: 'line.3.horizontal',
+	android: import('@expo/material-symbols/drag_handle.xml'),
 })
 
 const EDIT_ICON = Icon.select({
@@ -326,18 +341,35 @@ function LocalPlaylistContent({
 			}>
 		)?.flatMap((page) => page.sortKeys) ?? []
 
+	const [sort, setSort] = usePlaylistSort(Number(id))
+	const isSorted = !isCustomSort(sort)
+
+	// 非自定义顺序时需要整个歌单才能正确排序，此时不再走分页
+	const { data: allPlaylistTracks } = usePlaylistContents(Number(id), isSorted)
+
+	const sortedAllTracks = useMemo(
+		() => (isSorted ? sortTracks(allPlaylistTracks ?? [], sort) : []),
+		[allPlaylistTracks, isSorted, sort],
+	)
+
 	const isOffline = useIsActuallyOffline()
 
-	const loadedTrackKeys = allLoadedTracks.map((t) => t.uniqueKey)
+	const displayedSourceTracks = isSorted
+		? allPlaylistTracks
+			? sortedAllTracks
+			: allLoadedTracks
+		: allLoadedTracks
+
+	const loadedTrackKeys = displayedSourceTracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(loadedTrackKeys)
 
 	const playableOfflineKeys = (() => {
-		if (!allLoadedTracks.length) return new Set<string>()
+		if (!displayedSourceTracks.length) return new Set<string>()
 
 		const keys = new Set<string>()
 		const urisToCheck: { uniqueKey: string; uri: string }[] = []
 
-		for (const track of allLoadedTracks) {
+		for (const track of displayedSourceTracks) {
 			if (track.source === 'local') {
 				keys.add(track.uniqueKey)
 				continue
@@ -372,9 +404,14 @@ function LocalPlaylistContent({
 		error: searchError,
 	} = useSearchTracksInPlaylist(Number(id), deferredQuery, startSearch)
 
+	const sortedSearchData = useMemo(
+		() => sortTracks(searchData ?? [], sort),
+		[searchData, sort],
+	)
+
 	const finalPlaylistData = (() => {
 		if (!startSearch || !deferredQuery.trim()) {
-			return allLoadedTracks
+			return displayedSourceTracks
 		}
 
 		if (isSearchError) {
@@ -383,7 +420,7 @@ function LocalPlaylistContent({
 			return []
 		}
 
-		return searchData ?? []
+		return sortedSearchData
 	})()
 
 	const currentTrackKey = currentTrack?.uniqueKey
@@ -438,6 +475,13 @@ function LocalPlaylistContent({
 			return
 		}
 
+		// 排序模式下整个歌单已经加载完毕，找不到就是不在列表中
+		if (isSorted) {
+			if (allPlaylistTracks) setIsLocatingCurrentTrack(false)
+
+			return
+		}
+
 		if (hasNextPagePlaylistData && !isFetchingNextPagePlaylistData) {
 			const loadedPageCount = playlistData?.pages.length ?? 0
 
@@ -465,6 +509,8 @@ function LocalPlaylistContent({
 		hasNextPagePlaylistData,
 		isFetchingNextPagePlaylistData,
 		isLocatingCurrentTrack,
+		isSorted,
+		allPlaylistTracks,
 		listRef,
 		playlistData?.pages.length,
 	])
@@ -598,6 +644,7 @@ function LocalPlaylistContent({
 		Number(id),
 		isOffline,
 		playableOfflineKeys,
+		sort,
 	)
 
 	const pullingIcon = useMemo(
@@ -1005,6 +1052,13 @@ function LocalPlaylistContent({
 		setInsertAfterIndex(null)
 	}
 
+	const canDragReorder =
+		selectMode &&
+		playlistMetadata.type === 'local' &&
+		!startSearch &&
+		!isSorted &&
+		!isSharedSubscriber
+
 	const ghostAnimatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: ghostY.value }],
 	}))
@@ -1023,11 +1077,31 @@ function LocalPlaylistContent({
 			onPress: () => setPlayerPreferenceVisible(true),
 		})
 
+		menu.add({
+			title: '排序方式',
+			image: SORT_ICON,
+			subactions: PLAYLIST_SORT_OPTIONS.map((option) => ({
+				id: `sort.${getPlaylistSortId(option)}`,
+				title: getPlaylistSortLabel(option),
+				state:
+					getPlaylistSortId(option) === getPlaylistSortId(sort) ? 'on' : 'off',
+				onPress: () => setSort(option),
+			})),
+		})
+
 		if (isLocal && !isSharedSubscriber) {
 			menu.add({
-				title: '排序',
-				image: SORT_ICON,
-				onPress: enterSelectMode,
+				title: '手动调整顺序',
+				image: REORDER_ICON,
+				onPress: () => {
+					// 拖拽调整的是自定义顺序，需要先切回去才能看到真实位置
+					if (isSorted) {
+						setSort(DEFAULT_PLAYLIST_SORT)
+						toast.info('已切换回自定义顺序')
+					}
+
+					enterSelectMode()
+				},
 			})
 		}
 
@@ -1293,34 +1367,14 @@ function LocalPlaylistContent({
 							onEndReached={
 								hasNextPagePlaylistData &&
 								!startSearch &&
+								!isSorted &&
 								!isFetchingNextPagePlaylistData
 									? () => fetchNextPagePlaylistData()
 									: undefined
 							}
-							onDragStart={
-								selectMode &&
-								playlistMetadata.type === 'local' &&
-								!startSearch &&
-								!isSharedSubscriber
-									? handleDragStart
-									: undefined
-							}
-							onDragUpdate={
-								selectMode &&
-								playlistMetadata.type === 'local' &&
-								!startSearch &&
-								!isSharedSubscriber
-									? handleDragUpdate
-									: undefined
-							}
-							onDragEnd={
-								selectMode &&
-								playlistMetadata.type === 'local' &&
-								!startSearch &&
-								!isSharedSubscriber
-									? handleDragEnd
-									: undefined
-							}
+							onDragStart={canDragReorder ? handleDragStart : undefined}
+							onDragUpdate={canDragReorder ? handleDragUpdate : undefined}
+							onDragEnd={canDragReorder ? handleDragEnd : undefined}
 							insertAfterIndex={dragging !== null ? insertAfterIndex : null}
 							onViewableItemsChanged={handleViewableItemsChanged}
 							viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
