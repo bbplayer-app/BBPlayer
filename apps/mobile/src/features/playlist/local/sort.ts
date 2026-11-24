@@ -59,9 +59,11 @@ export const getPlaylistSortLabel = (sort: PlaylistSort) =>
 
 export const isCustomSort = (sort: PlaylistSort) => sort.field === 'custom'
 
+// B 站标题常以【】《》“” 等标点开头，忽略标点后才符合「按首字母」的直觉
 const collator = new Intl.Collator('zh-Hans-CN', {
 	numeric: true,
 	sensitivity: 'base',
+	ignorePunctuation: true,
 })
 
 /** 空字符串永远排在最后，不受正序 / 倒序影响 */

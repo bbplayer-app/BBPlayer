@@ -147,9 +147,9 @@ const renderItem = ({
 						handleMenuPress(item, downloadState)
 					}}
 					onDragStart={
-						isReadOnly
+						isReadOnly || !onDragStart
 							? undefined
-							: (absoluteY) => onDragStart?.(index, item.id, absoluteY)
+							: (absoluteY) => onDragStart(index, item.id, absoluteY)
 					}
 					onDragUpdate={isReadOnly ? undefined : onDragUpdate}
 					onDragEnd={isReadOnly ? undefined : onDragEnd}

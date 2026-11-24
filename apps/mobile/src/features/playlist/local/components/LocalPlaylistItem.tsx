@@ -261,7 +261,8 @@ export const TrackListItem = memo(function TrackListItem({
 					{!disabled && (
 						<View>
 							{selectMode ? (
-								playlist.type === 'local' && !isSearching ? (
+								// 没有传入拖拽回调（如排序视图、只读共享歌单）时不显示拖拽手柄
+								onDragStart && playlist.type === 'local' && !isSearching ? (
 									<GestureDetector gesture={dragPan}>
 										<View style={styles.menuButton}>
 											<Icon

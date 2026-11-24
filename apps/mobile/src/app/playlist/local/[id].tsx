@@ -1435,6 +1435,7 @@ function LocalPlaylistContent({
 										enterSelectMode={() => void 0}
 										onTrackPress={() => void 0}
 										onMenuPress={() => void 0}
+										onDragStart={() => void 0}
 									/>
 								</View>
 							</Animated.View>
