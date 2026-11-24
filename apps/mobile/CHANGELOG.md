@@ -5,11 +5,38 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [2.8.3] - 2026-11-20
+## [Unreleased]
 
 ### Added
 
 - 新增 Apple Music 风格歌词（实验性，仅 Android，设置 → 歌词中开启）：用 Jetpack Compose 原生绘制，支持逐行弹簧滚动、按距离模糊、逐字渐变高亮、长音强调和间奏呼吸点
+
+## [2.8.2] 热更新 - 2026-11-24
+
+### Changed
+
+- 歌单分页加载时不再重复查询歌单类型
+
+### Fixed
+
+- 修复播放队列中切歌后点回原曲目无反应
+
+## [2.8.2] 热更新 - 2026-11-19
+
+### Changed
+
+- Android 音频 offload 改为默认关闭的实验选项（设置 → 播放设置中开启，需要关闭音频频谱），已开启的设备会在更新后关闭一次；开启频谱不再弹窗确认
+
+## [2.8.2] 热更新 - 2026-11-18
+
+### Changed
+
+- 调大 Sentry 发送队列与离线缓存上限
+- Sentry release 固定跟随原生包，热更新改用 `app.ota.*` 属性区分
+
+### Fixed
+
+- 修复手动搜索歌词时报 No QueryClient set
 
 ## [2.8.2] - 2026-11-18
 
@@ -753,7 +780,8 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.8.0...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.8.2...HEAD
+[2.8.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.8.0...v2.8.2
 [2.8.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.7.0...v2.8.0
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
