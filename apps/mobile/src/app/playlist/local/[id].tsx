@@ -345,7 +345,28 @@ function LocalPlaylistContent({
 	const isSorted = !isCustomSort(sort)
 
 	// 非自定义顺序时需要整个歌单才能正确排序，此时不再走分页
-	const { data: allPlaylistTracks } = usePlaylistContents(Number(id), isSorted)
+	const {
+		data: allPlaylistTracks,
+		isError: isAllPlaylistTracksError,
+		error: allPlaylistTracksError,
+	} = usePlaylistContents(Number(id), isSorted)
+
+	/** 完整歌单已就绪，可以展示排序结果 */
+	const isSortedReady = isSorted && !!allPlaylistTracks
+
+	/** 完整歌单加载中：先展示（变暗的）分页数据，等待排序结果 */
+	const isSortedPending =
+		isSorted && !allPlaylistTracks && !isAllPlaylistTracksError
+
+	// 完整歌单加载失败时回退到可继续分页的自定义顺序，避免只能看到部分歌曲
+	useEffect(() => {
+		if (!isAllPlaylistTracksError) return
+		toastAndLogError(
+			'加载完整歌单失败，暂按自定义顺序显示',
+			allPlaylistTracksError,
+			SCOPE,
+		)
+	}, [isAllPlaylistTracksError, allPlaylistTracksError])
 
 	const sortedAllTracks = useMemo(
 		() => (isSorted ? sortTracks(allPlaylistTracks ?? [], sort) : []),
@@ -354,10 +375,8 @@ function LocalPlaylistContent({
 
 	const isOffline = useIsActuallyOffline()
 
-	const displayedSourceTracks = isSorted
-		? allPlaylistTracks
-			? sortedAllTracks
-			: allLoadedTracks
+	const displayedSourceTracks = isSortedReady
+		? sortedAllTracks
 		: allLoadedTracks
 
 	const loadedTrackKeys = displayedSourceTracks.map((t) => t.uniqueKey)
@@ -461,6 +480,9 @@ function LocalPlaylistContent({
 	useEffect(() => {
 		if (!isLocatingCurrentTrack || !currentTrackKey) return
 
+		// 排序结果还没出来，列表随后会重排，等完整歌单返回后再按最终位置定位
+		if (isSortedPending) return
+
 		if (currentTrackIndex !== -1) {
 			void listRef.current?.scrollToIndex({
 				index: currentTrackIndex,
@@ -476,8 +498,8 @@ function LocalPlaylistContent({
 		}
 
 		// 排序模式下整个歌单已经加载完毕，找不到就是不在列表中
-		if (isSorted) {
-			if (allPlaylistTracks) setIsLocatingCurrentTrack(false)
+		if (isSortedReady) {
+			setIsLocatingCurrentTrack(false)
 
 			return
 		}
@@ -509,8 +531,8 @@ function LocalPlaylistContent({
 		hasNextPagePlaylistData,
 		isFetchingNextPagePlaylistData,
 		isLocatingCurrentTrack,
-		isSorted,
-		allPlaylistTracks,
+		isSortedPending,
+		isSortedReady,
 		listRef,
 		playlistData?.pages.length,
 	])
@@ -1355,7 +1377,7 @@ function LocalPlaylistContent({
 					>
 						<LocalTrackList
 							listRef={listRef}
-							isStale={searchQuery !== deferredQuery}
+							isStale={searchQuery !== deferredQuery || isSortedPending}
 							tracks={finalPlaylistData ?? []}
 							playlist={playlistMetadata}
 							handleTrackPress={handleTrackPress}
@@ -1367,7 +1389,7 @@ function LocalPlaylistContent({
 							onEndReached={
 								hasNextPagePlaylistData &&
 								!startSearch &&
-								!isSorted &&
+								!isSortedReady &&
 								!isFetchingNextPagePlaylistData
 									? () => fetchNextPagePlaylistData()
 									: undefined
