@@ -15,8 +15,10 @@ const logger = log.extend('Services.ExternalPlaylist')
 // 全局配置
 const MIN_DELAY = 1200 // 防封号延迟 (ms)
 const SEARCH_TIMEOUT = 15_000
-const BLACKLIST_ZONES = new Set([26, 29, 31, 201, 238]) // 黑名单分区 (音MAD, 现场, 翻唱, 科普, 运动)
-const PRIORITY_ZONES = new Set([193, 130, 267]) // 优先分区 (MV, 音乐综合, 电台)
+
+// 搜索接口返回的分区 id（typeid）是字符串
+const BLACKLIST_ZONES = new Set(['26', '29', '31', '201', '238']) // 黑名单分区 (音MAD, 现场, 翻唱, 科普, 运动)
+const PRIORITY_ZONES = new Set(['193', '130', '267']) // 优先分区 (MV, 音乐综合, 电台)
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 

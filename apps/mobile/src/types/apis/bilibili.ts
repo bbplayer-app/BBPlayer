@@ -126,7 +126,7 @@ interface BilibiliSearchVideo {
 	duration: string // MM:SS（MM 可以超过 60min）
 	senddate: number
 	mid: number
-	typeid: number
+	typeid: string // 分区 id，接口返回的是字符串（如 "130"）
 }
 
 /**
