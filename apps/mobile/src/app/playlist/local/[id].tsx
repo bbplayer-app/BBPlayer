@@ -358,15 +358,29 @@ function LocalPlaylistContent({
 	const isSortedPending =
 		isSorted && !allPlaylistTracks && !isAllPlaylistTracksError
 
-	// 完整歌单加载失败时回退到可继续分页的自定义顺序，避免只能看到部分歌曲
+	/**
+	 * 页面实际生效的排序：完整歌单加载失败且没有缓存时回退到自定义顺序。
+	 * 列表、搜索结果和播放队列都以它为准，保证三者顺序一致。
+	 */
+	const effectiveSort =
+		isSorted && isAllPlaylistTracksError && !allPlaylistTracks
+			? DEFAULT_PLAYLIST_SORT
+			: sort
+
+	const isSortFallback = isSorted && effectiveSort !== sort
+
+	// 完整歌单加载失败时回退到可继续分页的自定义顺序，避免只能看到部分歌曲。
+	// 若仍有上次成功的缓存，则继续按缓存排序展示，只记录错误
 	useEffect(() => {
 		if (!isAllPlaylistTracksError) return
 		toastAndLogError(
-			'加载完整歌单失败，暂按自定义顺序显示',
+			isSortFallback
+				? '加载完整歌单失败，暂按自定义顺序显示'
+				: '刷新完整歌单失败',
 			allPlaylistTracksError,
 			SCOPE,
 		)
-	}, [isAllPlaylistTracksError, allPlaylistTracksError])
+	}, [isAllPlaylistTracksError, allPlaylistTracksError, isSortFallback])
 
 	const sortedAllTracks = useMemo(
 		() => (isSorted ? sortTracks(allPlaylistTracks ?? [], sort) : []),
@@ -424,8 +438,8 @@ function LocalPlaylistContent({
 	} = useSearchTracksInPlaylist(Number(id), deferredQuery, startSearch)
 
 	const sortedSearchData = useMemo(
-		() => sortTracks(searchData ?? [], sort),
-		[searchData, sort],
+		() => sortTracks(searchData ?? [], effectiveSort),
+		[searchData, effectiveSort],
 	)
 
 	const finalPlaylistData = (() => {
@@ -666,8 +680,7 @@ function LocalPlaylistContent({
 		Number(id),
 		isOffline,
 		playableOfflineKeys,
-		// 完整歌单加载失败时页面已回退到自定义顺序，播放队列也要跟着回退
-		isAllPlaylistTracksError ? DEFAULT_PLAYLIST_SORT : sort,
+		effectiveSort,
 	)
 
 	const pullingIcon = useMemo(
