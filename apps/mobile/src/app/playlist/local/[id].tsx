@@ -666,7 +666,8 @@ function LocalPlaylistContent({
 		Number(id),
 		isOffline,
 		playableOfflineKeys,
-		sort,
+		// 完整歌单加载失败时页面已回退到自定义顺序，播放队列也要跟着回退
+		isAllPlaylistTracksError ? DEFAULT_PLAYLIST_SORT : sort,
 	)
 
 	const pullingIcon = useMemo(
