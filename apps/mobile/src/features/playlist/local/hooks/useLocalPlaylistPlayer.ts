@@ -4,6 +4,7 @@ import type { MMKV } from 'react-native-mmkv'
 import { useMMKVBoolean } from 'react-native-mmkv'
 
 import { alert } from '@/components/modals/AlertModal'
+import { type PlaylistSort, sortTracks } from '@/features/playlist/local/sort'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -18,6 +19,7 @@ export function useLocalPlaylistPlayer(
 	playlistId: number,
 	isOffline?: boolean,
 	playableOfflineKeys?: Set<string>,
+	sort?: PlaylistSort,
 ) {
 	const [ignoreAlertReplacePlaylist, setIgnoreAlertReplacePlaylist] =
 		useMMKVBoolean('ignore_alert_replace_playlist', storage as MMKV)
@@ -35,6 +37,9 @@ export function useLocalPlaylistPlayer(
 			let tracks = tracksResult.value.filter((item) =>
 				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
 			)
+
+			// 播放队列跟随页面上的展示顺序
+			if (sort) tracks = sortTracks(tracks, sort)
 
 			if (isOffline) {
 				const originalLength = tracks.length
@@ -101,7 +106,7 @@ export function useLocalPlaylistPlayer(
 				toastAndLogError('播放全部失败', error, SCOPE)
 			}
 		},
-		[playlistId, isOffline],
+		[playlistId, isOffline, sort],
 	)
 
 	const handleTrackPress = useCallback(

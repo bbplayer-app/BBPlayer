@@ -63,7 +63,7 @@ export const usePlaylistLists = () => {
 	})
 }
 
-export const usePlaylistContents = (playlistId: number) => {
+export const usePlaylistContents = (playlistId: number, enabled = true) => {
 	return useTracedQuery({
 		span: { name: 'playlist.contents' },
 		queryKey: playlistKeys.playlistAllContents(playlistId),
@@ -71,6 +71,7 @@ export const usePlaylistContents = (playlistId: number) => {
 			returnOrThrowAsync(
 				playlistService.withTrace(span).getPlaylistTracks(playlistId),
 			),
+		enabled,
 	})
 }
 
