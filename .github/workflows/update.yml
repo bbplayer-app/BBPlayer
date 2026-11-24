@@ -35,6 +35,54 @@ jobs:
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "UPDATE_MESSAGE=$(git log -1 --format=%s)" >> $GITHUB_ENV
 
+      # appVersion 策略下发布时不会比对 fingerprint，热更新会下发给同版本号的所有原生包。
+      # 这里确认 HEAD 的 Android 原生 fingerprint 和 v${APP_VERSION} 原生包一致，
+      # 否则依赖新原生代码的 JS 会跑在旧原生包上
+      - name: 🔍 Check native fingerprint against v${{ env.APP_VERSION }}
+        env:
+          # app.config 默认用 git commit 数当 versionCode，每个 commit 都不同，
+          # 两边固定成同一个值，避免 expoConfig 因此对不上
+          VERSION_CODE: 1
+        run: |
+          BASELINE_REF="v${APP_VERSION}"
+          BASELINE_DIR="$RUNNER_TEMP/baseline"
+          # 两边都用 HEAD 装的 @expo/fingerprint。直接调 bin：pnpm exec 发现依赖不同步时
+          # 会先自动 install，并把日志打到 stdout 里
+          FINGERPRINT="$PWD/apps/hot-update-cli/node_modules/.bin/fingerprint"
+          generate() {
+            "$FINGERPRINT" fingerprint:generate --platform android "$1"
+          }
+
+          if ! git rev-parse -q --verify "${BASELINE_REF}^{commit}" > /dev/null; then
+            echo "::error::找不到原生包 tag ${BASELINE_REF}，版本 ${APP_VERSION} 可能还没发布原生包"
+            exit 1
+          fi
+
+          git worktree add --detach "$BASELINE_DIR" "$BASELINE_REF"
+          # autolinking 的结果取决于 node_modules，基线要按它自己的 lockfile 装一遍；
+          # 生命周期脚本不影响 fingerprint，跳过
+          (cd "$BASELINE_DIR" && pnpm install --frozen-lockfile --ignore-scripts)
+
+          generate "$BASELINE_DIR/apps/mobile" > "$RUNNER_TEMP/fingerprint-baseline.json"
+          generate "$PWD/apps/mobile" > "$RUNNER_TEMP/fingerprint-head.json"
+
+          BASELINE_HASH=$(jq -r .hash "$RUNNER_TEMP/fingerprint-baseline.json")
+          HEAD_HASH=$(jq -r .hash "$RUNNER_TEMP/fingerprint-head.json")
+          echo "${BASELINE_REF} fingerprint: ${BASELINE_HASH}"
+          echo "HEAD fingerprint: ${HEAD_HASH}"
+
+          if [ "$BASELINE_HASH" = "$HEAD_HASH" ]; then
+            echo "原生 fingerprint 一致，可以发布热更新"
+            exit 0
+          fi
+
+          echo "::error::HEAD 的原生 fingerprint 与 ${BASELINE_REF} 不一致，包含原生改动，不能通过热更新发布"
+          "$FINGERPRINT" fingerprint:diff \
+            "$RUNNER_TEMP/fingerprint-baseline.json" "$RUNNER_TEMP/fingerprint-head.json" \
+            | jq -r '.[] | (.addedSource // .removedSource // .afterSource) as $s
+                | "\(.op)\t\($s.type)\t\($s.filePath // $s.id)"'
+          exit 1
+
       - name: 🚀 Export and publish update
         env:
           BBPLAYER_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
