@@ -2,7 +2,9 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.content.SharedPreferences
+import expo.modules.bbplayernative.telemetry.NativeLog
 import expo.modules.orpheus.bilibili.BilibiliAudioQualityId
+import expo.modules.orpheus.telemetry.LogTags
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
@@ -67,8 +69,6 @@ object AudioQualityStore {
     @Volatile
     private var prefs: SharedPreferences? = null
 
-    fun isValidPreference(value: String?): Boolean = value != null && preferences.contains(value)
-
     fun normalizePreference(value: String?): String {
         return if (value != null && preferences.contains(value)) value else PREF_HIGH
     }
@@ -115,10 +115,19 @@ object AudioQualityStore {
     }
 
     fun put(uri: String, info: AudioQualityInfo) {
+        val prefix = "$uri|q="
         val key = cacheKeyOf(uri, info.preferredQuality)
+        infos.keys
+            .filter { existingKey -> existingKey.startsWith(prefix) && existingKey != key }
+            .forEach { staleKey -> infos.remove(staleKey) }
         infos[key] = info
-        persist(key, info)
-        listeners.forEach { listener -> listener(uri, info) }
+        persist(key, info, prefix)
+        listeners.forEach { listener ->
+            runCatching { listener(uri, info) }
+                .onFailure { error ->
+                    NativeLog.warning(LogTags.STORAGE, "storage.audio_quality.listener_failed", error = error)
+                }
+        }
     }
 
     fun get(uri: String, preferredQuality: String): AudioQualityInfo? {
@@ -127,11 +136,6 @@ object AudioQualityStore {
         val restored = restore(key) ?: return null
         infos[key] = restored
         return restored
-    }
-
-    fun clear(uri: String) {
-        val prefix = "$uri|q="
-        infos.keys.filter { it.startsWith(prefix) }.forEach { infos.remove(it) }
     }
 
     @Synchronized
@@ -169,10 +173,14 @@ object AudioQualityStore {
     }
 
     @Synchronized
-    private fun persist(key: String, info: AudioQualityInfo) {
+    private fun persist(key: String, info: AudioQualityInfo, prefix: String) {
         val store = prefs ?: return
         runCatching {
             val entries = readEntries(store)
+            entries.keys().asSequence()
+                .filter { existingKey -> existingKey.startsWith(prefix) && existingKey != key }
+                .toList()
+                .forEach { staleKey -> entries.remove(staleKey) }
             entries.put(key, encode(info))
             trim(entries)
             store.edit().putString(PREFS_KEY_ENTRIES, entries.toString()).apply()
@@ -222,7 +230,10 @@ object AudioQualityStore {
             .sortedBy { key -> entries.optJSONObject(key)?.optLong("updatedAt", 0L) ?: 0L }
             .take(entries.length() - MAX_PERSISTED_ENTRIES)
             .toList()
-        stale.forEach { entries.remove(it) }
+        stale.forEach { key ->
+            entries.remove(key)
+            infos.remove(key)
+        }
     }
 
     fun addListener(listener: (String, AudioQualityInfo) -> Unit) {

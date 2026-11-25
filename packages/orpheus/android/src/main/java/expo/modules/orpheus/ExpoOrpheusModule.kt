@@ -1257,8 +1257,7 @@ class ExpoOrpheusModule : Module() {
         Function("getLruCachedUris") { uris: List<String> ->
             try {
                 uris.filter { uri ->
-                    expo.modules.orpheus.manager.CachedUriManager.isFullyCached(uri) ||
-                        expo.modules.orpheus.manager.CachedUriManager.isFullyCached(DownloadUtil.playbackCacheKey(uri))
+                    expo.modules.orpheus.manager.CachedUriManager.isFullyCached(DownloadUtil.playbackCacheKey(uri))
                 }
             } catch (e: Exception) {
                 NativeLog.warning(LogTags.PLAYER, "player.cache.list_failed", error = e)
