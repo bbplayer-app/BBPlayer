@@ -481,11 +481,13 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 导出所有 Orpheus 原生配置数据。
 	 *
 	 * 返回包含 `playerQueue`（播放器队列 store 的配置键）和
-	 * `loudness`（所有已计算响度数据）的对象。
+	 * `loudness`（所有已计算响度数据）的对象。Android 还会带上
+	 * `loudnessTruePeak`（真峰值，用来限制响度均衡能提升多少）。
 	 */
 	exportData(): {
 		playerQueue: Record<string, boolean | string | number>
 		loudness: Record<string, number>
+		loudnessTruePeak?: Record<string, number>
 	}
 	/**
 	 * 批量导入 Orpheus 原生配置数据。
@@ -495,6 +497,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	importData(data: {
 		playerQueue: Record<string, boolean | string | number>
 		loudness: Record<string, number>
+		loudnessTruePeak?: Record<string, number>
 	}): void
 }
 

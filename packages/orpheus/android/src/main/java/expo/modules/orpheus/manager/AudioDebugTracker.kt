@@ -331,7 +331,12 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
             "播放位置" to "${formatSeconds(player.currentPosition)} / ${formatSeconds(player.duration)}",
             "已缓冲（领先播放位置）" to "${bufferedAheadMs / 1000.0}s",
             "倍速 / 音调" to "${player.playbackParameters.speed}x / ${player.playbackParameters.pitch}",
-            "音量（含响度均衡）" to String.format(Locale.US, "%.3f", player.volume),
+            "音量" to String.format(Locale.US, "%.3f", player.volume),
+            "响度均衡增益" to if (GeneralStorage.isLoudnessNormalizationEnabled()) {
+                String.format(Locale.US, "%+.1f dB", LoudnessGainProcessor.activeGainDb)
+            } else {
+                "已关闭"
+            },
             "音频会话 ID" to player.audioSessionId.toString(),
             "来源主机" to uri?.let { android.net.Uri.parse(it).host ?: it.substringBefore("://") },
             "已完整缓存" to uri?.let { yesNo(CachedUriManager.isFullyCached(it)) },

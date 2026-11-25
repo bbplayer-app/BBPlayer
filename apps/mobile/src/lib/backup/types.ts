@@ -21,4 +21,6 @@ export interface BackupManifest {
 export interface OrpheusBackupData {
 	playerQueue: Record<string, boolean | string | number>
 	loudness: Record<string, number>
+	/** 真峰值，仅 Android 导出；旧备份没有这个字段 */
+	loudnessTruePeak?: Record<string, number>
 }

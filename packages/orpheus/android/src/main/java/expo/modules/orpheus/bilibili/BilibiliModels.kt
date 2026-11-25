@@ -57,7 +57,9 @@ data class FlacData(
 @Serializable
 data class VolumeData(
     @SerialName("measured_i") val measuredI: Double,
-    @SerialName("target_i") val targetI: Double
+    @SerialName("target_i") val targetI: Double,
+    // 真峰值（dBTP），用来限制能提升多少，避免削波
+    @SerialName("measured_tp") val measuredTp: Double? = null
 )
 
 @Serializable

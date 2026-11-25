@@ -359,7 +359,11 @@ class ExpoOrpheusModule : Module() {
 
         Property("loudnessNormalizationEnabled")
             .get { GeneralStorage.isLoudnessNormalizationEnabled() }
-            .set { enabled: Boolean -> GeneralStorage.setLoudnessNormalizationEnabled(enabled) }
+            .set { enabled: Boolean ->
+                GeneralStorage.setLoudnessNormalizationEnabled(enabled)
+                // 增益由音频处理器在播放线程读取开关，这里只需要更新 offload：均衡要处理 PCM，开启时不能走 offload
+                mainHandler.post { OrpheusMusicService.refreshAudioOffloadPreferences() }
+            }
 
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.isAutoplayOnStartEnabled() }
@@ -1260,7 +1264,8 @@ class ExpoOrpheusModule : Module() {
         Function("exportData") {
             val playerQueue = GeneralStorage.exportConfig()
             val loudness = LoudnessStorage.exportAll()
-            mapOf("playerQueue" to playerQueue, "loudness" to loudness)
+            val loudnessTruePeak = LoudnessStorage.exportTruePeaks()
+            mapOf("playerQueue" to playerQueue, "loudness" to loudness, "loudnessTruePeak" to loudnessTruePeak)
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -1271,6 +1276,10 @@ class ExpoOrpheusModule : Module() {
             loudness.forEach { (key, value) ->
                 LoudnessStorage.setLoudnessData(key, (value as Number).toDouble())
             }
+            (data["loudnessTruePeak"] as? Map<String, Any>)?.forEach { (key, value) ->
+                LoudnessStorage.setTruePeak(key, (value as Number).toDouble())
+            }
+            mainHandler.post { OrpheusMusicService.refreshAudioOffloadPreferences() }
         }
     }
 
