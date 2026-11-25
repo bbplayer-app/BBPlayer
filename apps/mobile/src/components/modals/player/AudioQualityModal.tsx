@@ -256,15 +256,15 @@ const AudioQualityModal = () => {
 			clearPendingSwitch()
 
 			if (result.reason === 'downloaded') {
-				toast.error(`已设为默认 ${label}，当前离线缓存不再重新加载`, {
+				toast.info(`已设为默认 ${label}，当前离线缓存不再重新加载`, {
 					description: '下一首或重新下载后生效',
 				})
 			} else if (result.reason === 'not_bilibili') {
-				toast.error(`已设为默认 ${label}`, {
+				toast.info(`已设为默认 ${label}`, {
 					description: '当前曲目不是 B 站音源，无法即时重新加载',
 				})
 			} else if (result.reason === 'no_track') {
-				toast.error(`已设为默认 ${label}，当前没有播放中的曲目`, {
+				toast.info(`已设为默认 ${label}，当前没有播放中的曲目`, {
 					description: '下一首播放时生效',
 				})
 			} else {
