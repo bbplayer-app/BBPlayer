@@ -1,7 +1,7 @@
 import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Button, Text, useTheme } from 'react-native-paper'
 
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
@@ -41,6 +41,8 @@ const MultiPageVideosListComponent = memo(() => {
 		refetch: refetchPlaylists,
 	} = useGetFavoritePlaylists(userInfo?.mid)
 
+	const mpFolder = playlists?.find((item) => item.title.startsWith('[mp]'))
+
 	const {
 		data: favoriteData,
 		isError: isFavoriteDataError,
@@ -49,9 +51,7 @@ const MultiPageVideosListComponent = memo(() => {
 		fetchNextPage,
 		refetch: refetchFavoriteData,
 		hasNextPage,
-	} = useInfiniteFavoriteList(
-		playlists?.find((item) => item.title.startsWith('[mp]'))?.id,
-	)
+	} = useInfiniteFavoriteList(mpFolder?.id)
 
 	const keyExtractor = useCallback(
 		(item: BilibiliFavoriteListContent) => item.bvid,
@@ -68,11 +68,11 @@ const MultiPageVideosListComponent = memo(() => {
 		return <TabDisable />
 	}
 
-	if (playlistsIsPending || isFavoriteDataPending) {
+	if (playlistsIsPending) {
 		return <MultiPageVideosListSkeleton />
 	}
 
-	if (playlistsIsError || isFavoriteDataError) {
+	if (playlistsIsError) {
 		return (
 			<DataFetchingError
 				text='加载失败'
@@ -81,7 +81,8 @@ const MultiPageVideosListComponent = memo(() => {
 		)
 	}
 
-	if (!playlists?.find((item) => item.title.startsWith('[mp]'))) {
+	// 要先于内容的加载状态判断：没有 [mp] 收藏夹时内容查询不会发出，会一直停在 pending
+	if (!mpFolder) {
 		return (
 			<View style={styles.noMpContainer}>
 				<Text
@@ -90,7 +91,30 @@ const MultiPageVideosListComponent = memo(() => {
 				>
 					未找到分&thinsp;P&thinsp;视频收藏夹，请先创建一个收藏夹，并以&thinsp;[mp]&thinsp;开头
 				</Text>
+				{/* 收藏夹列表有 5 分钟 staleTime，创建 [mp] 收藏夹后需要能手动刷新 */}
+				<Button
+					mode='contained-tonal'
+					onPress={() => refetchPlaylists()}
+					loading={playlistsIsRefetching}
+					disabled={playlistsIsRefetching}
+					style={styles.noMpButton}
+				>
+					刷新
+				</Button>
 			</View>
+		)
+	}
+
+	if (isFavoriteDataPending) {
+		return <MultiPageVideosListSkeleton />
+	}
+
+	if (isFavoriteDataError) {
+		return (
+			<DataFetchingError
+				text='加载失败'
+				onRetry={() => onRefresh()}
+			/>
 		)
 	}
 
@@ -159,6 +183,9 @@ const styles = StyleSheet.create({
 	},
 	noMpText: {
 		textAlign: 'center',
+	},
+	noMpButton: {
+		marginTop: 16,
 	},
 	emptyList: {
 		textAlign: 'center',
