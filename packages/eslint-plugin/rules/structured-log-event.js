@@ -11,7 +11,7 @@ export default {
 				'日志事件必须是固定的 domain.action 字符串；动态值请放入结构化属性。',
 		},
 	},
-	create(context) {
+	createOnce(context) {
 		const loggers = new Set()
 		const isLogger = (node) => {
 			if (node.type === 'Identifier') return loggers.has(node.name)
@@ -31,6 +31,10 @@ export default {
 			)
 		}
 		return {
+			// createOnce 只调用一次，每个文件开始前清空上一个文件收集到的 logger
+			before() {
+				loggers.clear()
+			},
 			ImportDeclaration(node) {
 				if (!/(?:^|\/)utils\/log$/.test(node.source.value)) return
 				for (const specifier of node.specifiers) {

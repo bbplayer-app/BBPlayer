@@ -27,6 +27,9 @@
     },
     "anti-slop/require-safety-comment-for-type-assertion": {
       "count": 1
+    },
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 1
     }
   },
   "apps/docs/src/scripts/playlist.ts": {
@@ -102,6 +105,11 @@
       "count": 1
     }
   },
+  "apps/mobile/src/app/(tabs)/library/[tab].tsx": {
+    "typescript/no-unsafe-enum-assignment": {
+      "count": 2
+    }
+  },
   "apps/mobile/src/app/download.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": {
       "count": 1
@@ -121,6 +129,9 @@
     },
     "anti-slop/require-safety-comment-for-type-assertion": {
       "count": 2
+    },
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 1
     }
   },
   "apps/mobile/src/app/playlist/local/[id].tsx": {
@@ -149,6 +160,9 @@
       "count": 2
     },
     "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    },
+    "react/preserve-manual-memoization": {
       "count": 1
     }
   },
@@ -199,6 +213,14 @@
   "apps/mobile/src/app/share/playlist.tsx": {
     "anti-slop/no-runtime-typeof": {
       "count": 2
+    },
+    "react/purity": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/test.tsx": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
     }
   },
   "apps/mobile/src/components/AnimatedBootSplash.tsx": {
@@ -233,6 +255,14 @@
   },
   "apps/mobile/src/components/modals/player/LyricsSelectionModal.tsx": {
     "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/components/modals/player/SongShareModal.tsx": {
+    "typescript/no-unsafe-class-instance-assignment": {
       "count": 1
     }
   },
@@ -310,6 +340,9 @@
   "apps/mobile/src/features/playlist/local/components/SyncFailuresSheet.tsx": {
     "anti-slop/no-object-parameters": {
       "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
     }
   },
   "apps/mobile/src/features/playlist/local/hooks/useLocalPlaylistPlayer.ts": {
@@ -356,6 +389,9 @@
   "apps/mobile/src/hooks/stores/playbackContextStore.ts": {
     "anti-slop/no-unknown-parameters": {
       "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
     }
   },
   "apps/mobile/src/hooks/stores/useAppStore.ts": {
@@ -382,6 +418,11 @@
       "count": 1
     }
   },
+  "apps/mobile/src/hooks/ui/usePlaylistBackgroundColor.ts": {
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 1
+    }
+  },
   "apps/mobile/src/lib/api/bbplayer/client.ts": {
     "anti-slop/no-runtime-typeof": {
       "count": 1
@@ -390,6 +431,9 @@
   "apps/mobile/src/lib/api/bilibili/api.ts": {
     "anti-slop/require-safety-comment-for-type-assertion": {
       "count": 7
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
     }
   },
   "apps/mobile/src/lib/api/bilibili/client.ts": {
@@ -503,6 +547,9 @@
   "apps/mobile/src/lib/facades/playlist.ts": {
     "anti-slop/no-unsafe-dictionary-type": {
       "count": 1
+    },
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 6
     }
   },
   "apps/mobile/src/lib/facades/sharedPlaylist.ts": {
@@ -513,6 +560,14 @@
   "apps/mobile/src/lib/facades/syncBilibiliPlaylist/favorite.ts": {
     "anti-slop/require-safety-comment-for-type-assertion": {
       "count": 2
+    },
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/lib/services/artistService.ts": {
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 1
     }
   },
   "apps/mobile/src/lib/services/genKey.ts": {
@@ -531,6 +586,9 @@
   "apps/mobile/src/lib/services/trackService.ts": {
     "anti-slop/require-safety-comment-for-type-assertion": {
       "count": 3
+    },
+    "typescript/no-unsafe-class-instance-assignment": {
+      "count": 1
     }
   },
   "apps/mobile/src/lib/services/updateService.ts": {
@@ -735,6 +793,9 @@
       "count": 1
     },
     "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    },
+    "typescript/no-unsafe-class-instance-assignment": {
       "count": 1
     }
   },

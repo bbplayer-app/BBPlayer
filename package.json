@@ -20,24 +20,21 @@
 		"test:e2e:doctor": "e2e doctor --target android",
 		"test:e2e:ios": "e2e run --target ios",
 		"test:e2e:list": "e2e list",
-		"type-check": "tsgo --build --noEmit"
+		"type-check": "tsrs --build --noEmit"
 	},
 	"devDependencies": {
 		"@bbplayer/eslint-plugin": "workspace:*",
-		"@dword-design/eslint-plugin-import-alias": "^8.1.8",
 		"@e2e-dev/mobile": "0.12.6",
-		"@oxlint/plugins": "1.83.0",
+		"@oxlint/plugins": "1.95.0",
 		"@swmansion/argent": "^0.33.0",
 		"@tanstack/eslint-plugin-query": "~5.103.3",
 		"@types/node": "~25.9.9",
-		"@typescript/native-preview": "beta",
 		"e2e": "0.23.0",
 		"eslint-plugin-drizzle": "^0.2.3",
 		"gifenc": "^1.0.3",
 		"lefthook": "^2.1.14",
 		"oxfmt": "^0.68.0",
-		"oxlint": "^1.83.0",
-		"oxlint-tsgolint": "^7.0.2002",
+		"oxlint": "^1.95.0",
 		"syncpack": "^15.3.3",
 		"tsrs": "7.1.0-beta.tsrs5",
 		"typescript": "~6.0.3"

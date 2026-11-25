@@ -36,19 +36,9 @@ export default {
 		},
 	},
 
-	create(context) {
-		const opts = context.options[0] || {}
-		const CLOSE_NAMES = new Set(opts.closeNames || ['close', 'closeAll'])
-		const NAVIGATE_NAMES = new Set(
-			opts.navigateNames || [
-				'navigate',
-				'push',
-				'replace',
-				'reset',
-				'goBack',
-				'dispatch',
-			],
-		)
+	createOnce(context) {
+		let CLOSE_NAMES
+		let NAVIGATE_NAMES
 
 		// 判断是否是 close / closeAll 调用
 		function isCloseCall(node) {
@@ -166,6 +156,21 @@ export default {
 		}
 
 		return {
+			// context.options 只能在 createOnce 之外读取，按文件读取一次
+			before() {
+				const opts = context.options[0] || {}
+				CLOSE_NAMES = new Set(opts.closeNames || ['close', 'closeAll'])
+				NAVIGATE_NAMES = new Set(
+					opts.navigateNames || [
+						'navigate',
+						'push',
+						'replace',
+						'reset',
+						'goBack',
+						'dispatch',
+					],
+				)
+			},
 			CallExpression(node) {
 				if (!isCloseCall(node)) return
 				const afterPos = node.range?.[1] ?? 0

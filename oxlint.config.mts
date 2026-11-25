@@ -144,10 +144,10 @@ export default defineConfig({
 				'import-alias/prefer-alias': [
 					'error',
 					{
+						// 本地实现，见 oxlint-plugins/import-alias.mjs
 						alias: {
 							'@': './apps/mobile/src',
 						},
-						aliasForSubpaths: true,
 					},
 				],
 				// 统一走带 Sentry span 的封装，见 hooks/utils/useTracedQuery.ts
