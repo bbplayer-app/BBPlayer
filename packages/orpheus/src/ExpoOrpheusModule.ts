@@ -180,8 +180,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	isSpectrumVisualizerEnabled: boolean
 	/** 功耗测量用（仅 Android，重启 App 后生效）：不用 FFmpeg，PCM 也交给 MediaCodec 解码。 */
 	testForceMediaCodec: boolean
-	/** 功耗测量用（仅 Android，立即生效，切换时会重建一次音频输出）：不开频谱也不走 offload。 */
-	testForcePcm: boolean
 	/** 原生存储中桌面悬浮歌词窗口当前是否标记为显示。 */
 	isDesktopLyricsShown: boolean
 	/** 桌面悬浮歌词窗口是否锁定为不可拖动。 */
@@ -466,7 +464,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	updateSpectrumData(destination: Float32Array): void
 	/**
-	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、offload、网络等），用于调试页展示。
+	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、网络等），用于调试页展示。
 	 *
 	 * 返回按分组整理好的字符串；iOS 暂未实现，返回空数组。
 	 */
@@ -481,11 +479,13 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 导出所有 Orpheus 原生配置数据。
 	 *
 	 * 返回包含 `playerQueue`（播放器队列 store 的配置键）和
-	 * `loudness`（所有已计算响度数据）的对象。
+	 * `loudness`（所有已计算响度数据）的对象。Android 还会带上
+	 * `loudnessTruePeak`（真峰值，用来限制响度均衡能提升多少）。
 	 */
 	exportData(): {
 		playerQueue: Record<string, boolean | string | number>
 		loudness: Record<string, number>
+		loudnessTruePeak?: Record<string, number>
 	}
 	/**
 	 * 批量导入 Orpheus 原生配置数据。
@@ -495,6 +495,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	importData(data: {
 		playerQueue: Record<string, boolean | string | number>
 		loudness: Record<string, number>
+		loudnessTruePeak?: Record<string, number>
 	}): void
 }
 

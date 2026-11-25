@@ -106,8 +106,6 @@ export default function AppearanceSettingsPage() {
 							style={{ color: colors.onSurfaceVariant }}
 						>
 							在播放器封面周围显示实时音频频谱。
-							{Platform.OS === 'android' &&
-								'开启频谱会暂停使用 offload；切换时播放可能短暂停顿。'}
 						</Text>
 					</View>
 					<UniversalSwitch

@@ -173,9 +173,11 @@ object DownloadUtil {
                             mapOf(
                                 "bilibili.bvid" to bvid,
                                 "audio.integrated_loudness_lufs" to volume.measuredI,
+                                "audio.true_peak_dbtp" to volume.measuredTp,
                             ),
                         )
                         LoudnessStorage.setLoudnessData(dataSpec.uri.toString(), volume.measuredI)
+                        volume.measuredTp?.let { LoudnessStorage.setTruePeak(dataSpec.uri.toString(), it) }
                     }
 
                     val headers = HashMap(dataSpec.httpRequestHeaders)

@@ -1,7 +1,7 @@
-import { Orpheus, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
-import { useFocusEffect, useRouter } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { Platform, ScrollView, StyleSheet, View } from 'react-native'
+import { Orpheus } from '@bbplayer/orpheus'
+import { useRouter } from 'expo-router'
+import { useState } from 'react'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -24,21 +24,6 @@ export default function PlaybackSettingsPage() {
 
 	const allowSimultaneousPlayback = useAppStore(
 		(state) => state.settings.allowSimultaneousPlayback,
-	)
-
-	const canConfigureAudioOffload = Platform.OS === 'android'
-	const spectrumVisualizerEnabled = useSpectrumVisualizerEnabled()
-
-	const [enableAudioOffload, setEnableAudioOffload] = useState(
-		() => canConfigureAudioOffload && !Orpheus.testForcePcm,
-	)
-
-	useFocusEffect(
-		useCallback(() => {
-			if (canConfigureAudioOffload) {
-				setEnableAudioOffload(!Orpheus.testForcePcm)
-			}
-		}, [canConfigureAudioOffload]),
 	)
 
 	const defaultPlayerMode = useAppStore(
@@ -133,36 +118,6 @@ export default function PlaybackSettingsPage() {
 					/>
 				</View>
 
-				{canConfigureAudioOffload && (
-					<View style={styles.settingRow}>
-						<View style={styles.settingDescription}>
-							<Text>尝试使用 offload 播放（实验性）</Text>
-							<Text variant='bodySmall'>
-								可大幅降低后台播放耗电和系统唤醒次数，但部分设备可能出现无声等播放问题。
-							</Text>
-							<Text
-								variant='bodySmall'
-								style={styles.offloadRequirement}
-							>
-								必须关闭音频频谱才能使用 offload。
-							</Text>
-						</View>
-						<UniversalSwitch
-							testID='playback-enable-audio-offload'
-							disabled={spectrumVisualizerEnabled}
-							value={enableAudioOffload}
-							onValueChange={(value) => {
-								try {
-									Orpheus.testForcePcm = !value
-									setEnableAudioOffload(value)
-								} catch (error) {
-									toastAndLogError('设置失败', error, 'Settings')
-								}
-							}}
-						/>
-					</View>
-				)}
-
 				<SettingsSectionTitle title='启动时行为' />
 				<View style={styles.settingRow}>
 					<Text>在应用启动时恢复上次播放进度</Text>
@@ -219,12 +174,5 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginTop: 16,
-	},
-	settingDescription: {
-		flex: 1,
-		marginEnd: 12,
-	},
-	offloadRequirement: {
-		fontWeight: 'bold',
 	},
 })

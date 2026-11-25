@@ -11,13 +11,10 @@ import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
-import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -43,7 +40,11 @@ import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.MeizuStatusBarLyricsBackend
-import expo.modules.orpheus.manager.OffloadAwareMediaCodecAudioRenderer
+import expo.modules.orpheus.manager.FfmpegFirstMediaCodecAudioRenderer
+import expo.modules.orpheus.manager.LoudnessAudioSink
+import expo.modules.orpheus.manager.LoudnessGainProcessor
+import expo.modules.orpheus.manager.LoudnessStreamTracker
+import expo.modules.orpheus.manager.LoudnessTrackingRenderer
 import expo.modules.orpheus.manager.SpectrumCaptureAudioSink
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
@@ -61,16 +62,10 @@ import expo.modules.orpheus.util.GlideBitmapLoader
 import expo.modules.orpheus.util.LoudnessStorage
 import expo.modules.orpheus.util.SleepTimeController
 import expo.modules.orpheus.util.TrackResumeStorage
-import expo.modules.orpheus.util.calculateLoudnessGain
-import expo.modules.orpheus.util.fadeInTo
 import expo.modules.orpheus.util.toMediaItem
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.util.concurrent.CopyOnWriteArrayList
-import kotlin.math.abs
 
 class OrpheusMusicService : MediaLibraryService() {
 
@@ -82,10 +77,8 @@ class OrpheusMusicService : MediaLibraryService() {
     private var mediaSession: MediaLibrarySession? = null
 
     @Volatile
-    private var audioOffloadPreferences: AudioOffloadPreferences? = null
     private var sleepTimerManager: SleepTimeController? = null
-    private var volumeFadeJob: Job? = null
-    private var scope = MainScope()
+    private val loudnessTracker = LoudnessStreamTracker()
 
     lateinit var floatingLyricsManager: FloatingLyricsManager
     lateinit var statusBarLyricsManager: StatusBarLyricsManager
@@ -135,11 +128,6 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
         private val listeners = CopyOnWriteArrayList<(OrpheusMusicService) -> Unit>()
-
-        /** 频谱开关变化后调用，只能在主线程调用 */
-        fun refreshAudioOffloadPreferences() {
-            instance?.applyAudioOffloadPreferences()
-        }
 
         fun addOnServiceReadyListener(listener: (OrpheusMusicService) -> Unit) {
             instance?.let { listener(it) }
@@ -299,13 +287,11 @@ class OrpheusMusicService : MediaLibraryService() {
             mapOf(
                 "audio.ffmpeg_available" to androidx.media3.decoder.ffmpeg.FfmpegLibrary.isAvailable(),
                 "audio.force_media_codec" to testForceMediaCodec,
-                "audio.force_pcm" to GeneralStorage.isTestForcePcm(),
             ),
         )
         OrpheusTelemetry.update(
             "ffmpegAvailable" to androidx.media3.decoder.ffmpeg.FfmpegLibrary.isAvailable(),
             "testForceMediaCodec" to testForceMediaCodec.takeIf { it },
-            "testForcePcm" to GeneralStorage.isTestForcePcm().takeIf { it },
         )
 
         val renderersFactory = object : DefaultRenderersFactory(this) {
@@ -319,12 +305,15 @@ class OrpheusMusicService : MediaLibraryService() {
             ): AudioSink? {
                 this.enableFloatOutput = enableFloatOutput
                 this.enableAudioOutputPlaybackParams = enableAudioOutputPlaybackParams
+                // 响度均衡在 audioProcessorChain 里做，开启 float 输出会绕过这条链，见 LoudnessGainProcessor
+                val loudnessProcessor = LoudnessGainProcessor(loudnessTracker)
                 val audioSink = DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                    .setAudioProcessors(arrayOf(loudnessProcessor))
                     .build()
                 // 包一层，让频谱可以直接拿到播放器自己的 PCM
-                return SpectrumCaptureAudioSink(audioSink)
+                return SpectrumCaptureAudioSink(LoudnessAudioSink(audioSink, loudnessProcessor))
             }
 
             override fun buildAudioRenderers(
@@ -337,24 +326,34 @@ class OrpheusMusicService : MediaLibraryService() {
                 eventListener: AudioRendererEventListener,
                 out: ArrayList<Renderer>
             ) {
-                // 会走 offload 时用 MediaCodec，否则由 FFmpeg 在进程内解码，见 OffloadAwareMediaCodecAudioRenderer
+                // 常见格式由 FFmpeg 在进程内解码，见 FfmpegFirstMediaCodecAudioRenderer
+                // 包一层是为了知道每个流属于哪首歌，响度均衡按歌切换增益
                 out.add(
-                    OffloadAwareMediaCodecAudioRenderer(
-                        context,
-                        getCodecAdapterFactory(),
-                        mediaCodecSelector,
-                        enableDecoderFallback,
-                        eventHandler,
-                        eventListener,
-                        audioSink,
-                    ) { if (testForceMediaCodec) null else audioOffloadPreferences }
+                    LoudnessTrackingRenderer(
+                        FfmpegFirstMediaCodecAudioRenderer(
+                            context,
+                            getCodecAdapterFactory(),
+                            mediaCodecSelector,
+                            enableDecoderFallback,
+                            eventHandler,
+                            eventListener,
+                            audioSink,
+                            preferFfmpeg = !testForceMediaCodec,
+                        ),
+                        loudnessTracker,
+                    )
                 )
                 if (testForceMediaCodec) return
                 // FFmpeg 渲染器要用单独的 sink：sink 只保存一个 listener，共用的话后构造的 FFmpeg 渲染器
-                // 会顶掉 MediaCodec 渲染器的，offload 的缓冲满/空回调就到不了它那里，播放线程无法为 offload 休眠。
+                // 会顶掉 MediaCodec 渲染器的，MediaCodec 渲染器就收不到 sink 的回调。
                 // 两个渲染器同一时间只会启用一个，所以也只会有一个 AudioTrack
                 val ffmpegAudioSink = buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams)!!
-                out.add(FfmpegAudioRenderer(eventHandler, eventListener, ffmpegAudioSink))
+                out.add(
+                    LoudnessTrackingRenderer(
+                        FfmpegAudioRenderer(eventHandler, eventListener, ffmpegAudioSink),
+                        loudnessTracker,
+                    )
+                )
             }
         }.experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
 
@@ -372,10 +371,8 @@ class OrpheusMusicService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
-        applyAudioOffloadPreferences()
         audioDebugTracker = AudioDebugTracker().also { tracker ->
             player?.addAnalyticsListener(tracker)
-            player?.addAudioOffloadListener(tracker)
         }
 
         shuffleManager = ShuffleManager { player }
@@ -424,18 +421,7 @@ class OrpheusMusicService : MediaLibraryService() {
             )
         }
 
-        // 系统媒体控件、车机等外部控制器的变速请求也要走 setPlaybackParameters，
-        // 保证 offload 偏好在倍速之前更新
-        val sessionPlayer = object : ForwardingPlayer(player!!) {
-            override fun setPlaybackSpeed(speed: Float) {
-                this@OrpheusMusicService.setPlaybackSpeed(speed)
-            }
-
-            override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
-                this@OrpheusMusicService.setPlaybackParameters(playbackParameters)
-            }
-        }
-        mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, callback)
+        mediaSession = MediaLibrarySession.Builder(this, player!!, callback)
             .setId("OrpheusSession")
             .setSessionActivity(contentIntent)
             .setBitmapLoader(GlideBitmapLoader(this))
@@ -470,7 +456,6 @@ class OrpheusMusicService : MediaLibraryService() {
         saveCurrentResumeRecord()
         floatingLyricsManager.hide()
         statusBarLyricsManager.destroy()
-        scope.cancel()
         instance = null
 
         mediaSession?.run {
@@ -728,8 +713,6 @@ class OrpheusMusicService : MediaLibraryService() {
                     ),
                 )
                 OrpheusTelemetry.update("speed" to playbackParameters.speed.takeIf { it != 1f })
-                // 兜底：倍速可能从别处直接修改（不经过 setPlaybackParameters），保持 offload 偏好与倍速一致
-                applyAudioOffloadPreferences()
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -818,10 +801,6 @@ class OrpheusMusicService : MediaLibraryService() {
                 floatingLyricsManager.syncTrackInfo()
 
                 saveCurrentQueue()
-                val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
-
-                val volumeData = LoudnessStorage.getLoudnessData(uri)
-                applyVolumeForCurrentItem(volumeData)
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -1051,86 +1030,8 @@ class OrpheusMusicService : MediaLibraryService() {
         }
     }
 
-    @OptIn(UnstableApi::class)
-    private fun applyAudioOffloadPreferences(speed: Float? = null) {
-        val player = player ?: return
-        // offload（解码交给音频 DSP）时 CPU 可以长时间休眠，但播放器拿不到 PCM，
-        // 所以只在频谱关闭时启用
-        val mode = if (!GeneralStorage.isSpectrumVisualizerEnabled() && !GeneralStorage.isTestForcePcm()) {
-            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
-        } else {
-            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
-        }
-        val preferences = AudioOffloadPreferences.Builder()
-            .setAudioOffloadMode(mode)
-            // 设备不支持无缝切歌时不启用，ExoPlayer 会自动回退到普通解码
-            .setIsGaplessSupportRequired(true)
-            // 很多设备不支持 offload 下变速（倍速会被悄悄重置为 1x），
-            // 所以只在倍速不是 1x 时才要求设备支持
-            .setIsSpeedChangeSupportRequired((speed ?: player.playbackParameters.speed) != 1f)
-            .build()
-        // 先于轨道重选更新：渲染器在播放线程上按它判断由 MediaCodec 还是 FFmpeg 解码
-        audioOffloadPreferences = preferences
-        if (player.trackSelectionParameters.audioOffloadPreferences == preferences) return
-        val offloadMode = if (mode == AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED) "enabled" else "disabled"
-        NativeLog.info(
-            LogTags.AUDIO,
-            "audio.offload.changed",
-            mapOf(
-                "audio.offload_mode" to offloadMode,
-                "audio.speed_change_required" to preferences.isSpeedChangeSupportRequired,
-            ),
-        )
-        OrpheusTelemetry.update("offloadPreference" to offloadMode)
-
-        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-            .setAudioOffloadPreferences(preferences)
-            .build()
-    }
-
-    /**
-     * 设置倍速并同步 offload 偏好，只能在主线程调用。
-     *
-     * 切到非 1x 时必须先更新偏好再设倍速：偏好变化会让播放器先释放 offload 的 AudioTrack，
-     * 新倍速随后作用在重建的普通输出上。顺序反过来的话，倍速会先作用在不支持变速的
-     * offload 输出上而失败，被重置为 1x。切回 1x 时则先设倍速，再放宽要求。
-     */
+    /** 只能在主线程调用 */
     fun setPlaybackSpeed(speed: Float) {
-        val player = player ?: return
-        setPlaybackParameters(player.playbackParameters.withSpeed(speed))
-    }
-
-    private fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
-        val player = player ?: return
-        val speed = playbackParameters.speed
-        if (speed != 1f) {
-            applyAudioOffloadPreferences(speed)
-            player.playbackParameters = playbackParameters
-        } else {
-            player.playbackParameters = playbackParameters
-            applyAudioOffloadPreferences(speed)
-        }
-    }
-
-    @OptIn(UnstableApi::class)
-    private fun applyVolumeForCurrentItem(measuredI: Double) {
-        NativeLog.debug(LogTags.LOUDNESS, "audio.volume.applied", mapOf("audio.integrated_loudness_lufs" to measuredI))
-        val player = player ?: return
-        volumeFadeJob?.cancel()
-        val isLoudnessNormalizationEnabled = GeneralStorage.isLoudnessNormalizationEnabled()
-        if (!isLoudnessNormalizationEnabled) return
-        val gain = run {
-            val target = -14.0 // bilibili 的这个值似乎是固定的
-            if (measuredI == 0.0) 1.0f else calculateLoudnessGain(measuredI, target)
-        }
-
-        val targetVol = 1.0f * gain
-        val currentVolume = player.volume
-
-        if (abs(currentVolume - targetVol) < 0.001f) {
-            return
-        }
-
-        volumeFadeJob = player.fadeInTo(targetVol, 600L, scope)
+        player?.setPlaybackSpeed(speed)
     }
 }

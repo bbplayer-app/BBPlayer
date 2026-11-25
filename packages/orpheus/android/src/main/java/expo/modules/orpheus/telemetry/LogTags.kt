@@ -22,7 +22,7 @@ internal object LogTags {
     /** 播放服务、播放器的创建与销毁、队列恢复 */
     const val SERVICE = "Orpheus.Service"
 
-    /** 解码器、输入格式、AudioTrack、offload */
+    /** 解码器、输入格式、AudioTrack */
     const val AUDIO = "Orpheus.Audio"
 
     /** 解析 B 站音频流、选择音轨、镜像切换、网络加载 */

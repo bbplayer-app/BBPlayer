@@ -17,14 +17,14 @@ import toast from '@/utils/toast'
 
 const REFRESH_INTERVAL_MS = 1000
 
-type TestOptionKey = 'testForceMediaCodec' | 'testForcePcm'
+type TestOptionKey = 'testForceMediaCodec'
 
 // 功耗测量时用来切换配置，同一个安装包就能测完所有组合
 const TEST_OPTIONS: {
 	key: TestOptionKey
 	label: string
 	description: string
-	// 解码器在创建播放器时就定下来了，要重启才生效；offload 偏好可以随时重新应用
+	// 解码器在创建播放器时就定下来了，要重启才生效
 	needsRestart: boolean
 }[] = [
 	{
@@ -33,18 +33,11 @@ const TEST_OPTIONS: {
 		description: 'PCM 也用系统解码器，不用 FFmpeg（重启 App 后生效）',
 		needsRestart: true,
 	},
-	{
-		key: 'testForcePcm',
-		label: '强制 PCM',
-		description: '不开频谱也不走 offload（立即生效）',
-		needsRestart: false,
-	},
 ]
 
 function readTestOptions(): Record<TestOptionKey, boolean> {
 	return {
 		testForceMediaCodec: Orpheus.testForceMediaCodec,
-		testForcePcm: Orpheus.testForcePcm,
 	}
 }
 

@@ -6,7 +6,7 @@ import io.sentry.Sentry
  * 把播放器当前的状态写进 Sentry 原生 scope 的 `orpheus` context 和几个 tag。
  *
  * JS 上报事件时会合并原生 scope，所以不管 issue 来自 JS 还是原生，都能看到出问题时在播什么、
- * 用什么解码器、输出走 PCM 还是 offload。tag 可以在 Sentry 里筛选和聚合，只放取值有限的字段。
+ * 用什么解码器、输出走 PCM 还是直通。tag 可以在 Sentry 里筛选和聚合，只放取值有限的字段。
  *
  * 只在状态变化时调用（每首歌几次），不要放进逐 buffer 的路径。
  * 原生 SDK 没有初始化（例如用户关闭了数据采集）时，Sentry 的调用都是空操作。播放服务通常比
