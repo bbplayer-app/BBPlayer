@@ -122,6 +122,16 @@ object AudioQualityStore {
             .forEach { staleKey -> infos.remove(staleKey) }
         infos[key] = info
         persist(key, info, prefix)
+        NativeLog.info(
+            LogTags.STORAGE,
+            "audio.quality.resolved",
+            mapOf(
+                "audio.preferred_quality" to info.preferredQuality,
+                "audio.actual_kind" to info.actualKind,
+                "audio.actual_stream_id" to info.actualStreamId,
+                "audio.is_fallback" to info.isFallback,
+            ),
+        )
         listeners.forEach { listener ->
             runCatching { listener(uri, info) }
                 .onFailure { error ->

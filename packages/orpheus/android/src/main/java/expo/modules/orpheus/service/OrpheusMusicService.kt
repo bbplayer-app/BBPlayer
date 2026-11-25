@@ -476,6 +476,17 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     private fun broadcastAudioQuality(info: AudioQualityInfo) {
+        NativeLog.info(
+            LogTags.AUDIO,
+            "audio.quality.broadcast",
+            mapOf(
+                "audio.preferred_quality" to info.preferredQuality,
+                "audio.actual_kind" to info.actualKind,
+                "audio.actual_stream_id" to info.actualStreamId,
+                "audio.is_fallback" to info.isFallback,
+                "audio.listener_count" to audioQualityEventListeners.size,
+            ),
+        )
         audioQualityEventListeners.forEach { listener -> listener.onAudioQualityChanged(info) }
     }
 
@@ -540,15 +551,39 @@ class OrpheusMusicService : MediaLibraryService() {
         val index = player.currentMediaItemIndex
         val position = player.currentPosition.coerceAtLeast(0L)
         val wasPlaying = player.playWhenReady
+        val preferredQuality = GeneralStorage.getPreferredAudioQuality()
+        val refreshCacheKey = DownloadUtil.playbackCacheKey(uriString)
+        val reloadStrategy =
+            if (item.localConfiguration?.customCacheKey == refreshCacheKey) "stop" else "custom_cache_key"
+        if (reloadStrategy == "stop") {
+            player.stop()
+        }
         val refreshedItem = MediaItem.Builder()
             .setMediaId(item.mediaId)
             .setUri(uri)
             .setMediaMetadata(item.mediaMetadata)
+            .setCustomCacheKey(refreshCacheKey)
             .build()
         player.replaceMediaItem(index, refreshedItem)
         player.seekTo(index, position)
         player.prepare()
         if (wasPlaying) player.play()
+        NativeLog.info(
+            LogTags.AUDIO,
+            "audio.quality.reload",
+            mapOf(
+                "audio.preferred_quality" to preferredQuality,
+                "audio.reload_strategy" to reloadStrategy,
+                "audio.reload_cache_key" to refreshCacheKey,
+                "audio.reload_media_index" to index,
+                "audio.reload_position_ms" to position,
+                "audio.reload_was_playing" to wasPlaying,
+            ),
+        )
+        OrpheusTelemetry.update(
+            "audioQualityReload" to preferredQuality,
+            "audioQualityReloadStrategy" to reloadStrategy,
+        )
         return mapOf("reloaded" to true, "reason" to "reloaded")
     }
 
