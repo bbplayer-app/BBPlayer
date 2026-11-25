@@ -92,7 +92,14 @@ object DownloadUtil {
                 .setUpstreamDataSourceFactory(cacheFactory)
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                 .setCacheWriteDataSinkFactory(null)
-                .setCacheKeyFactory { dataSpec -> dataSpec.key ?: downloadCacheKeyOf(dataSpec.uri) }
+                .setCacheKeyFactory { dataSpec ->
+                    val uri = dataSpec.uri
+                    if (uri.scheme == "orpheus" && uri.host == "bilibili") {
+                        downloadCacheKeyOf(uri)
+                    } else {
+                        dataSpec.key ?: uri.toString()
+                    }
+                }
 
             playerDataSourceFactory = downloadFactory
         }
@@ -127,6 +134,17 @@ object DownloadUtil {
             return playbackCacheKey(uri.toString())
         }
         return dataSpec.key ?: uri.toString()
+    }
+
+    fun isFullyCachedInLruCache(context: Context, cacheKey: String): Boolean {
+        return try {
+            val cache = DownloadCache.getLruCache(context)
+            val contentLength = ContentMetadata.getContentLength(cache.getContentMetadata(cacheKey))
+            if (contentLength == C.LENGTH_UNSET.toLong() || contentLength <= 0L) return false
+            cache.getCachedSpans(cacheKey).sumOf { it.length } >= contentLength
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun isFullyCachedInDownloadCache(context: Context, uriString: String): Boolean {

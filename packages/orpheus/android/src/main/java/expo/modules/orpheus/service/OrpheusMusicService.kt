@@ -39,6 +39,7 @@ import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.AudioDebugTracker
 import expo.modules.orpheus.manager.AudioQualityInfo
 import expo.modules.orpheus.manager.AudioQualityStore
+import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
@@ -537,6 +538,7 @@ class OrpheusMusicService : MediaLibraryService() {
         return currentAudioQualityInfo(uri, GeneralStorage.getPreferredAudioQuality()).toMap()
     }
 
+    @OptIn(UnstableApi::class)
     fun reloadCurrentTrackForQualityChange(): Map<String, Any> {
         val player = player ?: return mapOf("reloaded" to false, "reason" to "no_track")
         val item = player.currentMediaItem ?: return mapOf("reloaded" to false, "reason" to "no_track")
@@ -553,10 +555,14 @@ class OrpheusMusicService : MediaLibraryService() {
         val wasPlaying = player.playWhenReady
         val preferredQuality = GeneralStorage.getPreferredAudioQuality()
         val refreshCacheKey = DownloadUtil.playbackCacheKey(uriString)
+        val lruFullCached = DownloadUtil.isFullyCachedInLruCache(this, refreshCacheKey)
         val reloadStrategy =
             if (item.localConfiguration?.customCacheKey == refreshCacheKey) "stop" else "custom_cache_key"
         if (reloadStrategy == "stop") {
             player.stop()
+            if (lruFullCached) {
+                DownloadCache.getLruCache(this).removeResource(refreshCacheKey)
+            }
         }
         val refreshedItem = MediaItem.Builder()
             .setMediaId(item.mediaId)
@@ -575,6 +581,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 "audio.preferred_quality" to preferredQuality,
                 "audio.reload_strategy" to reloadStrategy,
                 "audio.reload_cache_key" to refreshCacheKey,
+                "audio.reload_lru_full_cached" to lruFullCached,
                 "audio.reload_media_index" to index,
                 "audio.reload_position_ms" to position,
                 "audio.reload_was_playing" to wasPlaying,
