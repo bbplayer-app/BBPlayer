@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.core.graphics.toColorInt
 import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
+import expo.modules.orpheus.manager.AudioQualityStore
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
@@ -18,6 +19,7 @@ object GeneralStorage {
     private var lastSavedQueueSnapshot: List<String>? = null
     private const val KEY_RESTORE_POSITION_ENABLED = "config_restore_position_enabled"
     private const val KEY_BILIBILI_CDN = "config_bilibili_cdn"
+    private const val KEY_PREFERRED_AUDIO_QUALITY = "config_preferred_audio_quality"
 
     private const val KEY_LOUDNESS_NORMALIZATION_ENABLED = "config_loudness_normalization_enabled"
     private const val KEY_SAVED_QUEUE = "saved_queue_json_list"
@@ -78,6 +80,17 @@ object GeneralStorage {
     fun setPreferredBilibiliCdn(preference: String) {
         val value = preference.takeIf { it in setOf("auto", "ali", "tencent", "huawei", "akamai") } ?: "auto"
         safeKv.encode(KEY_BILIBILI_CDN, value)
+    }
+
+    fun getPreferredAudioQuality(): String =
+        AudioQualityStore.normalizePreference(kv?.decodeString(KEY_PREFERRED_AUDIO_QUALITY))
+
+    fun setPreferredAudioQuality(value: String) {
+        try {
+            safeKv.encode(KEY_PREFERRED_AUDIO_QUALITY, AudioQualityStore.normalizePreference(value))
+        } catch (e: Exception) {
+            NativeLog.error(LogTags.STORAGE, "storage.audio_quality.set_failed", error = e)
+        }
     }
 
     fun isLoudnessNormalizationEnabled(): Boolean {
@@ -221,6 +234,7 @@ object GeneralStorage {
     fun exportConfig(): Map<String, Any> {
         return mapOf(
             KEY_BILIBILI_CDN to getPreferredBilibiliCdn(),
+            KEY_PREFERRED_AUDIO_QUALITY to getPreferredAudioQuality(),
             KEY_RESTORE_POSITION_ENABLED to isRestoreEnabled(),
             KEY_LOUDNESS_NORMALIZATION_ENABLED to isLoudnessNormalizationEnabled(),
             KEY_AUTOPLAY_ON_START_ENABLED to isAutoplayOnStartEnabled(),
@@ -237,6 +251,7 @@ object GeneralStorage {
 
     fun importConfig(data: Map<String, Any>) {
         (data[KEY_BILIBILI_CDN] as? String)?.let { setPreferredBilibiliCdn(it) }
+        (data[KEY_PREFERRED_AUDIO_QUALITY] as? String)?.let { setPreferredAudioQuality(it) }
         (data[KEY_RESTORE_POSITION_ENABLED] as? Boolean)?.let { setRestoreEnabled(it) }
         (data[KEY_LOUDNESS_NORMALIZATION_ENABLED] as? Boolean)?.let { setLoudnessNormalizationEnabled(it) }
         (data[KEY_AUTOPLAY_ON_START_ENABLED] as? Boolean)?.let { setAutoplayOnStartEnabled(it) }

@@ -36,6 +36,9 @@ class AudioDebugTracker : AnalyticsListener {
     private var decoderInitAtMs = 0L
     private var inputFormat: Format? = null
 
+    @Volatile
+    var onAudioFormatChangedListener: ((Format) -> Unit)? = null
+
     /** 解码器与输入格式属于哪首歌：出错时它可能还是上一首的，不能和当前歌曲混为一谈 */
     private var audioMediaId: String? = null
 
@@ -107,7 +110,10 @@ class AudioDebugTracker : AnalyticsListener {
         )
         OrpheusTelemetry.update("inputFormat" to Format.toLogString(format), "audioMediaId" to audioMediaId)
         OrpheusTelemetry.setTag("orpheus.mime", format.sampleMimeType)
+        runCatching { onAudioFormatChangedListener?.invoke(format) }
     }
+
+    fun getCurrentInputFormat(): Format? = inputFormat
 
     override fun onAudioTrackInitialized(
         eventTime: AnalyticsListener.EventTime,

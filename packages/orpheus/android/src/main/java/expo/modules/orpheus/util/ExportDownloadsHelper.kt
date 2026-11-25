@@ -124,7 +124,13 @@ private suspend fun exportSingleItem(
         // 1. 将缓存数据直接写入临时 m4a 文件（m4s 与 m4a 同为 ISOBMFF 容器，无需转码）
         tempM4a = File(context.cacheDir, "$id.m4a")
         if (tempM4a.exists()) tempM4a.delete()
-        val dataSpec = DataSpec(download.request.uri)
+        val cacheKey = download.request.customCacheKey
+            ?.takeIf { it.isNotBlank() }
+            ?: DownloadUtil.downloadCacheKeyOf(download.request.uri)
+        val dataSpec = DataSpec.Builder()
+            .setUri(download.request.uri)
+            .setKey(cacheKey)
+            .build()
         try {
             dataSource.open(dataSpec)
             tempM4a.outputStream().use { outputStream ->

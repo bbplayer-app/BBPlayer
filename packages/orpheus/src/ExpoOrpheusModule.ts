@@ -68,6 +68,39 @@ export type BilibiliCdnPreference =
 	| 'huawei'
 	| 'akamai'
 
+export type AudioQualityPreference =
+	| 'low'
+	| 'standard'
+	| 'high'
+	| 'hires'
+	| 'dolby'
+
+export type AudioQuality = AudioQualityPreference
+
+export type AudioQualityActualKind =
+	| 'dolby'
+	| 'hires'
+	| 'normal'
+	| 'durl'
+	| 'local'
+	| 'unknown'
+
+export interface AudioQualityInfo {
+	preferredQuality: AudioQualityPreference
+	actualKind: AudioQualityActualKind
+	actualStreamId: number | null
+	codecs: string | null
+	bandwidth: number | null
+	isFallback: boolean
+	isFromDownloadCache: boolean
+	availableQualities?: AudioQuality[]
+}
+
+export interface ReloadAudioQualityResult {
+	reloaded: boolean
+	reason: 'reloaded' | 'downloaded' | 'not_bilibili' | 'no_track'
+}
+
 export interface AndroidPlaybackErrorEvent {
 	platform: 'android'
 	errorCode: number
@@ -113,6 +146,7 @@ export type OrpheusEvents = {
 		status: 'success' | 'failed'
 	}): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
+	onAudioQualityChanged(event: AudioQualityInfo): void
 	onExportProgress(event: {
 		progress?: number
 		currentId: string
@@ -162,6 +196,7 @@ export type OrpheusHeadlessEvent =
 declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	/** 优先使用指定服务商的常规节点，再尝试其余常规节点，mcdn 最后兜底。 */
 	preferredBilibiliCdn: BilibiliCdnPreference
+	preferredAudioQuality: AudioQualityPreference
 	/** 原生服务启动时是否恢复上次保存的队列索引和播放位置。 */
 	restorePlaybackPositionEnabled: boolean
 	/** Android 创建播放器时是否应用已保存的响度标准化增益。 */
@@ -451,6 +486,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	setPlaybackSpeed(speed: number): Promise<void>
 	/** 返回当前原生播放倍速。 */
 	getPlaybackSpeed(): Promise<number>
+	getCurrentAudioQuality(): Promise<AudioQualityInfo | null>
+	reloadCurrentTrackForQualityChange(): Promise<ReloadAudioQualityResult>
 	/**
 	 * 触发原生播放错误路径，用于调试错误处理。
 	 *

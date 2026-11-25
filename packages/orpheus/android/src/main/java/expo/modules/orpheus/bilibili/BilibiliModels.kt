@@ -3,6 +3,12 @@ package expo.modules.orpheus.bilibili
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+object BilibiliAudioQualityId {
+    const val LOW = 30216
+    const val STANDARD = 30232
+    const val HIGH = 30280
+}
+
 @Serializable
 data class BilibiliApiResponse<TData>(
     @SerialName("code") val code: Int,
