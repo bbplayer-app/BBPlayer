@@ -40,7 +40,6 @@ object GeneralStorage {
 
     // 功耗测量用的开关，在音频调试页设置，重启 App 后生效
     private const val KEY_TEST_FORCE_MEDIA_CODEC = "debug_test_force_media_codec"
-    private const val KEY_TEST_FORCE_PCM = "debug_test_force_pcm"
 
 
     @Synchronized
@@ -118,13 +117,6 @@ object GeneralStorage {
 
     fun setTestForceMediaCodec(enabled: Boolean) {
         safeKv.encode(KEY_TEST_FORCE_MEDIA_CODEC, enabled)
-    }
-
-    /** 测量用：不开频谱也不走 offload */
-    fun isTestForcePcm(): Boolean = safeKv.decodeBool(KEY_TEST_FORCE_PCM, false)
-
-    fun setTestForcePcm(enabled: Boolean) {
-        safeKv.encode(KEY_TEST_FORCE_PCM, enabled)
     }
 
     fun saveQueue(mediaItems: List<MediaItem>) {

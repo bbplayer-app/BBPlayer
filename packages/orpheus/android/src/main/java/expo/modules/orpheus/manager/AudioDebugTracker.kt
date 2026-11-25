@@ -2,17 +2,14 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.media.AudioDeviceInfo
-import android.media.AudioFormat
 import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaLibraryInfo
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
-import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.DecoderReuseEvaluation
@@ -33,7 +30,7 @@ import java.util.Locale
  * 回调与 [snapshot] 都在主线程（ExoPlayer 的 application looper）上执行。
  */
 @UnstableApi
-class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
+class AudioDebugTracker : AnalyticsListener {
     private var decoderName: String? = null
     private var decoderInitDurationMs = 0L
     private var decoderInitAtMs = 0L
@@ -56,11 +53,6 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     private var sinkErrorCount = 0
     private var codecErrorCount = 0
     private var lastAudioError: String? = null
-
-    private var isSleepingForOffload = false
-    private var offloadSleepCount = 0
-    private var offloadSleepStartMs = 0L
-    private var offloadSleepTotalMs = 0L
 
     private var bitrateEstimate = 0L
     private var activeLoads = 0
@@ -274,17 +266,6 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         lastLoadAtMs = SystemClock.elapsedRealtime()
     }
 
-    override fun onSleepingForOffloadChanged(isSleepingForOffload: Boolean) {
-        val now = SystemClock.elapsedRealtime()
-        if (isSleepingForOffload && !this.isSleepingForOffload) {
-            offloadSleepCount++
-            offloadSleepStartMs = now
-        } else if (!isSleepingForOffload && this.isSleepingForOffload) {
-            offloadSleepTotalMs += now - offloadSleepStartMs
-        }
-        this.isSleepingForOffload = isSleepingForOffload
-    }
-
     /** 显式选择诊断字段，避免把 Format 或播放器对象整体上传。 */
     fun logAttributes(): Map<String, Any?> = mapOf(
         "track.id" to audioMediaId,
@@ -308,7 +289,7 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     }
 
     private fun outputMode(config: AudioSink.AudioTrackConfig) =
-        if (config.offload) "offload" else if (isPcm(config.encoding)) "pcm" else "passthrough"
+        if (isPcm(config.encoding)) "pcm" else "passthrough"
 
     /** 按分组返回可直接展示的字符串 */
     fun snapshot(context: Context, player: ExoPlayer): List<Map<String, Any>> {
@@ -353,13 +334,10 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
             "编码器延迟 / 填充" to format?.let { "${it.encoderDelay} / ${it.encoderPadding} 帧" },
         )
 
-        // onOffloadedPlayback 只会回调给 DefaultAudioSink.Builder 里设置的监听器，
-        // 通过 player.addAudioOffloadListener 注册的收不到，所以直接看 AudioTrack 配置
-        val isOffloaded = audioTrackConfig?.offload == true
         val counters = player.audioDecoderCounters
         section(
             "解码器",
-            "解码器" to (if (isOffloaded) "（offload 中，由音频芯片解码）" else decoderName),
+            "解码器" to decoderName,
             "初始化耗时" to decoderName?.let { "${decoderInitDurationMs}ms（${formatAgo(now - decoderInitAtMs)}）" },
             "已送入 / 已输出 buffer" to counters?.let { "${it.queuedInputBufferCount} / ${it.renderedOutputBufferCount}" },
             "跳过 / 丢弃 buffer" to counters?.let { "${it.skippedOutputBufferCount} / ${it.droppedBufferCount}" },
@@ -369,7 +347,7 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         val track = audioTrackConfig
         section(
             "音频输出（AudioTrack）",
-            "输出模式" to track?.let { if (it.offload) "offload" else if (isPcm(it.encoding)) "PCM" else "直通" },
+            "输出模式" to track?.let { if (isPcm(it.encoding)) "PCM" else "直通" },
             "编码" to track?.let { encodingName(it.encoding) },
             "采样率" to track?.let { "${it.sampleRate} Hz" },
             "缓冲大小" to track?.let { formatTrackBuffer(it) },
@@ -381,24 +359,6 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
             } else null,
             "AudioSink 错误" to sinkErrorCount.toString(),
             "最近一次音频错误" to lastAudioError,
-        )
-
-        val preferences = player.trackSelectionParameters.audioOffloadPreferences
-        val sleepingTotalMs = offloadSleepTotalMs +
-            if (isSleepingForOffload) now - offloadSleepStartMs else 0
-        section(
-            "音频 offload",
-            "偏好" to offloadPreferenceText(preferences),
-            "频谱开关" to if (GeneralStorage.isSpectrumVisualizerEnabled()) "开（因此禁用 offload）" else "关",
-            "测量开关" to listOfNotNull(
-                "强制 MediaCodec".takeIf { GeneralStorage.isTestForceMediaCodec() },
-                "强制 PCM".takeIf { GeneralStorage.isTestForcePcm() },
-            ).joinToString("、").ifEmpty { "无" },
-            "当前是否 offload" to yesNo(isOffloaded),
-            "正在为 offload 休眠" to yesNo(isSleepingForOffload),
-            "休眠次数 / 累计时长" to "$offloadSleepCount 次 / ${formatSeconds(sleepingTotalMs)}",
-            "设备对当前格式的支持" to format?.let { deviceOffloadSupport(context, player, it) },
-            "设备支持 offload 变速" to deviceOffloadVariableRate(context),
         )
 
         section(
@@ -417,56 +377,12 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
             "其他",
             "输出设备" to outputDevices(context, player),
             "频谱采集中" to yesNo(SpectrumAnalyzer.isCapturing),
+            "强制 MediaCodec（测量开关）" to yesNo(GeneralStorage.isTestForceMediaCodec()),
             "动态调度" to "开",
             "Media3 版本" to MediaLibraryInfo.VERSION,
         )
 
         return sections
-    }
-
-    private fun offloadPreferenceText(preferences: AudioOffloadPreferences): String {
-        val mode = when (preferences.audioOffloadMode) {
-            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED -> "启用"
-            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_REQUIRED -> "强制"
-            else -> "禁用"
-        }
-        val requirements = buildList {
-            if (preferences.isGaplessSupportRequired) add("要求无缝切歌")
-            if (preferences.isSpeedChangeSupportRequired) add("要求支持变速")
-        }
-        return if (requirements.isEmpty()) mode else "$mode（${requirements.joinToString("、")}）"
-    }
-
-    private fun deviceOffloadSupport(context: Context, player: ExoPlayer, format: Format): String {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return "需要 Android 12+ 才能查询"
-        val mime = format.sampleMimeType ?: return "未知格式"
-        return try {
-            val encoding = MimeTypes.getEncoding(mime, format.codecs)
-            if (encoding == C.ENCODING_INVALID) return "该格式没有对应的 offload 编码"
-            val audioFormat = AudioFormat.Builder()
-                .setEncoding(encoding)
-                .setSampleRate(format.sampleRate)
-                .setChannelMask(Util.getAudioTrackChannelConfig(format.channelCount))
-                .build()
-            when (
-                AudioManager.getPlaybackOffloadSupport(
-                    audioFormat,
-                    player.audioAttributes.getPlatformAudioAttributes()
-                )
-            ) {
-                AudioManager.PLAYBACK_OFFLOAD_GAPLESS_SUPPORTED -> "支持（含无缝切歌）"
-                AudioManager.PLAYBACK_OFFLOAD_SUPPORTED -> "支持（不支持无缝切歌）"
-                else -> "不支持"
-            }
-        } catch (e: Exception) {
-            "查询失败：${e.message}"
-        }
-    }
-
-    private fun deviceOffloadVariableRate(context: Context): String {
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val value = audioManager.getParameters("offloadVariableRateSupported")
-        return if (value == "offloadVariableRateSupported=1") "是" else "否（$value）"
     }
 
     private fun outputDevices(context: Context, player: ExoPlayer): String {

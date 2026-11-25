@@ -359,11 +359,8 @@ class ExpoOrpheusModule : Module() {
 
         Property("loudnessNormalizationEnabled")
             .get { GeneralStorage.isLoudnessNormalizationEnabled() }
-            .set { enabled: Boolean ->
-                GeneralStorage.setLoudnessNormalizationEnabled(enabled)
-                // 增益由音频处理器在播放线程读取开关，这里只需要更新 offload：均衡要处理 PCM，开启时不能走 offload
-                mainHandler.post { OrpheusMusicService.refreshAudioOffloadPreferences() }
-            }
+            // 增益由音频处理器在播放线程读取开关，写入即生效
+            .set { enabled: Boolean -> GeneralStorage.setLoudnessNormalizationEnabled(enabled) }
 
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.isAutoplayOnStartEnabled() }
@@ -393,22 +390,12 @@ class ExpoOrpheusModule : Module() {
             .get { GeneralStorage.isTestForceMediaCodec() }
             .set { enabled: Boolean -> GeneralStorage.setTestForceMediaCodec(enabled) }
 
-        Property("testForcePcm")
-            .get { GeneralStorage.isTestForcePcm() }
-            .set { enabled: Boolean ->
-                GeneralStorage.setTestForcePcm(enabled)
-                // offload 偏好随时可以重新应用，不用等重启
-                mainHandler.post { OrpheusMusicService.refreshAudioOffloadPreferences() }
-            }
-
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.isSpectrumVisualizerEnabled() }
             .set { enabled: Boolean ->
                 GeneralStorage.setSpectrumVisualizerEnabled(enabled)
                 mainHandler.post {
                     updateSpectrumCapture()
-                    // 频谱需要 PCM，开启时不能走 offload。切换会让播放器重建音频输出，短暂停顿一下
-                    OrpheusMusicService.refreshAudioOffloadPreferences()
                     sendEvent(
                         "onSpectrumVisualizerEnabledChanged", mapOf(
                             "enabled" to GeneralStorage.isSpectrumVisualizerEnabled()
@@ -1194,7 +1181,6 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("setPlaybackSpeed") Coroutine { speed: Float ->
-            // 由服务处理，保证倍速与 offload 偏好的切换顺序正确
             withServiceAndPlayerOnMainThread { service, _ -> service.setPlaybackSpeed(speed) }
         }
 
@@ -1279,7 +1265,6 @@ class ExpoOrpheusModule : Module() {
             (data["loudnessTruePeak"] as? Map<String, Any>)?.forEach { (key, value) ->
                 LoudnessStorage.setTruePeak(key, (value as Number).toDouble())
             }
-            mainHandler.post { OrpheusMusicService.refreshAudioOffloadPreferences() }
         }
     }
 

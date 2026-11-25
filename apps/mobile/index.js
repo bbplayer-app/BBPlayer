@@ -1,25 +1,11 @@
 // 必须是第一个 import：import 会被提升到入口代码之前按顺序求值，profiler 要在其他模块之前启动
 import './src/lib/startupProfiling'
 
-import { Orpheus } from '@bbplayer/orpheus'
-import { Platform } from 'react-native'
 import { enableFreeze } from 'react-native-screens'
 
 enableFreeze(true)
 
 import { playerSideEffects } from './src/lib/player/PlayerSideEffects'
-import { storage } from './src/utils/mmkv-instance'
-
-if (
-	Platform.OS === 'android' &&
-	!storage.getBoolean('audio_offload_default_migrated') &&
-	typeof Orpheus.testForcePcm === 'boolean'
-) {
-	if (!Orpheus.testForcePcm) {
-		Orpheus.testForcePcm = true
-	}
-	storage.set('audio_offload_default_migrated', true)
-}
 
 playerSideEffects.initialize()
 

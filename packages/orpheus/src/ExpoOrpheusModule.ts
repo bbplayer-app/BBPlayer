@@ -180,8 +180,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	isSpectrumVisualizerEnabled: boolean
 	/** 功耗测量用（仅 Android，重启 App 后生效）：不用 FFmpeg，PCM 也交给 MediaCodec 解码。 */
 	testForceMediaCodec: boolean
-	/** 功耗测量用（仅 Android，立即生效，切换时会重建一次音频输出）：不开频谱也不走 offload。 */
-	testForcePcm: boolean
 	/** 原生存储中桌面悬浮歌词窗口当前是否标记为显示。 */
 	isDesktopLyricsShown: boolean
 	/** 桌面悬浮歌词窗口是否锁定为不可拖动。 */
@@ -466,7 +464,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	updateSpectrumData(destination: Float32Array): void
 	/**
-	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、offload、网络等），用于调试页展示。
+	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、网络等），用于调试页展示。
 	 *
 	 * 返回按分组整理好的字符串；iOS 暂未实现，返回空数组。
 	 */
