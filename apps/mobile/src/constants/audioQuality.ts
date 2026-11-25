@@ -264,3 +264,79 @@ export function formatActualAudioQuality(
 		subtitle: notes.length > 0 ? notes.join(' · ') : undefined,
 	}
 }
+
+export function resolveActualAudioQualityPreference(
+	info: AudioQualityInfo | null,
+): AudioQualityPreference | null {
+	if (info === null) {
+		return null
+	}
+
+	if (info.actualKind === 'dolby') {
+		return 'dolby'
+	}
+
+	if (info.actualKind === 'hires') {
+		return 'hires'
+	}
+
+	if (info.isFromDownloadCache || info.actualStreamId === null) {
+		return null
+	}
+
+	if (info.actualKind !== 'normal') {
+		return null
+	}
+
+	return NORMAL_STREAM_PREFERENCES.get(info.actualStreamId) ?? null
+}
+
+export type AudioQualitySwitchOutcome = 'applied' | 'fallback' | 'unknown'
+
+export function resolveAudioQualitySwitchOutcome(
+	info: AudioQualityInfo,
+	target: AudioQualityPreference,
+): AudioQualitySwitchOutcome {
+	const actualPreference = resolveActualAudioQualityPreference(info)
+
+	if (actualPreference === null) {
+		return 'unknown'
+	}
+
+	return actualPreference === target ? 'applied' : 'fallback'
+}
+
+export function resolveSelectedAudioQualityPreference(
+	preference: AudioQualityPreference,
+	options: readonly AudioQualityOption[],
+): AudioQualityPreference {
+	if (options.length === 0) {
+		return preference
+	}
+
+	if (options.some((option) => option.value === preference)) {
+		return preference
+	}
+
+	const targetIndex = AUDIO_QUALITY_OPTIONS.findIndex(
+		(option) => option.value === preference,
+	)
+
+	let selected = options[0]
+	let selectedDistance = Number.POSITIVE_INFINITY
+
+	for (const option of options) {
+		const index = AUDIO_QUALITY_OPTIONS.findIndex(
+			(item) => item.value === option.value,
+		)
+
+		const distance = Math.abs(index - targetIndex)
+
+		if (distance < selectedDistance) {
+			selected = option
+			selectedDistance = distance
+		}
+	}
+
+	return selected.value
+}

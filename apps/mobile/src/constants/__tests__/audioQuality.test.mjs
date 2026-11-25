@@ -2,9 +2,15 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+	formatActualAudioQuality,
+	formatAudioQualityLabel,
 	getAudioQualityAccessHint,
+	getAudioQualityOption,
 	getVisibleAudioQualityOptions,
+	resolveActualAudioQualityPreference,
+	resolveAudioQualitySwitchOutcome,
 	resolveBilibiliAccountTier,
+	resolveSelectedAudioQualityPreference,
 } from '../audioQuality.ts'
 
 const qualityValues = (options) => options.map((option) => option.value)
@@ -202,4 +208,231 @@ test('getAudioQualityAccessHint 按账号等级返回简要提示', () => {
 	assert.match(getAudioQualityAccessHint('guest') ?? '', /登录/)
 	assert.match(getAudioQualityAccessHint('logged_in') ?? '', /大会员/)
 	assert.equal(getAudioQualityAccessHint('vip'), null)
+})
+
+const createQualityInfo = (overrides = {}) => ({
+	preferredQuality: 'high',
+	actualKind: 'normal',
+	actualStreamId: 30280,
+	codecs: 'mp4a.40.2',
+	bandwidth: 192000,
+	isFallback: false,
+	isFromDownloadCache: false,
+	availableQualities: [],
+	...overrides,
+})
+
+test('formatActualAudioQuality 无播放中曲目时返回 null', () => {
+	assert.equal(formatActualAudioQuality(null), null)
+})
+
+test('formatActualAudioQuality 输出杜比与 Hi-Res 标题与带宽', () => {
+	const dolby = formatActualAudioQuality(
+		createQualityInfo({ actualKind: 'dolby', actualStreamId: 30250 }),
+	)
+
+	const hires = formatActualAudioQuality(
+		createQualityInfo({ actualKind: 'hires', actualStreamId: 30251 }),
+	)
+
+	assert.equal(dolby?.title, '杜比全景声')
+	assert.match(dolby?.subtitle ?? '', /192 kbps/)
+	assert.equal(hires?.title, 'Hi-Res 无损')
+	assert.match(hires?.subtitle ?? '', /192 kbps/)
+})
+
+test('formatActualAudioQuality 把普通音轨的 streamId 映射到具体档位', () => {
+	assert.equal(
+		formatActualAudioQuality(
+			createQualityInfo({ actualStreamId: 30216, bandwidth: 64000 }),
+		)?.title,
+		'省流 64k',
+	)
+	assert.equal(
+		formatActualAudioQuality(
+			createQualityInfo({ actualStreamId: 30232, bandwidth: 132000 }),
+		)?.title,
+		'标准 132k',
+	)
+	assert.equal(
+		formatActualAudioQuality(
+			createQualityInfo({ actualStreamId: 30280, bandwidth: 192000 }),
+		)?.title,
+		'高品 192k',
+	)
+	assert.equal(
+		formatActualAudioQuality(
+			createQualityInfo({ actualStreamId: null, bandwidth: null }),
+		)?.title,
+		'B 站普通音轨',
+	)
+})
+
+test('formatActualAudioQuality 对离线缓存与 durl 给出专门说明', () => {
+	const local = formatActualAudioQuality(
+		createQualityInfo({ actualKind: 'local' }),
+	)
+
+	const downloaded = formatActualAudioQuality(
+		createQualityInfo({ isFromDownloadCache: true }),
+	)
+
+	assert.equal(local?.title, '离线已下载缓存')
+	assert.equal(downloaded?.title, '离线已下载缓存')
+	assert.match(downloaded?.subtitle ?? '', /不受音质偏好影响/)
+
+	const durl = formatActualAudioQuality(
+		createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
+	)
+
+	assert.equal(durl?.title, '普通整段音轨')
+})
+
+test('formatActualAudioQuality 在降级时追加降级提示', () => {
+	const degraded = formatActualAudioQuality(
+		createQualityInfo({ preferredQuality: 'hires', isFallback: true }),
+	)
+
+	assert.match(degraded?.subtitle ?? '', /已自动降级/)
+
+	const applied = formatActualAudioQuality(
+		createQualityInfo({ preferredQuality: 'high', isFallback: false }),
+	)
+
+	assert.doesNotMatch(applied?.subtitle ?? '', /已自动降级/)
+})
+
+test('resolveActualAudioQualityPreference 把实际音轨映射为档位', () => {
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ actualKind: 'dolby' }),
+		),
+		'dolby',
+	)
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ actualKind: 'hires' }),
+		),
+		'hires',
+	)
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ actualKind: 'normal', actualStreamId: 30216 }),
+		),
+		'low',
+	)
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ actualKind: 'normal', actualStreamId: 30232 }),
+		),
+		'standard',
+	)
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ actualKind: 'normal', actualStreamId: 30280 }),
+		),
+		'high',
+	)
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ actualKind: 'normal', actualStreamId: 30251 }),
+		),
+		null,
+	)
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
+		),
+		null,
+	)
+	assert.equal(
+		resolveActualAudioQualityPreference(
+			createQualityInfo({ isFromDownloadCache: true }),
+		),
+		null,
+	)
+	assert.equal(resolveActualAudioQualityPreference(null), null)
+})
+
+test('resolveAudioQualitySwitchOutcome 判定成功、降级与未知', () => {
+	assert.equal(
+		resolveAudioQualitySwitchOutcome(
+			createQualityInfo({ preferredQuality: 'hires', actualKind: 'hires' }),
+			'hires',
+		),
+		'applied',
+	)
+	assert.equal(
+		resolveAudioQualitySwitchOutcome(
+			createQualityInfo({ preferredQuality: 'high', actualStreamId: 30280 }),
+			'high',
+		),
+		'applied',
+	)
+	assert.equal(
+		resolveAudioQualitySwitchOutcome(
+			createQualityInfo({
+				preferredQuality: 'hires',
+				actualKind: 'normal',
+				actualStreamId: 30280,
+				isFallback: true,
+			}),
+			'hires',
+		),
+		'fallback',
+	)
+	assert.equal(
+		resolveAudioQualitySwitchOutcome(
+			createQualityInfo({
+				preferredQuality: 'low',
+				actualStreamId: 30232,
+				isFallback: true,
+			}),
+			'low',
+		),
+		'fallback',
+	)
+	assert.equal(
+		resolveAudioQualitySwitchOutcome(
+			createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
+			'high',
+		),
+		'unknown',
+	)
+	assert.equal(
+		resolveAudioQualitySwitchOutcome(
+			createQualityInfo({ isFromDownloadCache: true }),
+			'high',
+		),
+		'unknown',
+	)
+})
+
+test('resolveSelectedAudioQualityPreference 回退到最近的可见档位', () => {
+	const visible = getVisibleAudioQualityOptions({ accountTier: 'logged_in' })
+
+	assert.equal(resolveSelectedAudioQualityPreference('high', visible), 'high')
+	assert.equal(resolveSelectedAudioQualityPreference('hires', visible), 'high')
+	assert.equal(
+		resolveSelectedAudioQualityPreference(
+			'dolby',
+			getVisibleAudioQualityOptions({ accountTier: 'guest' }),
+		),
+		'standard',
+	)
+	assert.equal(
+		resolveSelectedAudioQualityPreference('low', [
+			{ value: 'high', label: '高品', badge: '192k', description: '' },
+			{ value: 'hires', label: 'Hi-Res 无损', badge: '无损', description: '' },
+		]),
+		'high',
+	)
+	assert.equal(resolveSelectedAudioQualityPreference('dolby', []), 'dolby')
+})
+
+test('formatAudioQualityLabel 与 getAudioQualityOption 处理未知档位', () => {
+	assert.equal(formatAudioQualityLabel('high'), '高品 (192k)')
+	assert.equal(formatAudioQualityLabel('dolby'), '杜比全景声')
+	assert.equal(getAudioQualityOption(undefined).value, 'high')
+	assert.equal(getAudioQualityOption('low').value, 'low')
 })
