@@ -1,7 +1,7 @@
 import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Button, Text, useTheme } from 'react-native-paper'
 
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
@@ -91,6 +91,16 @@ const MultiPageVideosListComponent = memo(() => {
 				>
 					未找到分&thinsp;P&thinsp;视频收藏夹，请先创建一个收藏夹，并以&thinsp;[mp]&thinsp;开头
 				</Text>
+				{/* 收藏夹列表有 5 分钟 staleTime，创建 [mp] 收藏夹后需要能手动刷新 */}
+				<Button
+					mode='contained-tonal'
+					onPress={() => refetchPlaylists()}
+					loading={playlistsIsRefetching}
+					disabled={playlistsIsRefetching}
+					style={styles.noMpButton}
+				>
+					刷新
+				</Button>
 			</View>
 		)
 	}
@@ -173,6 +183,9 @@ const styles = StyleSheet.create({
 	},
 	noMpText: {
 		textAlign: 'center',
+	},
+	noMpButton: {
+		marginTop: 16,
 	},
 	emptyList: {
 		textAlign: 'center',
