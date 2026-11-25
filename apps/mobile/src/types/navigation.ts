@@ -32,6 +32,7 @@ export interface ModalPropsMap {
 	SaveQueueToPlaylist: { trackIds: string[] }
 	DonationQR: { type: 'wechat' | 'alipay' }
 	PlaybackSpeed: undefined
+	AudioQuality: undefined
 	LyricsSelection: undefined
 	SongShare: undefined
 	SyncLocalToBilibili: { playlistId: number }

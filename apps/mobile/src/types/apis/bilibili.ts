@@ -167,6 +167,16 @@ interface BilibiliUserInfo {
 }
 
 /**
+ * B 站导航信息（登录态与大会员状态）
+ */
+export interface BilibiliNavInfo {
+	isLogin: boolean
+	vipStatus?: number
+	vipType?: number
+	vip?: { status?: number; type?: number } | null
+}
+
+/**
  * 收藏夹内容项
  */
 interface BilibiliFavoriteListContent {

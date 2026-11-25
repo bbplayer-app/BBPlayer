@@ -1,5 +1,9 @@
 import { Image } from 'expo-image'
 
+import {
+	type BilibiliAccountTier,
+	resolveBilibiliAccountTier,
+} from '@/constants/audioQuality'
 import useAppStore from '@/hooks/stores/useAppStore'
 import {
 	useTracedInfiniteQuery,
@@ -17,6 +21,7 @@ export const userQueryKeys = {
 		[...userQueryKeys.all, 'uploadedVideos', mid, keyword ?? ''] as const,
 	otherUserInfo: (mid: number) =>
 		[...userQueryKeys.all, 'otherUserInfo', mid] as const,
+	navInfo: (uid: string) => [...userQueryKeys.all, 'navInfo', uid] as const,
 }
 
 export const usePersonalInformation = () => {
@@ -68,6 +73,32 @@ export const usePersonalInformation = () => {
 		},
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})
+}
+
+export const useBilibiliAccountAccess = () => {
+	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
+	const uid = useAppStore((s) => s.bilibiliCookie?.DedeUserID ?? '')
+
+	const query = useTracedQuery({
+		span: { name: 'bilibili.user.nav_info' },
+		queryKey: userQueryKeys.navInfo(uid),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(bilibiliApi.withTrace(span).getNavInfo({ signal })),
+		enabled: hasCookie,
+		staleTime: 10 * 60 * 1000,
+		retry: 1,
+	})
+
+	const tier: BilibiliAccountTier = resolveBilibiliAccountTier({
+		hasCookie,
+		navInfo: query.data,
+	})
+
+	return {
+		tier,
+		isLoading: hasCookie && query.isPending,
+		isError: hasCookie && query.isError,
+	}
 }
 
 export const useRecentlyPlayed = () => {
