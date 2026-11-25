@@ -71,3 +71,6 @@ external-playlist-experiment/
 .tmp
 bilibili_skin_exp
 codedb.snapshot
+
+# 截图源文件（不提交）
+assets/screenshots/

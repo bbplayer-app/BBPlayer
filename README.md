@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/readme/banner.jpg" alt="BBPlayer：B 站上想听的，值得一个专门的播放器" />
+<img src="./assets/brand/banner/readme-banner.jpg" alt="BBPlayer：B 站上想听的，值得一个专门的播放器" />
 
 <h1>BBPlayer</h1>
 
