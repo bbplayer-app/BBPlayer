@@ -9,7 +9,8 @@
 						"name": "oxfmt"
 					}
 				}
-			]
+			],
+			"language_servers": ["!eslint", "..."]
 		},
 		"TypeScript": {
 			"format_on_save": "on",
@@ -21,12 +22,7 @@
 					}
 				}
 			],
-			"language_servers": [
-				"tsgo",
-				"!vtsls",
-				"!typescript-language-server",
-				"..."
-			]
+			"language_servers": ["typescript-ls", "!vtsls", "!eslint", "..."]
 		},
 		"TSX": {
 			"format_on_save": "on",
@@ -38,12 +34,7 @@
 					}
 				}
 			],
-			"language_servers": [
-				"tsgo",
-				"!vtsls",
-				"!typescript-language-server",
-				"..."
-			]
+			"language_servers": ["typescript-ls", "!vtsls", "!eslint", "..."]
 		},
 		"JSON": {
 			"format_on_save": "on",
@@ -57,19 +48,12 @@
 			]
 		}
 	},
-	"context_servers": {
-		"argent": {
-      "source": "custom",
-      "command": "node",
-      "args": [
-        "node_modules/@swmansion/argent/dist/cli.js",
-        "mcp"
-      ]
-    }
-	},
-	"agent": {
-		"tool_permissions": {
-			"default": "allow"
+	"lsp": {
+		"typescript-ls": {
+			"binary": {
+				"path": "node_modules/.bin/tsrs",
+				"arguments": ["--lsp", "--stdio"]
+			}
 		}
 	}
 }

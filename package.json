@@ -39,6 +39,7 @@
 		"oxlint": "^1.83.0",
 		"oxlint-tsgolint": "^7.0.2002",
 		"syncpack": "^15.3.3",
+		"tsrs": "7.1.0-beta.tsrs5",
 		"typescript": "~6.0.3"
 	},
 	"packageManager": "pnpm@11.25.0"
