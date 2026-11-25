@@ -901,6 +901,53 @@ export class TrackService {
 		}
 	}
 
+	/**
+	 * 多 P 视频最近写入的一条播放记录对应的分 P。
+	 *
+	 * 按写入顺序（id）取，而不是 startTime：startTime 由结束时的播放位置倒推，
+	 * 从中途续播的分 P 会被算得很早，排在之后只听了一下的分 P 后面。
+	 */
+	public getLastPlayRecordOfVideo(
+		bvid: string,
+	): ResultAsync<{ cid: number; completed: boolean } | null, DatabaseError> {
+		return ResultAsync.fromPromise(
+			traceSpan(
+				this.traceParent,
+				dbSpan(
+					'SELECT',
+					['play_history', 'bilibili_metadata'],
+					'last_play_record_of_video',
+				),
+				() =>
+					this.db
+						.select({
+							cid: schema.bilibiliMetadata.cid,
+							completed: schema.playHistory.completed,
+						})
+						.from(schema.playHistory)
+						.innerJoin(
+							schema.bilibiliMetadata,
+							eq(schema.bilibiliMetadata.trackId, schema.playHistory.trackId),
+						)
+						.where(
+							and(
+								eq(schema.bilibiliMetadata.bvid, bvid),
+								eq(schema.bilibiliMetadata.isMultiPage, true),
+							),
+						)
+						.orderBy(desc(schema.playHistory.id))
+						.limit(1),
+			),
+			(e) => new DatabaseError('获取视频的最近播放记录失败', { cause: e }),
+		).map((rows) => {
+			const row = rows.at(0)
+
+			return row && row.cid !== null
+				? { cid: row.cid, completed: row.completed }
+				: null
+		})
+	}
+
 	public getTrackByUniqueKey(
 		uniqueKey: string,
 	): ResultAsync<Track, ServiceError | DatabaseError> {

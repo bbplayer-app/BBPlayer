@@ -29,6 +29,9 @@ interface PlaylistHeaderProps {
 	secondaryButtonIcon?: string
 	onClickSecondaryButton?: () => void
 	disableSecondaryButton?: boolean
+	/** 有值时在主按钮旁显示续播按钮，比如「续播 P3」 */
+	resumeButtonText?: string
+	onClickResumeButton?: () => void
 	primaryButtonColor?: string
 	primaryButtonTextColor?: string
 	secondaryButtonContainerColor?: string
@@ -151,6 +154,18 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							{mainButtonText ?? '同步到本地'}
 						</Button>
 					)
+				)}
+				{props.resumeButtonText && props.onClickResumeButton && (
+					<Button
+						testID='playlist-header-resume-button'
+						mode='contained-tonal'
+						icon='play-circle-outline'
+						onPress={props.onClickResumeButton}
+						buttonColor={props.secondaryButtonContainerColor}
+						textColor={secondaryButtonIconColor}
+					>
+						{props.resumeButtonText}
+					</Button>
 				)}
 				{props.secondaryButtonText && props.onClickSecondaryButton && (
 					<Button

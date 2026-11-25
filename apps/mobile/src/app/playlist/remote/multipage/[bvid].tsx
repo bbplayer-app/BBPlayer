@@ -1,3 +1,9 @@
+import {
+	Orpheus,
+	PlaybackState,
+	useIsPlaying,
+	usePlaybackState,
+} from '@bbplayer/orpheus'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -16,16 +22,20 @@ import useCheckLinkedToPlaylist from '@/features/playlist/remote/hooks/useCheckL
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
+import { findResumePartIndex } from '@/features/playlist/remote/resumePart'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
+import { useCurrentTrackId } from '@/hooks/player/useCurrentTrackId'
 import {
 	useGetMultiPageList,
 	useGetVideoDetails,
 } from '@/hooks/queries/bilibili/video'
+import { useLastPlayRecordOfVideo } from '@/hooks/queries/db/track'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
+import { useSettledValue } from '@/hooks/utils/useSettledValue'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
 	BilibiliMultipageVideo,
@@ -130,6 +140,48 @@ export default function MultipagePage() {
 	const { playTrack } = useRemotePlaylist()
 	const listRef = useRef<LegendListRef>(null)
 	const { handleDoubleTap } = useDoubleTapScrollToTop(listRef)
+
+	const currentTrackId = useCurrentTrackId()
+	const isPlaying = useIsPlaying()
+	const playbackState = usePlaybackState()
+	const { data: lastPlayRecord } = useLastPlayRecordOfVideo(bvid)
+
+	const resumeIndex = findResumePartIndex(
+		tracksData,
+		currentTrackId,
+		lastPlayRecord,
+	)
+
+	const resumePart = resumeIndex === -1 ? undefined : tracksData[resumeIndex]
+
+	// 续播的目标就是当前曲目、并且正在放时不需要续播；切换曲目和取音频地址时报告的是缓冲，
+	// 也算正在放。放着别的歌时照样显示，点了就切回这个视频
+	const listeningHere =
+		resumePart !== undefined &&
+		resumePart.uniqueKey === currentTrackId &&
+		(isPlaying || playbackState === PlaybackState.BUFFERING)
+
+	// 切换曲目时当前曲目和播放状态会连着变好几次，按钮内容稳定一会儿再显示，免得闪一下
+	const resumeButtonText = useSettledValue(
+		resumePart !== undefined && !listeningHere
+			? `续播 P${resumeIndex + 1}`
+			: undefined,
+	)
+
+	const handleResume = useCallback(() => {
+		if (!resumePart) return
+
+		// 播放器里暂停着的就是这一 P：接着放，不再加进队列
+		if (resumePart.uniqueKey === currentTrackId) {
+			void Orpheus.play()
+
+			return
+		}
+
+		void playTrack(resumePart)
+		// 和从播放器跳过来时一样，滚到这一 P 并闪一下
+		router.setParams({ cid: String(resumePart.id) })
+	}, [resumePart, currentTrackId, playTrack, router])
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
@@ -316,6 +368,8 @@ export default function MultipagePage() {
 						description={videoData.desc}
 						onClickMainButton={handleSync}
 						mainButtonIcon={'sync'}
+						resumeButtonText={resumeButtonText}
+						onClickResumeButton={handleResume}
 						secondaryButtonText='打开原视频'
 						secondaryButtonIcon='open-in-new'
 						onClickSecondaryButton={() =>
