@@ -113,7 +113,11 @@ export async function matchSearchStrategies(
 		}
 
 		// 3) 如果 URL 上包含 BV/AV，直接提取
-		const bvidInUrl = BV_REGEX.exec(urlObj.href)?.[1]
+		// BV 号区分大小写，不能从 href 里取：URL 会把主机名转成小写。直接输入的 BV 号补上协议后
+		// 会被当成主机名，这里就取不到，交给后面按原文提取
+		const bvidInUrl = BV_REGEX.exec(
+			urlObj.pathname + urlObj.search + urlObj.hash,
+		)?.[1]
 
 		if (bvidInUrl) {
 			const bvid = 'BV' + bvidInUrl.slice(2)
