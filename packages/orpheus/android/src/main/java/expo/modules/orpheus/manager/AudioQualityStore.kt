@@ -149,6 +149,31 @@ object AudioQualityStore {
     }
 
     @Synchronized
+    fun describeCachedQualityInfo(uri: String, preference: String): AudioQualityInfo {
+        val normalized = normalizePreference(preference)
+        get(uri, normalized)?.let { cached -> return cached }
+        val template = preferences
+            .asSequence()
+            .filter { candidate -> candidate != normalized }
+            .mapNotNull { candidate -> get(uri, candidate) }
+            .firstOrNull()
+        val (kind, streamId) = when (normalized) {
+            PREF_DOLBY -> KIND_DOLBY to DOLBY_STREAM_ID
+            PREF_HIRES -> KIND_HIRES to HIRES_STREAM_ID
+            else -> KIND_NORMAL to requestFor(normalized).audioQuality
+        }
+        return AudioQualityInfo(
+            preferredQuality = normalized,
+            actualKind = kind,
+            actualStreamId = streamId,
+            codecs = null,
+            bandwidth = null,
+            isFallback = false,
+            isFromDownloadCache = false,
+            availableQualities = template?.availableQualities.orEmpty(),
+        )
+    }
+
     fun clearAll() {
         infos.clear()
         runCatching { prefs?.edit()?.clear()?.apply() }

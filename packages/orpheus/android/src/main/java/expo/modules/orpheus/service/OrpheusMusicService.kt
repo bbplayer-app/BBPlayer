@@ -563,6 +563,19 @@ class OrpheusMusicService : MediaLibraryService() {
             if (lruFullCached) {
                 DownloadCache.getLruCache(this).removeResource(refreshCacheKey)
             }
+        } else if (lruFullCached) {
+            val cachedInfo = AudioQualityStore.describeCachedQualityInfo(uriString, preferredQuality)
+            AudioQualityStore.put(uriString, cachedInfo)
+            NativeLog.info(
+                LogTags.AUDIO,
+                "audio.quality.lru_hit_broadcast",
+                mapOf(
+                    "audio.preferred_quality" to cachedInfo.preferredQuality,
+                    "audio.actual_kind" to cachedInfo.actualKind,
+                    "audio.actual_stream_id" to cachedInfo.actualStreamId,
+                    "audio.is_fallback" to cachedInfo.isFallback,
+                ),
+            )
         }
         val refreshedItem = MediaItem.Builder()
             .setMediaId(item.mediaId)
