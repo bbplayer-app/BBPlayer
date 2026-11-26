@@ -119,6 +119,11 @@ const AudioQualityModal = () => {
 		reloadIndicatorRef.current?.finish()
 	}, [])
 
+	const enterPendingSwitch = useCallback((target: AudioQualityPreference) => {
+		setPendingTarget(target)
+		reloadIndicatorRef.current?.start()
+	}, [])
+
 	const startPendingSwitch = useCallback((target: AudioQualityPreference) => {
 		const timer = setTimeout(() => {
 			pendingRef.current = null
@@ -138,8 +143,6 @@ const AudioQualityModal = () => {
 
 		pendingRef.current = { target, timer }
 		switchingRef.current = true
-		setPendingTarget(target)
-		reloadIndicatorRef.current?.start()
 	}, [])
 
 	const handleActualQuality = useCallback(
@@ -261,11 +264,12 @@ const AudioQualityModal = () => {
 		}
 
 		switchingRef.current = true
+		enterPendingSwitch(next)
 
 		try {
 			applyPreferredAudioQuality(next)
 		} catch (error) {
-			switchingRef.current = false
+			clearPendingSwitch()
 			toastAndLogError('设置音质偏好失败', error, 'Modal.AudioQuality')
 
 			return
@@ -310,6 +314,7 @@ const AudioQualityModal = () => {
 	const actual = formatActualAudioQuality(actualQuality)
 
 	const cardState = resolveAudioQualityCardState(
+		pendingTarget !== null,
 		qualityUnconfirmed,
 		actual !== null,
 		qualityLoading,
@@ -320,6 +325,12 @@ const AudioQualityModal = () => {
 	let actualSubtitleText: string | undefined
 
 	switch (cardState) {
+		case 'pending':
+			actualTitleText = pendingTarget
+				? `切换到 ${formatAudioQualityLabel(pendingTarget)}…`
+				: '正在切换音质…'
+			actualSubtitleText = '正在请求播放器重新加载当前曲目。'
+			break
 		case 'unconfirmed':
 			actualTitleText = '音质未确认'
 			actualSubtitleText = '播放器没有回填实际音质，可点「重新检查」。'

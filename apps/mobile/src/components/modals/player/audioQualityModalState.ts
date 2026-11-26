@@ -92,6 +92,7 @@ export function createDelayedVisibilityController(
 }
 
 export type AudioQualityCardState =
+	| 'pending'
 	| 'unconfirmed'
 	| 'actual'
 	| 'loading'
@@ -99,11 +100,16 @@ export type AudioQualityCardState =
 	| 'idle'
 
 export function resolveAudioQualityCardState(
+	hasPending: boolean,
 	qualityUnconfirmed: boolean,
 	hasActual: boolean,
 	qualityLoading: boolean,
 	qualityLoadFailed: boolean,
 ): AudioQualityCardState {
+	if (hasPending) {
+		return 'pending'
+	}
+
 	if (qualityUnconfirmed) {
 		return 'unconfirmed'
 	}
