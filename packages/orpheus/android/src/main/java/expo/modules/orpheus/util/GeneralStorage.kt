@@ -129,107 +129,6 @@ object GeneralStorage {
     }
 
     /** 测量用：不用 FFmpeg，PCM 也交给 MediaCodec 解码 */
-    fun isEqualizerEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_ENABLED, false) ?: false
-
-    fun setEqualizerEnabled(enabled: Boolean) {
-        try {
-            safeKv.encode(KEY_EQUALIZER_ENABLED, enabled)
-        } catch (e: Exception) {
-            NativeLog.error(LogTags.STORAGE, "storage.equalizer.enabled.set_failed", error = e)
-        }
-    }
-
-    fun getEqualizerPreampDb(): Float = sanitizeEqualizerGain(kv?.decodeFloat(KEY_EQUALIZER_PREAMP_DB, 0f) ?: 0f)
-
-    fun setEqualizerPreampDb(preampDb: Float) {
-        try {
-            safeKv.encode(KEY_EQUALIZER_PREAMP_DB, sanitizeEqualizerGain(preampDb))
-        } catch (e: Exception) {
-            NativeLog.error(LogTags.STORAGE, "storage.equalizer.preamp.set_failed", error = e)
-        }
-    }
-
-    fun isEqualizerLimiterEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_LIMITER_ENABLED, true) ?: true
-
-    fun setEqualizerLimiterEnabled(enabled: Boolean) {
-        try {
-            safeKv.encode(KEY_EQUALIZER_LIMITER_ENABLED, enabled)
-        } catch (e: Exception) {
-            NativeLog.error(LogTags.STORAGE, "storage.equalizer.limiter.set_failed", error = e)
-        }
-    }
-
-    fun getEqualizerGainsJson(): String =
-        kv?.decodeString(KEY_EQUALIZER_GAINS_JSON, DEFAULT_EQUALIZER_GAINS_JSON) ?: DEFAULT_EQUALIZER_GAINS_JSON
-
-    fun setEqualizerGainsJson(value: String) {
-        try {
-            safeKv.encode(KEY_EQUALIZER_GAINS_JSON, value)
-        } catch (e: Exception) {
-            NativeLog.error(LogTags.STORAGE, "storage.equalizer.gains.set_failed", error = e)
-        }
-    }
-
-    /** 按 10 个频段解析已持久化的增益，损坏的 JSON 和非有限数都安全回退到 0 dB */
-    fun getEqualizerGains(): FloatArray {
-        val parsed = try {
-            json.decodeFromString<List<Float>>(getEqualizerGainsJson())
-        } catch (e: Exception) {
-            NativeLog.warning(LogTags.STORAGE, "storage.equalizer.gains.parse_failed", error = e)
-            return FloatArray(EQ_BAND_COUNT)
-        }
-        return FloatArray(EQ_BAND_COUNT) { index ->
-            sanitizeEqualizerGain(parsed.getOrElse(index) { 0f })
-        }
-    }
-
-    fun setEqualizerGains(gainsDb: FloatArray) {
-        val sanitized = FloatArray(EQ_BAND_COUNT) { index ->
-            sanitizeEqualizerGain(gainsDb.getOrElse(index) { 0f })
-        }
-        setEqualizerGainsJson(json.encodeToString(sanitized.toList()))
-    }
-
-    /** 读取时把空串还原为 null，表示当前增益不属于任何预设 */
-    fun getEqualizerActivePresetId(): String? {
-        val raw = kv?.decodeString(KEY_EQUALIZER_ACTIVE_PRESET_ID, DEFAULT_EQUALIZER_ACTIVE_PRESET_ID)
-            ?: DEFAULT_EQUALIZER_ACTIVE_PRESET_ID
-        return raw.takeIf { it.isNotBlank() }
-    }
-
-    fun setEqualizerActivePresetId(presetId: String?) {
-        try {
-            safeKv.encode(KEY_EQUALIZER_ACTIVE_PRESET_ID, presetId ?: "")
-        } catch (e: Exception) {
-            NativeLog.error(LogTags.STORAGE, "storage.equalizer.preset.set_failed", error = e)
-        }
-    }
-
-    fun getCustomEqualizerPresetsJson(): String =
-        kv?.decodeString(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON)
-            ?: DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON
-
-    fun setCustomEqualizerPresetsJson(value: String) {
-        try {
-            safeKv.encode(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, value)
-        } catch (e: Exception) {
-            NativeLog.error(LogTags.STORAGE, "storage.equalizer.presets.set_failed", error = e)
-        }
-    }
-
-    /** 冷启动时一次性把持久化状态写进 DSP 共用配置，避免逐项更新时反复重算滤波系数 */
-    fun restoreEqualizerConfigToHolder() {
-        EqualizerConfigHolder.update(
-            enabled = isEqualizerEnabled(),
-            preampDb = getEqualizerPreampDb(),
-            limiterEnabled = isEqualizerLimiterEnabled(),
-            gainsDb = getEqualizerGains(),
-        )
-    }
-
-    private fun sanitizeEqualizerGain(value: Float): Float =
-        if (!value.isFinite()) 0f else value.coerceIn(EQ_MIN_GAIN_DB, EQ_MAX_GAIN_DB)
-
     fun isTestForceMediaCodec(): Boolean = safeKv.decodeBool(KEY_TEST_FORCE_MEDIA_CODEC, false)
 
     fun setTestForceMediaCodec(enabled: Boolean) {
@@ -381,4 +280,105 @@ object GeneralStorage {
         (data[KEY_DESKTOP_LYRICS_Y] as? Int)?.let { setDesktopLyricsY(it) }
         restoreEqualizerConfigToHolder()
     }
+
+    fun isEqualizerEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_ENABLED, false) ?: false
+
+    fun setEqualizerEnabled(enabled: Boolean) {
+        try {
+            safeKv.encode(KEY_EQUALIZER_ENABLED, enabled)
+        } catch (e: Exception) {
+            NativeLog.error(LogTags.STORAGE, "storage.equalizer.enabled.set_failed", error = e)
+        }
+    }
+
+    fun getEqualizerPreampDb(): Float = sanitizeEqualizerGain(kv?.decodeFloat(KEY_EQUALIZER_PREAMP_DB, 0f) ?: 0f)
+
+    fun setEqualizerPreampDb(preampDb: Float) {
+        try {
+            safeKv.encode(KEY_EQUALIZER_PREAMP_DB, sanitizeEqualizerGain(preampDb))
+        } catch (e: Exception) {
+            NativeLog.error(LogTags.STORAGE, "storage.equalizer.preamp.set_failed", error = e)
+        }
+    }
+
+    fun isEqualizerLimiterEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_LIMITER_ENABLED, true) ?: true
+
+    fun setEqualizerLimiterEnabled(enabled: Boolean) {
+        try {
+            safeKv.encode(KEY_EQUALIZER_LIMITER_ENABLED, enabled)
+        } catch (e: Exception) {
+            NativeLog.error(LogTags.STORAGE, "storage.equalizer.limiter.set_failed", error = e)
+        }
+    }
+
+    fun getEqualizerGainsJson(): String =
+        kv?.decodeString(KEY_EQUALIZER_GAINS_JSON, DEFAULT_EQUALIZER_GAINS_JSON) ?: DEFAULT_EQUALIZER_GAINS_JSON
+
+    fun setEqualizerGainsJson(value: String) {
+        try {
+            safeKv.encode(KEY_EQUALIZER_GAINS_JSON, value)
+        } catch (e: Exception) {
+            NativeLog.error(LogTags.STORAGE, "storage.equalizer.gains.set_failed", error = e)
+        }
+    }
+
+    /** 按 10 个频段解析已持久化的增益，损坏的 JSON 和非有限数都安全回退到 0 dB */
+    fun getEqualizerGains(): FloatArray {
+        val parsed = try {
+            json.decodeFromString<List<Float>>(getEqualizerGainsJson())
+        } catch (e: Exception) {
+            NativeLog.warning(LogTags.STORAGE, "storage.equalizer.gains.parse_failed", error = e)
+            return FloatArray(EQ_BAND_COUNT)
+        }
+        return FloatArray(EQ_BAND_COUNT) { index ->
+            sanitizeEqualizerGain(parsed.getOrElse(index) { 0f })
+        }
+    }
+
+    fun setEqualizerGains(gainsDb: FloatArray) {
+        val sanitized = FloatArray(EQ_BAND_COUNT) { index ->
+            sanitizeEqualizerGain(gainsDb.getOrElse(index) { 0f })
+        }
+        setEqualizerGainsJson(json.encodeToString(sanitized.toList()))
+    }
+
+    /** 读取时把空串还原为 null，表示当前增益不属于任何预设 */
+    fun getEqualizerActivePresetId(): String? {
+        val raw = kv?.decodeString(KEY_EQUALIZER_ACTIVE_PRESET_ID, DEFAULT_EQUALIZER_ACTIVE_PRESET_ID)
+            ?: DEFAULT_EQUALIZER_ACTIVE_PRESET_ID
+        return raw.takeIf { it.isNotBlank() }
+    }
+
+    fun setEqualizerActivePresetId(presetId: String?) {
+        try {
+            safeKv.encode(KEY_EQUALIZER_ACTIVE_PRESET_ID, presetId ?: "")
+        } catch (e: Exception) {
+            NativeLog.error(LogTags.STORAGE, "storage.equalizer.preset.set_failed", error = e)
+        }
+    }
+
+    fun getCustomEqualizerPresetsJson(): String =
+        kv?.decodeString(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON)
+            ?: DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON
+
+    fun setCustomEqualizerPresetsJson(value: String) {
+        try {
+            safeKv.encode(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, value)
+        } catch (e: Exception) {
+            NativeLog.error(LogTags.STORAGE, "storage.equalizer.presets.set_failed", error = e)
+        }
+    }
+
+    /** 冷启动时一次性把持久化状态写进 DSP 共用配置，避免逐项更新时反复重算滤波系数 */
+    fun restoreEqualizerConfigToHolder() {
+        EqualizerConfigHolder.update(
+            enabled = isEqualizerEnabled(),
+            preampDb = getEqualizerPreampDb(),
+            limiterEnabled = isEqualizerLimiterEnabled(),
+            gainsDb = getEqualizerGains(),
+        )
+    }
+
+    private fun sanitizeEqualizerGain(value: Float): Float =
+        if (!value.isFinite()) 0f else value.coerceIn(EQ_MIN_GAIN_DB, EQ_MAX_GAIN_DB)
 }
