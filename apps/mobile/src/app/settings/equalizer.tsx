@@ -763,8 +763,6 @@ export default function EqualizerSettingsPage() {
 		],
 	)
 
-	const offloadEnabled = isAndroid && !Orpheus.testForcePcm
-
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
@@ -820,15 +818,6 @@ export default function EqualizerSettingsPage() {
 								onValueChange={handleToggleEnabled}
 							/>
 						</View>
-						{settings.enabled && offloadEnabled && (
-							<Text
-								variant='bodySmall'
-								style={[styles.hint, { color: colors.onSurfaceVariant }]}
-							>
-								均衡器已开启，已自动切换为 PCM 播放（offload
-								暂停），耗电可能略有增加。
-							</Text>
-						)}
 					</Surface>
 					<Surface
 						mode='flat'
