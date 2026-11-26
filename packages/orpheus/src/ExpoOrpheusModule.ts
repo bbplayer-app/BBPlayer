@@ -1,6 +1,8 @@
 import { requireNativeModule, NativeModule } from 'expo-modules-core'
 import { Platform } from 'react-native'
 
+import type { EqualizerSettings } from './equalizerPresets'
+
 export enum PlaybackState {
 	IDLE = 1,
 	BUFFERING = 2,
@@ -113,6 +115,7 @@ export type OrpheusEvents = {
 		status: 'success' | 'failed'
 	}): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
+	onEqualizerChanged(event: EqualizerSettings): void
 	onExportProgress(event: {
 		progress?: number
 		currentId: string
@@ -178,6 +181,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	playbackResumeStrategy: ResumeStrategy
 	/** 是否显示并启用音频频谱分析。 */
 	isSpectrumVisualizerEnabled: boolean
+	/** 是否启用原生 10 段均衡器。 */
+	isEqualizerEnabled: boolean
 	/** 功耗测量用（仅 Android，重启 App 后生效）：不用 FFmpeg，PCM 也交给 MediaCodec 解码。 */
 	testForceMediaCodec: boolean
 	/** 原生存储中桌面悬浮歌词窗口当前是否标记为显示。 */
@@ -469,6 +474,35 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 返回按分组整理好的字符串；iOS 暂未实现，返回空数组。
 	 */
 	getAudioDebugInfo(): Promise<AudioDebugSection[]>
+	/** 返回原生均衡器当前设置。 */
+	getEqualizerSettings(): Promise<EqualizerSettings>
+	/** 覆盖全部均衡器设置，并返回应用后的状态。 */
+	setEqualizerSettings(
+		enabled: boolean,
+		preampDb: number,
+		limiterEnabled: boolean,
+		gainsDb: number[],
+		activePresetId: string | null,
+	): Promise<EqualizerSettings>
+	/**
+	 * 设置单个频段的增益（dB），并把当前预设标记为自定义。
+	 *
+	 * 频段索引越界时不会修改任何设置，直接返回当前状态。
+	 */
+	setEqualizerBandGain(
+		bandIndex: number,
+		gainDb: number,
+	): Promise<EqualizerSettings>
+	/** 设置均衡器前置增益（dB）。 */
+	setEqualizerPreamp(preampDb: number): Promise<EqualizerSettings>
+	/** 开关软限幅器，并返回应用后的状态。 */
+	setEqualizerLimiterEnabled(enabled: boolean): Promise<EqualizerSettings>
+	/** 把所有频段与前置增益归零，保留开关与限幅器状态。 */
+	resetEqualizer(): Promise<EqualizerSettings>
+	/** 返回用户自定义均衡器预设的 JSON 字符串。 */
+	getCustomEqualizerPresetsJson(): Promise<string>
+	/** 覆盖用户自定义均衡器预设的 JSON 字符串。 */
+	setCustomEqualizerPresetsJson(presetsJson: string): Promise<void>
 	/**
 	 * 从 `uris` 中筛出原生 LRU 缓存当前已知的完整缓存 URI。
 	 *
