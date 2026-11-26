@@ -52,6 +52,8 @@ const PREAMP_STEP_DB = 0.5
 
 const PREAMP_THROTTLE_MS = 50
 
+const NATIVE_SEND_THROTTLE_MS = 40
+
 const PRESET_TRANSITION_MS = 260
 
 const VISUAL_TOLERANCE_DB = 1e-3
@@ -275,6 +277,22 @@ export default function EqualizerSettingsPage() {
 	const draggingRef = useRef(false)
 
 	const bandErrorRef = useRef(false)
+
+	const bandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const pendingBandRef = useRef<{ bandIndex: number; gainDb: number } | null>(
+		null,
+	)
+
+	const lastBandSentAtRef = useRef(0)
+
+	const preampErrorRef = useRef(false)
+
+	const preampTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const pendingPreampRef = useRef<number | null>(null)
+
+	const lastPreampSentAtRef = useRef(0)
 
 	const bandGain0 = useSharedValue(0)
 
@@ -580,6 +598,26 @@ export default function EqualizerSettingsPage() {
 		[applyPreset, settings],
 	)
 
+	const flushBandGain = useCallback(() => {
+		const pending = pendingBandRef.current
+
+		if (pending === null) return
+
+		pendingBandRef.current = null
+
+		lastBandSentAtRef.current = Date.now()
+
+		void (async () => {
+			try {
+				await Orpheus.setEqualizerBandGain(pending.bandIndex, pending.gainDb)
+			} catch (error) {
+				bandErrorRef.current = true
+
+				toastAndLogError('调整均衡器失败', error, 'Equalizer')
+			}
+		})()
+	}, [])
+
 	const handleBandChange = useCallback(
 		(bandIndex: number, gainDb: number) => {
 			lastVisualTargetRef.current.gainsDb[bandIndex] = gainDb
@@ -592,21 +630,37 @@ export default function EqualizerSettingsPage() {
 
 			if (!isAndroid || bandErrorRef.current) return
 
-			void (async () => {
-				try {
-					await Orpheus.setEqualizerBandGain(bandIndex, gainDb)
-				} catch (error) {
-					bandErrorRef.current = true
+			pendingBandRef.current = { bandIndex, gainDb }
 
-					toastAndLogError('调整均衡器失败', error, 'Equalizer')
-				}
-			})()
+			if (bandTimerRef.current !== null) return
+
+			const elapsed = Date.now() - lastBandSentAtRef.current
+
+			if (elapsed >= NATIVE_SEND_THROTTLE_MS) {
+				flushBandGain()
+
+				return
+			}
+
+			bandTimerRef.current = setTimeout(() => {
+				bandTimerRef.current = null
+
+				flushBandGain()
+			}, NATIVE_SEND_THROTTLE_MS - elapsed)
 		},
-		[isAndroid],
+		[flushBandGain, isAndroid],
 	)
 
 	const handleBandCommit = useCallback(
 		(bandIndex: number, gainDb: number) => {
+			if (bandTimerRef.current !== null) {
+				clearTimeout(bandTimerRef.current)
+
+				bandTimerRef.current = null
+			}
+
+			pendingBandRef.current = null
+
 			bandErrorRef.current = false
 
 			lastVisualTargetRef.current.gainsDb[bandIndex] = gainDb
@@ -629,27 +683,67 @@ export default function EqualizerSettingsPage() {
 		[isAndroid, runEqualizerAction],
 	)
 
+	const flushPreamp = useCallback(() => {
+		const pending = pendingPreampRef.current
+
+		if (pending === null) return
+
+		pendingPreampRef.current = null
+
+		lastPreampSentAtRef.current = Date.now()
+
+		void (async () => {
+			try {
+				await Orpheus.setEqualizerPreamp(pending)
+			} catch (error) {
+				preampErrorRef.current = true
+
+				toastAndLogError('调整前置增益失败', error, 'Equalizer')
+			}
+		})()
+	}, [])
+
 	const handlePreampChange = useCallback(
 		(preampDb: number) => {
 			lastVisualTargetRef.current.preampDb = preampDb
 
 			preampSharedValue.set(preampDb)
 
-			if (!isAndroid) return
+			if (!isAndroid || preampErrorRef.current) return
 
-			void (async () => {
-				try {
-					await Orpheus.setEqualizerPreamp(preampDb)
-				} catch (error) {
-					toastAndLogError('调整前置增益失败', error, 'Equalizer')
-				}
-			})()
+			pendingPreampRef.current = preampDb
+
+			if (preampTimerRef.current !== null) return
+
+			const elapsed = Date.now() - lastPreampSentAtRef.current
+
+			if (elapsed >= NATIVE_SEND_THROTTLE_MS) {
+				flushPreamp()
+
+				return
+			}
+
+			preampTimerRef.current = setTimeout(() => {
+				preampTimerRef.current = null
+
+				flushPreamp()
+			}, NATIVE_SEND_THROTTLE_MS - elapsed)
 		},
-		[isAndroid, preampSharedValue],
+		[flushPreamp, isAndroid, preampSharedValue],
 	)
 
 	const handlePreampCommit = useCallback(
 		(preampDb: number) => {
+			if (preampTimerRef.current !== null) {
+				clearTimeout(preampTimerRef.current)
+
+				preampTimerRef.current = null
+			}
+
+			pendingPreampRef.current = null
+
+			preampErrorRef.current = false
+
 			lastVisualTargetRef.current.preampDb = preampDb
 
 			preampSharedValue.set(preampDb)
@@ -664,6 +758,19 @@ export default function EqualizerSettingsPage() {
 			)
 		},
 		[isAndroid, preampSharedValue, runEqualizerAction],
+	)
+
+	useEffect(
+		() => () => {
+			if (bandTimerRef.current !== null) {
+				clearTimeout(bandTimerRef.current)
+			}
+
+			if (preampTimerRef.current !== null) {
+				clearTimeout(preampTimerRef.current)
+			}
+		},
+		[],
 	)
 
 	const handleDragActiveChange = useCallback((active: boolean) => {
