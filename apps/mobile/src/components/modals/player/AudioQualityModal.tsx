@@ -153,6 +153,11 @@ const AudioQualityModal = () => {
 			const outcome = resolveAudioQualitySwitchOutcome(info, pending.target)
 
 			if (outcome === 'unknown') {
+				clearPendingSwitch()
+				toast.info('未能确认实际音质', {
+					description: '可能是缓存缺少解析记录，可稍后重新打开面板查看',
+				})
+
 				return
 			}
 

@@ -436,3 +436,23 @@ test('formatAudioQualityLabel 与 getAudioQualityOption 处理未知档位', () 
 	assert.equal(getAudioQualityOption(undefined).value, 'high')
 	assert.equal(getAudioQualityOption('low').value, 'low')
 })
+
+test('resolveAudioQualitySwitchOutcome 对 unknown 实际格式返回 unknown', () => {
+	assert.equal(
+		resolveAudioQualitySwitchOutcome(
+			createQualityInfo({ actualKind: 'unknown', actualStreamId: null }),
+			'high',
+		),
+		'unknown',
+	)
+	assert.equal(
+		formatActualAudioQuality(createQualityInfo({ actualKind: 'unknown' }))
+			?.title,
+		'识别中',
+	)
+	assert.equal(
+		formatActualAudioQuality(createQualityInfo({ actualKind: 'unknown' }))
+			?.subtitle,
+		'正在解析音源信息',
+	)
+})
