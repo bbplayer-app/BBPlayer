@@ -135,8 +135,8 @@ class LoudnessAudioSink(
     // MediaCodecAudioRenderer 会把压缩数据原样交给 sink，不经过处理器链，响度增益与均衡器都不会生效。
     // 拒绝后渲染器改解码成 PCM；系统无对应解码器时由 FfmpegAudioRenderer 解码。
     //
-    // 注意渲染器能力是在选轨时确定的：若当前曲目正以直通方式播放（即选轨时响度与均衡器都关闭），
-    // 播放中打开均衡器不会立刻生效，需要换曲后才走 PCM 处理链。
+    // 注意渲染器能力是在选轨时确定的：若当前曲目正以直通方式播放（即选轨时响度归一化与均衡器都关闭），
+    // 播放中打开均衡器或响度归一化都不会立刻生效，需要换曲后才走 PCM 处理链。
     // 已在 PCM 处理链上的曲目（包括响度归一化已开启时的压缩格式曲目）切换开关立即生效。
     override fun supportsFormat(format: Format): Boolean =
         !rejectsPassthrough(format) && super.supportsFormat(format)

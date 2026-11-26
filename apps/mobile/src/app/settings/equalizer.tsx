@@ -36,7 +36,10 @@ import {
 } from '@/features/equalizer/utils/customPresets'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
+import log from '@/utils/log'
 import toast from '@/utils/toast'
+
+const eqLogger = log.extend('Equalizer')
 
 const FLAT_GAINS = Array.from({ length: EQ_BAND_COUNT }, () => 0)
 
@@ -617,7 +620,15 @@ export default function EqualizerSettingsPage() {
 			try {
 				await Orpheus.setEqualizerBandGain(pending.bandIndex, pending.gainDb)
 			} catch (error) {
-				if (bandErrorRef.current) return
+				if (bandErrorRef.current) {
+					eqLogger.error(
+						'equalizer.band_gain.write_failed',
+						{ 'operation.message': '调整均衡器失败（已忽略重复提示）' },
+						error,
+					)
+
+					return
+				}
 
 				bandErrorRef.current = true
 
@@ -710,7 +721,15 @@ export default function EqualizerSettingsPage() {
 			try {
 				await Orpheus.setEqualizerPreamp(pending)
 			} catch (error) {
-				if (preampErrorRef.current) return
+				if (preampErrorRef.current) {
+					eqLogger.error(
+						'equalizer.preamp.write_failed',
+						{ 'operation.message': '调整前置增益失败（已忽略重复提示）' },
+						error,
+					)
+
+					return
+				}
 
 				preampErrorRef.current = true
 
