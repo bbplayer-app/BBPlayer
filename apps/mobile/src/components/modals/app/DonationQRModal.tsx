@@ -30,7 +30,8 @@ export default function DonationQRModal({
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 
 	const handleLongPress = async () => {
-		const needsPermission = permissionResponse?.granted
+		// 安卓保存图片不检查相册权限；iOS 会检查，没授权时直接报错而不弹授权框，所以要先申请
+		const needsPermission = !permissionResponse?.granted
 
 		try {
 			if (needsPermission) {
