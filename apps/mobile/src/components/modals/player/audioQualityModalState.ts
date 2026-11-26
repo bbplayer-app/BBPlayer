@@ -90,3 +90,35 @@ export function createDelayedVisibilityController(
 
 	return { start, finish, dispose }
 }
+
+export type AudioQualityCardState =
+	| 'unconfirmed'
+	| 'actual'
+	| 'loading'
+	| 'load_failed'
+	| 'idle'
+
+export function resolveAudioQualityCardState(
+	qualityUnconfirmed: boolean,
+	hasActual: boolean,
+	qualityLoading: boolean,
+	qualityLoadFailed: boolean,
+): AudioQualityCardState {
+	if (qualityUnconfirmed) {
+		return 'unconfirmed'
+	}
+
+	if (hasActual) {
+		return 'actual'
+	}
+
+	if (qualityLoading) {
+		return 'loading'
+	}
+
+	if (qualityLoadFailed) {
+		return 'load_failed'
+	}
+
+	return 'idle'
+}

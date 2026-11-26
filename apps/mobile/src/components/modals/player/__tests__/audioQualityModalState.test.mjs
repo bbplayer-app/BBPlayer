@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
 	createDelayedVisibilityController,
+	resolveAudioQualityCardState,
 	SWITCH_INDICATOR_DELAY_MS,
 } from '../audioQualityModalState.ts'
 
@@ -140,4 +141,35 @@ test('连续多次 start/finish 状态正确重置', () => {
 	advance(SWITCH_INDICATOR_DELAY_MS * 3)
 	assert.deepEqual(events, [true, false, true, false])
 	assert.equal(pendingCount(), 0)
+})
+
+test('resolveAudioQualityCardState 未确认态优先于任何旧档位', () => {
+	assert.equal(
+		resolveAudioQualityCardState(true, true, false, false),
+		'unconfirmed',
+	)
+	assert.equal(
+		resolveAudioQualityCardState(true, true, true, true),
+		'unconfirmed',
+	)
+})
+
+test('resolveAudioQualityCardState 其余优先级：实际 > 加载中 > 失败 > 空', () => {
+	assert.equal(resolveAudioQualityCardState(false, true, true, true), 'actual')
+	assert.equal(
+		resolveAudioQualityCardState(false, false, true, true),
+		'loading',
+	)
+	assert.equal(
+		resolveAudioQualityCardState(false, false, false, true),
+		'load_failed',
+	)
+	assert.equal(resolveAudioQualityCardState(false, false, false, false), 'idle')
+})
+
+test('resolveAudioQualityCardState 真实事件覆盖超时后回到实际档位', () => {
+	assert.equal(
+		resolveAudioQualityCardState(false, true, false, false),
+		'actual',
+	)
 })

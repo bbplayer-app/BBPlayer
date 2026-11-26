@@ -33,6 +33,7 @@ import toast from '@/utils/toast'
 
 import {
 	createDelayedVisibilityController,
+	resolveAudioQualityCardState,
 	SWITCH_INDICATOR_DELAY_MS,
 	type DelayedVisibilityController,
 } from './audioQualityModalState'
@@ -41,7 +42,7 @@ function applyPreferredAudioQuality(preference: AudioQualityPreference) {
 	Orpheus.preferredAudioQuality = preference
 }
 
-const QUALITY_CONFIRM_TIMEOUT_MS = 8_000
+const QUALITY_CONFIRM_TIMEOUT_MS = 3_000
 
 const AudioQualityModal = () => {
 	const close = useModalStore((state) => state.close)
@@ -62,6 +63,7 @@ const AudioQualityModal = () => {
 
 	const [qualityLoading, setQualityLoading] = useState(true)
 	const [qualityLoadFailed, setQualityLoadFailed] = useState(false)
+	const [qualityUnconfirmed, setQualityUnconfirmed] = useState(false)
 
 	const switchingRef = useRef(false)
 	const mountedRef = useRef(true)
@@ -127,9 +129,10 @@ const AudioQualityModal = () => {
 			}
 
 			setPendingTarget(null)
+			setQualityUnconfirmed(true)
 			reloadIndicatorRef.current?.finish()
 			toast.info('切换结果未确认', {
-				description: '可稍后重新打开音质面板查看实际档位',
+				description: '卡片已标记为未确认，可点「重新检查」重新读取实际音质',
 			})
 		}, QUALITY_CONFIRM_TIMEOUT_MS)
 
@@ -144,6 +147,10 @@ const AudioQualityModal = () => {
 			setActualQuality(info)
 			setQualityLoadFailed(false)
 
+			if (info.actualKind !== 'unknown') {
+				setQualityUnconfirmed(false)
+			}
+
 			const pending = pendingRef.current
 
 			if (pending === null || info.preferredQuality !== pending.target) {
@@ -153,9 +160,10 @@ const AudioQualityModal = () => {
 			const outcome = resolveAudioQualitySwitchOutcome(info, pending.target)
 
 			if (outcome === 'unknown') {
+				setQualityUnconfirmed(true)
 				clearPendingSwitch()
 				toast.info('未能确认实际音质', {
-					description: '可能是缓存缺少解析记录，可稍后重新打开面板查看',
+					description: '可点「重新检查」重新读取播放器当前音质',
 				})
 
 				return
@@ -182,15 +190,31 @@ const AudioQualityModal = () => {
 		[clearPendingSwitch],
 	)
 
-	const loadCurrentQuality = useCallback(async () => {
+	const loadCurrentQuality = useCallback(async (announce: boolean) => {
 		setQualityLoading(true)
 		setQualityLoadFailed(false)
 
 		try {
 			const info = await Orpheus.getCurrentAudioQuality()
 
-			if (mountedRef.current) {
-				setActualQuality(info)
+			if (!mountedRef.current) {
+				return
+			}
+
+			setActualQuality(info)
+
+			const confirmed = info !== null && info.actualKind !== 'unknown'
+
+			if (confirmed) {
+				setQualityUnconfirmed(false)
+			}
+
+			if (announce) {
+				if (confirmed) {
+					toast.info('已重新读取当前音质')
+				} else {
+					toast.info('仍未能确认实际音质')
+				}
 			}
 		} catch (error) {
 			if (mountedRef.current) {
@@ -206,7 +230,7 @@ const AudioQualityModal = () => {
 	}, [])
 
 	useEffect(() => {
-		void loadCurrentQuality()
+		void loadCurrentQuality(false)
 
 		const subscription = Orpheus.addListener(
 			'onAudioQualityChanged',
@@ -285,21 +309,36 @@ const AudioQualityModal = () => {
 
 	const actual = formatActualAudioQuality(actualQuality)
 
+	const cardState = resolveAudioQualityCardState(
+		qualityUnconfirmed,
+		actual !== null,
+		qualityLoading,
+		qualityLoadFailed,
+	)
+
 	let actualTitleText: string
 	let actualSubtitleText: string | undefined
 
-	if (actual) {
-		actualTitleText = actual.title
-		actualSubtitleText = actual.subtitle
-	} else if (qualityLoading) {
-		actualTitleText = '正在读取当前音质'
-		actualSubtitleText = '正在向播放服务查询当前音质。'
-	} else if (qualityLoadFailed) {
-		actualTitleText = '读取当前音质失败'
-		actualSubtitleText = '播放服务暂时没有返回结果，可以重试。'
-	} else {
-		actualTitleText = '暂无正在播放的曲目'
-		actualSubtitleText = '选好档位会存为默认音质，下一首播放时生效。'
+	switch (cardState) {
+		case 'unconfirmed':
+			actualTitleText = '音质未确认'
+			actualSubtitleText = '播放器没有回填实际音质，可点「重新检查」。'
+			break
+		case 'actual':
+			actualTitleText = actual ? actual.title : '暂无正在播放的曲目'
+			actualSubtitleText = actual ? actual.subtitle : undefined
+			break
+		case 'loading':
+			actualTitleText = '正在读取当前音质'
+			actualSubtitleText = '正在向播放服务查询当前音质。'
+			break
+		case 'load_failed':
+			actualTitleText = '读取当前音质失败'
+			actualSubtitleText = '播放服务暂时没有返回结果，可以重试。'
+			break
+		default:
+			actualTitleText = '暂无正在播放的曲目'
+			actualSubtitleText = '选好档位会存为默认音质，下一首播放时生效。'
 	}
 
 	const accountAccess = useBilibiliAccountAccess()
@@ -387,16 +426,16 @@ const AudioQualityModal = () => {
 						>
 							{actualSubtitleText}
 						</Text>
-						{qualityLoadFailed && actual === null && (
+						{(qualityUnconfirmed || (qualityLoadFailed && actual === null)) && (
 							<Button
 								mode='text'
 								compact
 								onPress={() => {
-									void loadCurrentQuality()
+									void loadCurrentQuality(true)
 								}}
 								textColor={colors.onSecondaryContainer}
 							>
-								重试
+								{qualityUnconfirmed ? '重新检查' : '重试'}
 							</Button>
 						)}
 					</Surface>
