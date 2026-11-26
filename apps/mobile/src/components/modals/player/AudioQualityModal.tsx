@@ -33,9 +33,11 @@ import toast from '@/utils/toast'
 
 import {
 	createDelayedVisibilityController,
+	createPendingSwitchTimer,
 	resolveAudioQualityCardState,
 	SWITCH_INDICATOR_DELAY_MS,
 	type DelayedVisibilityController,
+	type PendingSwitchTimer,
 } from './audioQualityModalState'
 
 function applyPreferredAudioQuality(preference: AudioQualityPreference) {
@@ -64,15 +66,50 @@ const AudioQualityModal = () => {
 	const [qualityLoading, setQualityLoading] = useState(true)
 	const [qualityLoadFailed, setQualityLoadFailed] = useState(false)
 	const [qualityUnconfirmed, setQualityUnconfirmed] = useState(false)
+	const [qualityChecking, setQualityChecking] = useState(false)
 
 	const switchingRef = useRef(false)
 	const mountedRef = useRef(true)
 	const reloadIndicatorRef = useRef<DelayedVisibilityController | null>(null)
+	const switchTimerRef = useRef<PendingSwitchTimer | null>(null)
 
 	const pendingRef = useRef<{
 		target: AudioQualityPreference
-		timer: ReturnType<typeof setTimeout>
 	} | null>(null)
+
+	const clearPendingSwitch = useCallback(() => {
+		switchTimerRef.current?.settle()
+		pendingRef.current = null
+		switchingRef.current = false
+
+		if (!mountedRef.current) {
+			return
+		}
+
+		setPendingTarget(null)
+		reloadIndicatorRef.current?.finish()
+	}, [])
+
+	const handleSwitchTimeout = useCallback(() => {
+		clearPendingSwitch()
+
+		if (!mountedRef.current) {
+			return
+		}
+
+		setQualityUnconfirmed(true)
+		toast.info('切换结果未确认', {
+			description: '卡片已标记为未确认，可点「重新检查」重新读取实际音质',
+		})
+	}, [clearPendingSwitch])
+
+	const enterPendingSwitch = useCallback((target: AudioQualityPreference) => {
+		pendingRef.current = { target }
+		switchingRef.current = true
+		setPendingTarget(target)
+		reloadIndicatorRef.current?.start()
+		switchTimerRef.current?.start()
+	}, [])
 
 	useEffect(() => {
 		mountedRef.current = true
@@ -84,75 +121,32 @@ const AudioQualityModal = () => {
 
 		reloadIndicatorRef.current = controller
 
+		const switchTimer = createPendingSwitchTimer(
+			QUALITY_CONFIRM_TIMEOUT_MS,
+			handleSwitchTimeout,
+		)
+
+		switchTimerRef.current = switchTimer
+
 		return () => {
 			mountedRef.current = false
 			controller.dispose()
+			switchTimer.dispose()
+			switchTimerRef.current = null
+			pendingRef.current = null
 
 			if (reloadIndicatorRef.current === controller) {
 				reloadIndicatorRef.current = null
 			}
-
-			const pending = pendingRef.current
-
-			if (pending) {
-				clearTimeout(pending.timer)
-				pendingRef.current = null
-			}
 		}
-	}, [])
-
-	const clearPendingSwitch = useCallback(() => {
-		const pending = pendingRef.current
-
-		if (pending) {
-			clearTimeout(pending.timer)
-			pendingRef.current = null
-		}
-
-		switchingRef.current = false
-
-		if (!mountedRef.current) {
-			return
-		}
-
-		setPendingTarget(null)
-		reloadIndicatorRef.current?.finish()
-	}, [])
-
-	const enterPendingSwitch = useCallback((target: AudioQualityPreference) => {
-		setPendingTarget(target)
-		reloadIndicatorRef.current?.start()
-	}, [])
-
-	const startPendingSwitch = useCallback((target: AudioQualityPreference) => {
-		const timer = setTimeout(() => {
-			pendingRef.current = null
-			switchingRef.current = false
-
-			if (!mountedRef.current) {
-				return
-			}
-
-			setPendingTarget(null)
-			setQualityUnconfirmed(true)
-			reloadIndicatorRef.current?.finish()
-			toast.info('切换结果未确认', {
-				description: '卡片已标记为未确认，可点「重新检查」重新读取实际音质',
-			})
-		}, QUALITY_CONFIRM_TIMEOUT_MS)
-
-		pendingRef.current = { target, timer }
-		switchingRef.current = true
-	}, [])
+	}, [handleSwitchTimeout])
 
 	const handleActualQuality = useCallback(
 		(info: AudioQualityInfo) => {
 			setActualQuality(info)
 			setQualityLoadFailed(false)
 
-			if (info.actualKind !== 'unknown') {
-				setQualityUnconfirmed(false)
-			}
+			setQualityUnconfirmed(info.actualKind === 'unknown')
 
 			const pending = pendingRef.current
 
@@ -197,23 +191,31 @@ const AudioQualityModal = () => {
 		setQualityLoading(true)
 		setQualityLoadFailed(false)
 
+		if (announce) {
+			setQualityChecking(true)
+		}
+
+		let timeoutId: ReturnType<typeof setTimeout> | null = null
+
 		try {
-			const info = await Orpheus.getCurrentAudioQuality()
+			const info = await Promise.race([
+				Orpheus.getCurrentAudioQuality(),
+				new Promise<never>((_resolve, reject) => {
+					timeoutId = setTimeout(() => {
+						reject(new Error('读取音质超时'))
+					}, QUALITY_CONFIRM_TIMEOUT_MS)
+				}),
+			])
 
 			if (!mountedRef.current) {
 				return
 			}
 
 			setActualQuality(info)
-
-			const confirmed = info !== null && info.actualKind !== 'unknown'
-
-			if (confirmed) {
-				setQualityUnconfirmed(false)
-			}
+			setQualityUnconfirmed(info !== null && info.actualKind === 'unknown')
 
 			if (announce) {
-				if (confirmed) {
+				if (info !== null && info.actualKind !== 'unknown') {
 					toast.info('已重新读取当前音质')
 				} else {
 					toast.info('仍未能确认实际音质')
@@ -224,10 +226,25 @@ const AudioQualityModal = () => {
 				setQualityLoadFailed(true)
 			}
 
-			toastAndLogError('读取当前音质失败', error, 'Modal.AudioQuality')
+			if (announce) {
+				if (mountedRef.current) {
+					setQualityUnconfirmed(true)
+				}
+
+				toast.info('检查音质超时', {
+					description: '未能读取到实际音质，可稍后再试',
+				})
+			} else {
+				toastAndLogError('读取当前音质失败', error, 'Modal.AudioQuality')
+			}
 		} finally {
+			if (timeoutId !== null) {
+				clearTimeout(timeoutId)
+			}
+
 			if (mountedRef.current) {
 				setQualityLoading(false)
+				setQualityChecking(false)
 			}
 		}
 	}, [])
@@ -281,8 +298,6 @@ const AudioQualityModal = () => {
 			const result = await Orpheus.reloadCurrentTrackForQualityChange()
 
 			if (result.reloaded) {
-				startPendingSwitch(next)
-
 				return
 			}
 
@@ -313,10 +328,14 @@ const AudioQualityModal = () => {
 
 	const actual = formatActualAudioQuality(actualQuality)
 
+	const hasConfirmedActual =
+		actualQuality !== null && actualQuality.actualKind !== 'unknown'
+
 	const cardState = resolveAudioQualityCardState(
 		pendingTarget !== null,
+		qualityChecking,
 		qualityUnconfirmed,
-		actual !== null,
+		hasConfirmedActual,
 		qualityLoading,
 		qualityLoadFailed,
 	)
@@ -330,6 +349,10 @@ const AudioQualityModal = () => {
 				? `切换到 ${formatAudioQualityLabel(pendingTarget)}…`
 				: '正在切换音质…'
 			actualSubtitleText = '正在请求播放器重新加载当前曲目。'
+			break
+		case 'checking':
+			actualTitleText = '正在检查当前音质…'
+			actualSubtitleText = '正在向播放服务重新读取实际音质。'
 			break
 		case 'unconfirmed':
 			actualTitleText = '音质未确认'
@@ -441,6 +464,7 @@ const AudioQualityModal = () => {
 							<Button
 								mode='text'
 								compact
+								contentStyle={styles.recheckButton}
 								onPress={() => {
 									void loadCurrentQuality(true)
 								}}
@@ -553,6 +577,10 @@ const styles = StyleSheet.create({
 	},
 	actualHeaderLabel: {
 		flexShrink: 1,
+	},
+	recheckButton: {
+		minHeight: 48,
+		justifyContent: 'center',
 	},
 	actualStatus: {
 		flexDirection: 'row',

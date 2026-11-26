@@ -93,6 +93,7 @@ export function createDelayedVisibilityController(
 
 export type AudioQualityCardState =
 	| 'pending'
+	| 'checking'
 	| 'unconfirmed'
 	| 'actual'
 	| 'loading'
@@ -101,6 +102,7 @@ export type AudioQualityCardState =
 
 export function resolveAudioQualityCardState(
 	hasPending: boolean,
+	isChecking: boolean,
 	qualityUnconfirmed: boolean,
 	hasActual: boolean,
 	qualityLoading: boolean,
@@ -108,6 +110,10 @@ export function resolveAudioQualityCardState(
 ): AudioQualityCardState {
 	if (hasPending) {
 		return 'pending'
+	}
+
+	if (isChecking) {
+		return 'checking'
 	}
 
 	if (qualityUnconfirmed) {
@@ -127,4 +133,53 @@ export function resolveAudioQualityCardState(
 	}
 
 	return 'idle'
+}
+
+export interface PendingSwitchTimer {
+	start: () => void
+	settle: () => void
+	dispose: () => void
+}
+
+export function createPendingSwitchTimer(
+	delayMs: number,
+	onTimeout: () => void,
+	scheduler: DelayedVisibilityScheduler = defaultScheduler,
+): PendingSwitchTimer {
+	let timer: DelayedVisibilityTimer | null = null
+	let disposed = false
+
+	const clear = () => {
+		if (timer === null) {
+			return
+		}
+
+		scheduler.clearTimeout(timer)
+		timer = null
+	}
+
+	const start = () => {
+		if (disposed || timer !== null) {
+			return
+		}
+
+		timer = scheduler.setTimeout(() => {
+			timer = null
+
+			if (!disposed) {
+				onTimeout()
+			}
+		}, delayMs)
+	}
+
+	const settle = () => {
+		clear()
+	}
+
+	const dispose = () => {
+		clear()
+		disposed = true
+	}
+
+	return { start, settle, dispose }
 }
