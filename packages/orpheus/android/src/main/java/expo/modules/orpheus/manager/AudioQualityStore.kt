@@ -115,13 +115,9 @@ object AudioQualityStore {
     }
 
     fun put(uri: String, info: AudioQualityInfo) {
-        val prefix = "$uri|q="
         val key = cacheKeyOf(uri, info.preferredQuality)
-        infos.keys
-            .filter { existingKey -> existingKey.startsWith(prefix) && existingKey != key }
-            .forEach { staleKey -> infos.remove(staleKey) }
         infos[key] = info
-        persist(key, info, prefix)
+        persist(key, info)
         NativeLog.info(
             LogTags.STORAGE,
             "audio.quality.resolved",
@@ -148,31 +144,8 @@ object AudioQualityStore {
         return restored
     }
 
-    @Synchronized
-    fun describeCachedQualityInfo(uri: String, preference: String): AudioQualityInfo {
-        val normalized = normalizePreference(preference)
-        get(uri, normalized)?.let { cached -> return cached }
-        val template = preferences
-            .asSequence()
-            .filter { candidate -> candidate != normalized }
-            .mapNotNull { candidate -> get(uri, candidate) }
-            .firstOrNull()
-        val (kind, streamId) = when (normalized) {
-            PREF_DOLBY -> KIND_DOLBY to DOLBY_STREAM_ID
-            PREF_HIRES -> KIND_HIRES to HIRES_STREAM_ID
-            else -> KIND_NORMAL to requestFor(normalized).audioQuality
-        }
-        return AudioQualityInfo(
-            preferredQuality = normalized,
-            actualKind = kind,
-            actualStreamId = streamId,
-            codecs = null,
-            bandwidth = null,
-            isFallback = false,
-            isFromDownloadCache = false,
-            availableQualities = template?.availableQualities.orEmpty(),
-        )
-    }
+    fun describeCachedQualityInfo(uri: String, preference: String): AudioQualityInfo? =
+        get(uri, normalizePreference(preference))
 
     fun clearAll() {
         infos.clear()
@@ -208,14 +181,10 @@ object AudioQualityStore {
     }
 
     @Synchronized
-    private fun persist(key: String, info: AudioQualityInfo, prefix: String) {
+    private fun persist(key: String, info: AudioQualityInfo) {
         val store = prefs ?: return
         runCatching {
             val entries = readEntries(store)
-            entries.keys().asSequence()
-                .filter { existingKey -> existingKey.startsWith(prefix) && existingKey != key }
-                .toList()
-                .forEach { staleKey -> entries.remove(staleKey) }
             entries.put(key, encode(info))
             trim(entries)
             store.edit().putString(PREFS_KEY_ENTRIES, entries.toString()).apply()

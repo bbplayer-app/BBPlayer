@@ -561,21 +561,37 @@ class OrpheusMusicService : MediaLibraryService() {
         if (reloadStrategy == "stop") {
             player.stop()
             if (lruFullCached) {
-                DownloadCache.getLruCache(this).removeResource(refreshCacheKey)
+                runCatching {
+                    DownloadCache.getLruCache(this).removeResource(refreshCacheKey)
+                }.onFailure { error ->
+                    NativeLog.warning(LogTags.AUDIO, "audio.quality.lru_clear_failed", error = error)
+                }
             }
         } else if (lruFullCached) {
             val cachedInfo = AudioQualityStore.describeCachedQualityInfo(uriString, preferredQuality)
-            AudioQualityStore.put(uriString, cachedInfo)
-            NativeLog.info(
-                LogTags.AUDIO,
-                "audio.quality.lru_hit_broadcast",
-                mapOf(
-                    "audio.preferred_quality" to cachedInfo.preferredQuality,
-                    "audio.actual_kind" to cachedInfo.actualKind,
-                    "audio.actual_stream_id" to cachedInfo.actualStreamId,
-                    "audio.is_fallback" to cachedInfo.isFallback,
-                ),
-            )
+            if (cachedInfo == null) {
+                NativeLog.info(
+                    LogTags.AUDIO,
+                    "audio.quality.lru_hit_skipped",
+                    mapOf(
+                        "audio.reason" to "no_record",
+                        "audio.preferred_quality" to preferredQuality,
+                        "audio.reload_cache_key" to refreshCacheKey,
+                    ),
+                )
+            } else {
+                AudioQualityStore.put(uriString, cachedInfo)
+                NativeLog.info(
+                    LogTags.AUDIO,
+                    "audio.quality.lru_hit_broadcast",
+                    mapOf(
+                        "audio.preferred_quality" to cachedInfo.preferredQuality,
+                        "audio.actual_kind" to cachedInfo.actualKind,
+                        "audio.actual_stream_id" to cachedInfo.actualStreamId,
+                        "audio.is_fallback" to cachedInfo.isFallback,
+                    ),
+                )
+            }
         }
         val refreshedItem = MediaItem.Builder()
             .setMediaId(item.mediaId)
