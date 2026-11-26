@@ -6,12 +6,22 @@
 package io.github.proify.lyricon.lyric.model.extensions
 
 import io.github.proify.lyricon.lyric.model.LyricWord
+import io.github.proify.lyricon.lyric.model.resolveDuration
+
+/**
+ * 孤立无效词的兜底结束时间（毫秒）。
+ *
+ * 当整行单词的时间戳全部无效时会构造一个占位词，仅保证 `duration > 0`
+ * 从而不被上层剔除，**不代表真实演唱时长**。
+ */
+private const val ORPHAN_WORD_END_MS = 100L
 
 /**
  * 规范化歌词单词列表。
  *
  * 处理无效的时间戳、修正持续时间、合并碎片单词以及填充空隙，返回新列表，
- * **不修改原列表及原单词**。常作为 [io.github.proify.lyricon.lyric.model.LyricLine.normalize]
+ * **不修改原列表及原单词**（内部先对输入逐词深拷贝，所有修正只作用于副本）。
+ * 常作为 [io.github.proify.lyricon.lyric.model.LyricLine.normalize]
  * 等规范化流程的中间步骤。
  *
  * 规则说明：
@@ -26,14 +36,17 @@ import io.github.proify.lyricon.lyric.model.LyricWord
  * @see LyricWord
  */
 fun List<LyricWord>.normalize(): List<LyricWord> {
+    // 0. 只处理副本：本函数承诺不修改调用方传入的单词对象
+    val source = map { it.deepCopy() }
+
     // 1. 过滤掉没有文本内容的单词
-    val validTextWords = this.filter { !it.text.isNullOrEmpty() }
+    val validTextWords = source.filter { !it.text.isNullOrEmpty() }
 
     if (validTextWords.isEmpty()) {
         return emptyList()
     }
 
-    val result = ArrayList<LyricWord>()
+    val result = ArrayList<LyricWord>(validTextWords.size)
     val invalidBuffer = ArrayList<LyricWord>()
 
     var lastEndTime = 0L
@@ -49,14 +62,14 @@ fun List<LyricWord>.normalize(): List<LyricWord> {
                 val gap = word.begin - lastEndTime
 
                 if (gap > 0) {
-                    // 情况 A: 有足够的空间 (Gap > 1),创建一个填补单词
-                    val filler = LyricWord().apply {
-                        this.text = combinedText
-                        this.begin = lastEndTime
-                        this.end = word.begin
-                        this.duration = this.end - this.begin
-                    }
-                    result.add(filler)
+                    // 情况 A: 存在时间空隙, 用空隙承载缓冲文本(不额外占用相邻词的时间)
+                    result.add(
+                        LyricWord(
+                            begin = lastEndTime,
+                            end = word.begin,
+                            text = combinedText
+                        )
+                    )
                 } else {
                     // 情况 B: 空间不足,需要合并文本
                     if (result.isNotEmpty()) {
@@ -72,8 +85,8 @@ fun List<LyricWord>.normalize(): List<LyricWord> {
             }
 
             // --- 处理当前有效单词 ---
-            // 强制修正 duration 字段
-            if (word.duration <= 0) word.duration = word.end - word.begin
+            // duration 无效(<=0)时以 begin/end 为唯一事实来源兜底
+            word.duration = resolveDuration(word.begin, word.end, word.duration)
             result.add(word)
 
             // 更新最后结束时间
@@ -93,18 +106,18 @@ fun List<LyricWord>.normalize(): List<LyricWord> {
             val lastWord = result.last()
             lastWord.text = (lastWord.text ?: "") + combinedText
         } else {
-            // 如果全是无效单词 (孤立情况),创建一个新单词
-            val newWord = LyricWord().apply {
-                this.text = combinedText
-                this.begin = 0
-                this.end = 100
-                this.duration = 100
-            }
-            result.add(newWord)
+            // 如果全是无效单词 (孤立情况),创建一个最小可渲染的占位词
+            result.add(
+                LyricWord(
+                    begin = 0,
+                    end = ORPHAN_WORD_END_MS,
+                    text = combinedText
+                )
+            )
         }
     }
 
-    return result.normalizeSortByTime().mergeAsciiWordFragments()
+    return result.sortedByBegin().mergeAsciiWordFragments()
 }
 
 /**
@@ -124,7 +137,8 @@ private fun List<LyricWord>.mergeAsciiWordFragments(): List<LyricWord> {
         if (previous != null && previous.canMergeAsciiWordFragmentWith(word)) {
             previous.text = previous.text.orEmpty() + word.text.orEmpty()
             previous.end = maxOf(previous.end, word.end)
-            previous.duration += word.duration
+            // 合并后跨度已变，按 begin/end 重新派生 duration，避免累加放大历史误差
+            previous.duration = resolveDuration(previous.begin, previous.end, 0L)
         } else {
             result.add(word)
         }

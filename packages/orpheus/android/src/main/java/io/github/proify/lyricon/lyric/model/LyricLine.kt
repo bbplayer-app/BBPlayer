@@ -8,6 +8,7 @@ package io.github.proify.lyricon.lyric.model
 
 import io.github.proify.lyricon.lyric.model.extensions.deepCopy
 import io.github.proify.lyricon.lyric.model.extensions.normalize
+import io.github.proify.lyricon.lyric.model.extensions.rebuildTextOr
 import io.github.proify.lyricon.lyric.model.interfaces.DeepCopyable
 import io.github.proify.lyricon.lyric.model.interfaces.ILyricLine
 import io.github.proify.lyricon.lyric.model.interfaces.Normalize
@@ -19,7 +20,7 @@ import kotlinx.serialization.Serializable
  * - **时间单位为毫秒 (ms)**；初始化时若 `duration == 0` 且 `end > begin`，
  *   会自动以 `end - begin` 兜底。
  * - [text] 与 [words] 互为冗余：规范化（[normalize]）后由 [words] 重新拼接出 [text]，
- *   [words] 为空或拼接结果为空时保留原 [text]。
+ *   当 [words] 为 `null` 或空列表时保留原 [text]。
  * - [isAlignedRight] 表示本行渲染时是否靠右对齐（如副歌、伴唱行）。
  *
  * @property begin 开始时间（毫秒）
@@ -45,7 +46,7 @@ data class LyricLine(
 ) : ILyricLine, DeepCopyable<LyricLine>, Normalize<LyricLine> {
 
     init {
-        if (duration == 0L && end > begin) duration = end - begin
+        duration = fallbackZeroDuration(begin, end, duration)
     }
 
     /**
@@ -64,16 +65,13 @@ data class LyricLine(
      * 返回规范化后的深拷贝，原对象不受影响。
      *
      * 先深拷贝自身；随后对 [words] 逐词规范化（丢弃无效词、修正持续时间、
-     * 合并碎片、填充空隙）；最后用非空的 [words] 重新拼接 [text]，
-     * [words] 为空或拼接结果为空时保留原 [text]。
+     * 合并碎片、填充空隙）；最后用 [words] 重新拼接 [text]，[words] 为
+     * `null` 或空列表时保留原 [text]。
      *
      * @return 规范化后的深拷贝
      */
     override fun normalize(): LyricLine = deepCopy().apply {
         words = words?.normalize()
-        text = words
-            ?.takeIf { it.isNotEmpty() }
-            ?.joinToString("") { it.text.orEmpty() }
-            ?: text
+        text = words.rebuildTextOr(text)
     }
 }

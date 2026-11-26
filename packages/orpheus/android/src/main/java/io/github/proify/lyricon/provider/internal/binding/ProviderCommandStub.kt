@@ -16,11 +16,11 @@ import io.github.proify.lyricon.provider.ProviderService
  *
  * @property handler 当前命令处理回调；可通过 LyriconProvider.providerService 更新。
  */
-internal class ProviderCommandStub(handler: ProviderService? = null) :
-    IProviderService.Stub() {
-
+internal class ProviderCommandStub(
     /** 当前命令处理回调，可为 null（此时命令返回空结果）。 */
-    var handler: ProviderService? = handler
+    var handler: ProviderService? = null
+) :
+    IProviderService.Stub() {
 
     override fun onRunCommand(intent: Intent?): Bundle? = handler?.onRunCommand(intent)
 }

@@ -8,6 +8,7 @@ package io.github.proify.lyricon.lyric.model
 
 import io.github.proify.lyricon.lyric.model.extensions.deepCopy
 import io.github.proify.lyricon.lyric.model.extensions.normalize
+import io.github.proify.lyricon.lyric.model.extensions.rebuildTextOr
 import io.github.proify.lyricon.lyric.model.interfaces.DeepCopyable
 import io.github.proify.lyricon.lyric.model.interfaces.IRichLyricLine
 import io.github.proify.lyricon.lyric.model.interfaces.Normalize
@@ -25,7 +26,7 @@ import kotlinx.serialization.Serializable
  * - **时间单位为毫秒 (ms)**；初始化时若 `duration == 0` 且 `end > begin`，
  *   会自动以 `end - begin` 兜底。
  * - 各文本字段与其 `*Words` 字段互为冗余：[normalize] 会逐组规范化 `*Words`，
- *   并用其重新生成对应文本，无法生成时保留原文本。
+ *   并用其重新生成对应文本；对应 `*Words` 为 `null` 或空列表时保留原文本。
  *
  * @property begin 开始时间（毫秒）
  * @property end 结束时间（毫秒）
@@ -61,7 +62,7 @@ data class RichLyricLine(
 ) : IRichLyricLine, DeepCopyable<RichLyricLine>, Normalize<RichLyricLine> {
 
     init {
-        if (duration == 0L && end > begin) duration = end - begin
+        duration = fallbackZeroDuration(begin, end, duration)
     }
 
     /**
@@ -83,20 +84,17 @@ data class RichLyricLine(
      * 返回规范化后的深拷贝，原对象不受影响。
      *
      * 先深拷贝自身；随后对三组 `*Words` 逐词规范化（丢弃无效词、修正持续时间、
-     * 合并碎片、填充空隙），并分别用非空的 `*Words` 重新生成 [text]、[secondary]、
-     * [translation]（对应 `*Words` 为空时保留原文本）。
+     * 合并碎片、填充空隙），并分别用 `*Words` 重新生成 [text]、[secondary]、
+     * [translation]（对应 `*Words` 为 `null` 或空列表时保留原文本）。
      *
      * @return 规范化后的深拷贝
      */
     override fun normalize(): RichLyricLine = deepCopy().apply {
         words = words?.normalize()
-        text = words.toText(text)
+        text = words.rebuildTextOr(text)
         secondaryWords = secondaryWords?.normalize()
-        secondary = secondaryWords.toText(secondary)
+        secondary = secondaryWords.rebuildTextOr(secondary)
         translationWords = translationWords?.normalize()
-        translation = translationWords.toText(translation)
+        translation = translationWords.rebuildTextOr(translation)
     }
-
-    private fun List<LyricWord>?.toText(default: String?): String? =
-        if (isNullOrEmpty()) default else joinToString("") { it.text.orEmpty() }
 }

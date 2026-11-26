@@ -38,7 +38,7 @@ data class LyricWord(
 ) : ILyricWord, DeepCopyable<LyricWord> {
 
     init {
-        if (duration == 0L && end > begin) duration = end - begin
+        duration = fallbackZeroDuration(begin, end, duration)
     }
 
     /**

@@ -30,3 +30,32 @@ data class LyricTiming(
     override var end: Long,
     override var duration: Long
 ) : ILyricTiming
+
+/**
+ * 构造期的持续时间兜底。
+ *
+ * 仅在 `duration == 0` 且 `end > begin` 时用 `end - begin` 补全，其余情况原样返回；
+ * [LyricTiming] 刻意不参与兜底。集中此处的目的是让 [LyricWord]、[LyricLine]、
+ * [RichLyricLine] 三处 `init` 的时间语义保持完全一致，避免规则散落产生分歧。
+ *
+ * @param begin 开始时间（毫秒）
+ * @param end 结束时间（毫秒）
+ * @param duration 调用方提供的持续时间（毫秒）
+ * @return 兜底后的持续时间（毫秒）
+ */
+internal fun fallbackZeroDuration(begin: Long, end: Long, duration: Long): Long =
+    if (duration == 0L && end > begin) end - begin else duration
+
+/**
+ * 规范化期的持续时间兜底。
+ *
+ * `duration <= 0` 时一律以 `end - begin` 为准，用于修正歌词源里
+ * "duration 与 begin/end 不一致"的脏数据（`begin`/`end` 为唯一事实来源）。
+ *
+ * @param begin 开始时间（毫秒）
+ * @param end 结束时间（毫秒）
+ * @param duration 待校验的持续时间（毫秒）
+ * @return 合法的持续时间（毫秒）；`end <= begin` 时返回非正值，交由上层决定是否剔除
+ */
+internal fun resolveDuration(begin: Long, end: Long, duration: Long): Long =
+    if (duration > 0L) duration else end - begin

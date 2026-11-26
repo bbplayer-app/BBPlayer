@@ -29,6 +29,10 @@ import io.github.proify.lyricon.lyric.model.interfaces.ILyricTiming
  * [forEachAtOrPrevious] 复用 [forEachAt] 刚缓存的锚点作为"最近历史行"，
  * 空拍时无需再次二分查找。
  *
+ * **线程约束** — 本类持有可变检索缓存（[lastMatchedIndex]、[lastStartIndex]、[sequentialMode]），
+ * **不是线程安全的**：请在单个线程（如播放/UI 线程）内使用同一实例，需要并发查询时每个线程
+ * 各自持有实例；[resetCache] 用于手动跳进度或切歌后清理缓存。
+ *
  * @property source 必须按 [ILyricTiming.begin] 升序排列的数据源（构造时直接持有，不做拷贝）。
  * @param T 实现 [ILyricTiming] 接口的数据类型。
  */
@@ -41,6 +45,9 @@ class TimingNavigator<T : ILyricTiming>(
     /**
      * 记录 0..i 范围内的最大结束时间。
      * 该数组具有单调递增属性，用于在 [resolveOverlapping] 中定位重叠窗口起点。
+     *
+     * 仅供检索内部与性能分析读取：构造完成后不应再被修改，外部写入会破坏查询结果。
+     * （保留公开可见性是为了兼容既有调用方，请勿写入。）
      */
     val maxEndSoFar: LongArray = LongArray(size)
 
@@ -87,14 +94,17 @@ class TimingNavigator<T : ILyricTiming>(
         private set
 
     /**
-     * 获取指定位置 [position] 处匹配的第一条活动记录。
+     * 获取指定位置 [position] 处的活动记录。
      *
-     * 返回所有覆盖该位置的行中 `begin` 最小的一条（按 `begin` 升序的遍历首项）；
-     * 注意该行不一定是最后开始的行（存在重叠时由 [resolveOverlapping] 决定）。
-     * 该位置没有活动行时返回 `null`。
+     * 语义为**锚点优先**：先定位最后一条 `begin <= position` 的行（锚点），若该行仍覆盖
+     * [position] 则直接返回它——即存在重叠时优先返回**最近开始**的活动行；锚点已结束但
+     * 更早开始的行仍活动时，返回这些行中 `begin` 最小的一条。
+     *
+     * 需要全部活动行或空拍时的最近历史行，请分别使用 [forEachAt]、[forEachAtOrPrevious]。
+     * 该位置没有任何活动行时返回 `null`。
      *
      * @param position 查询位置（毫秒）
-     * @return 匹配的第一条记录；无匹配时返回 `null`
+     * @return 命中的活动记录；无匹配时返回 `null`
      */
     fun first(position: Long): T? {
         val index = findTargetIndex(position)

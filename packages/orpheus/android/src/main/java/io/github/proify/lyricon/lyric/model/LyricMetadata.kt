@@ -80,13 +80,18 @@ data class LyricMetadata(
     fun getString(key: String, default: String? = null): String? = map[key] ?: default
 
     /**
-     * 判断对象是否相等
-     * 基于底层的 map 内容进行比对
+     * 判断对象是否相等。
+     *
+     * 与任意内容相同的 `Map<String, String?>` 互为等值：本类通过委托实现了 [Map]，
+     * 若只与同类比较，会出现 `map == metadata` 为 `true` 而 `metadata == map` 为
+     * `false` 的不对称结果，进而让 `HashMap`/`HashSet` 的查找行为不可预期。
      */
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is LyricMetadata) return false
-        return map == other.map
+        return this === other || when (other) {
+            is LyricMetadata -> map == other.map
+            is Map<*, *> -> map == other
+            else -> false
+        }
     }
 
     /**
