@@ -579,6 +579,17 @@ class OrpheusMusicService : MediaLibraryService() {
                         "audio.reload_cache_key" to refreshCacheKey,
                     ),
                 )
+                broadcastAudioQuality(
+                    AudioQualityInfo(
+                        preferredQuality = AudioQualityStore.normalizePreference(preferredQuality),
+                        actualKind = AudioQualityStore.KIND_UNKNOWN,
+                        actualStreamId = null,
+                        codecs = null,
+                        bandwidth = null,
+                        isFallback = false,
+                        isFromDownloadCache = false,
+                    ),
+                )
             } else {
                 AudioQualityStore.put(uriString, cachedInfo)
                 NativeLog.info(

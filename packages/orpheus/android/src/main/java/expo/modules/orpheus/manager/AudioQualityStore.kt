@@ -64,6 +64,7 @@ object AudioQualityStore {
 
     private val preferences = setOf(PREF_LOW, PREF_STANDARD, PREF_HIGH, PREF_HIRES, PREF_DOLBY)
     private val infos = ConcurrentHashMap<String, AudioQualityInfo>()
+    private val updatedAt = ConcurrentHashMap<String, Long>()
     private val listeners = CopyOnWriteArrayList<(String, AudioQualityInfo) -> Unit>()
 
     @Volatile
@@ -117,6 +118,8 @@ object AudioQualityStore {
     fun put(uri: String, info: AudioQualityInfo) {
         val key = cacheKeyOf(uri, info.preferredQuality)
         infos[key] = info
+        updatedAt[key] = System.currentTimeMillis()
+        enforceMemoryLimit()
         persist(key, info)
         NativeLog.info(
             LogTags.STORAGE,
@@ -149,6 +152,7 @@ object AudioQualityStore {
 
     fun clearAll() {
         infos.clear()
+        updatedAt.clear()
         runCatching { prefs?.edit()?.clear()?.apply() }
     }
 
@@ -237,7 +241,21 @@ object AudioQualityStore {
         stale.forEach { key ->
             entries.remove(key)
             infos.remove(key)
+            updatedAt.remove(key)
         }
+    }
+
+    private fun enforceMemoryLimit() {
+        val size = infos.size
+        if (size <= MAX_PERSISTED_ENTRIES * 2) return
+        val staleCount = size - MAX_PERSISTED_ENTRIES / 2
+        infos.keys
+            .sortedBy { key -> updatedAt[key] ?: 0L }
+            .take(staleCount)
+            .forEach { key ->
+                infos.remove(key)
+                updatedAt.remove(key)
+            }
     }
 
     fun addListener(listener: (String, AudioQualityInfo) -> Unit) {
