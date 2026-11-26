@@ -599,6 +599,12 @@ export default function EqualizerSettingsPage() {
 	)
 
 	const flushBandGain = useCallback(() => {
+		if (bandErrorRef.current) {
+			pendingBandRef.current = null
+
+			return
+		}
+
 		const pending = pendingBandRef.current
 
 		if (pending === null) return
@@ -611,6 +617,8 @@ export default function EqualizerSettingsPage() {
 			try {
 				await Orpheus.setEqualizerBandGain(pending.bandIndex, pending.gainDb)
 			} catch (error) {
+				if (bandErrorRef.current) return
+
 				bandErrorRef.current = true
 
 				toastAndLogError('调整均衡器失败', error, 'Equalizer')
@@ -684,6 +692,12 @@ export default function EqualizerSettingsPage() {
 	)
 
 	const flushPreamp = useCallback(() => {
+		if (preampErrorRef.current) {
+			pendingPreampRef.current = null
+
+			return
+		}
+
 		const pending = pendingPreampRef.current
 
 		if (pending === null) return
@@ -696,6 +710,8 @@ export default function EqualizerSettingsPage() {
 			try {
 				await Orpheus.setEqualizerPreamp(pending)
 			} catch (error) {
+				if (preampErrorRef.current) return
+
 				preampErrorRef.current = true
 
 				toastAndLogError('调整前置增益失败', error, 'Equalizer')
