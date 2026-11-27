@@ -328,6 +328,24 @@ export function createAudioQualityReadVersion(): AudioQualityReadVersion {
 	}
 }
 
+export function shouldSkipAudioQualitySwitch(params: {
+	preference: AudioQualityPreference
+	next: AudioQualityPreference
+	actualQuality: AudioQualityInfo | null
+}): boolean {
+	const { preference, next, actualQuality } = params
+	const actualPreference = resolveActualAudioQualityPreference(actualQuality)
+
+	if (actualPreference !== next) {
+		return false
+	}
+
+	const isDegraded =
+		actualQuality?.isFallback === true || actualPreference !== preference
+
+	return !isDegraded
+}
+
 export function resolveSelectedAudioQualityPreference(
 	preference: AudioQualityPreference,
 	options: readonly AudioQualityOption[],

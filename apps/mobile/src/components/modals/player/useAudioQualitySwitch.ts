@@ -8,8 +8,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
 	formatActualAudioQuality,
 	formatAudioQualityLabel,
-	resolveActualAudioQualityPreference,
 	resolveAudioQualitySwitchOutcome,
+	shouldSkipAudioQualitySwitch,
 } from '@/constants/audioQuality'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
@@ -177,13 +177,8 @@ export function useAudioQualitySwitch({
 		}
 
 		const label = formatAudioQualityLabel(next)
-		const actualPreference = resolveActualAudioQualityPreference(actualQuality)
 
-		const isDegraded =
-			actualQuality?.isFallback === true ||
-			(actualPreference !== null && actualPreference !== preference)
-
-		if (next === preference && !isDegraded) {
+		if (shouldSkipAudioQualitySwitch({ preference, next, actualQuality })) {
 			showQualityMessage(QUALITY_MESSAGES.alreadyCurrent(label))
 
 			return

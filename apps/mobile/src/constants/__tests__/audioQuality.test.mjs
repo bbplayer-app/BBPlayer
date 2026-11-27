@@ -12,6 +12,7 @@ import {
 	resolveAudioQualitySwitchOutcome,
 	resolveBilibiliAccountTier,
 	resolveSelectedAudioQualityPreference,
+	shouldSkipAudioQualitySwitch,
 } from '../audioQuality.ts'
 
 const qualityValues = (options) => options.map((option) => option.value)
@@ -498,4 +499,67 @@ test('createAudioQualityReadVersion 后发起的读取让先前读取作废', ()
 
 	assert.equal(readVersion.isCurrent(first), false)
 	assert.equal(readVersion.isCurrent(second), true)
+})
+
+test('shouldSkipAudioQualitySwitch 实际档位已确认等于目标时短路', () => {
+	assert.equal(
+		shouldSkipAudioQualitySwitch({
+			preference: 'high',
+			next: 'high',
+			actualQuality: createQualityInfo({ actualStreamId: 30280 }),
+		}),
+		true,
+	)
+	assert.equal(
+		shouldSkipAudioQualitySwitch({
+			preference: 'high',
+			next: 'high',
+			actualQuality: createQualityInfo({ actualKind: 'dolby' }),
+		}),
+		false,
+	)
+})
+
+test('shouldSkipAudioQualitySwitch 实际音质未知时不短路，点切换仍会重载', () => {
+	const unknownCases = [
+		null,
+		createQualityInfo({ actualKind: 'unknown', actualStreamId: null }),
+		createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
+		createQualityInfo({ isFromDownloadCache: true }),
+		createQualityInfo({ actualKind: 'normal', actualStreamId: 30251 }),
+	]
+
+	for (const actualQuality of unknownCases) {
+		assert.equal(
+			shouldSkipAudioQualitySwitch({
+				preference: 'high',
+				next: 'high',
+				actualQuality,
+			}),
+			false,
+		)
+	}
+
+	assert.equal(
+		shouldSkipAudioQualitySwitch({
+			preference: 'high',
+			next: 'high',
+			actualQuality: createQualityInfo({ actualStreamId: 30216 }),
+		}),
+		false,
+	)
+})
+
+test('shouldSkipAudioQualitySwitch 降级中即使实际档位等于目标也要重载', () => {
+	assert.equal(
+		shouldSkipAudioQualitySwitch({
+			preference: 'high',
+			next: 'high',
+			actualQuality: createQualityInfo({
+				actualStreamId: 30280,
+				isFallback: true,
+			}),
+		}),
+		false,
+	)
 })
