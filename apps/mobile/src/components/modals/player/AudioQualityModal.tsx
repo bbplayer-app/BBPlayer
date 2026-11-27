@@ -224,7 +224,8 @@ const AudioQualityModal = () => {
 						subtitleText={actualSubtitleText}
 						showSpinner={showReloadIndicator}
 						showRecheckButton={
-							qualityUnconfirmed || (qualityLoadFailed && actual === null)
+							pendingTarget === null &&
+							(qualityUnconfirmed || (qualityLoadFailed && actual === null))
 						}
 						recheckLabel={qualityUnconfirmed ? '重新检查' : '重试'}
 						onRecheck={() => {

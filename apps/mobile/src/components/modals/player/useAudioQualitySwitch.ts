@@ -25,6 +25,11 @@ import {
 
 export const QUALITY_CONFIRM_TIMEOUT_MS = 3_000
 
+const SWITCH_IN_PROGRESS_MESSAGE = {
+	message: '正在切换音质，请稍候',
+	description: '当前切换还未结束，完成后可以再选择其他档位',
+}
+
 function applyPreferredAudioQuality(preference: AudioQualityPreference) {
 	Orpheus.preferredAudioQuality = preference
 }
@@ -169,6 +174,8 @@ export function useAudioQualitySwitch({
 
 	const switchQuality = async (next: AudioQualityPreference) => {
 		if (switchingRef.current) {
+			showQualityMessage(SWITCH_IN_PROGRESS_MESSAGE)
+
 			return
 		}
 
