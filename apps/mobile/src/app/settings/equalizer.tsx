@@ -49,6 +49,7 @@ import {
 	resolveSettingsStatus,
 } from '@/features/equalizer/utils/eqReadiness'
 import { buildPresetSettings } from '@/features/equalizer/utils/presetSettings'
+import { commitSettingsToRef } from '@/features/equalizer/utils/settingsCommit'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
@@ -290,11 +291,7 @@ export default function EqualizerSettingsPage() {
 
 	const commitSettings = useCallback(
 		(update: (previous: EqualizerSettings) => EqualizerSettings) => {
-			const next = update(settingsRef.current)
-
-			settingsRef.current = next
-
-			setSettings(next)
+			commitSettingsToRef(settingsRef, setSettings, update)
 		},
 		[],
 	)
@@ -553,6 +550,7 @@ export default function EqualizerSettingsPage() {
 		async (
 			action: () => Promise<EqualizerSettings>,
 			failureMessage: string,
+			onFailure?: () => void,
 		) => {
 			try {
 				const next = await action()
@@ -560,6 +558,8 @@ export default function EqualizerSettingsPage() {
 				applySettledSettings(next)
 			} catch (error) {
 				toastAndLogError(failureMessage, error, 'Equalizer')
+
+				onFailure?.()
 			}
 		},
 		[applySettledSettings],
@@ -619,10 +619,9 @@ export default function EqualizerSettingsPage() {
 	const handleToggleEnabled = useCallback(() => {
 		if (!isAndroid || !canWriteSettings(readiness)) return
 
-		const next = {
-			...settingsRef.current,
-			enabled: !settingsRef.current.enabled,
-		}
+		const previous = settingsRef.current
+
+		const next = { ...previous, enabled: !previous.enabled }
 
 		commitSettings(() => next)
 
@@ -636,22 +635,23 @@ export default function EqualizerSettingsPage() {
 					next.activePresetId,
 				),
 			'切换均衡器失败',
+			() => commitSettings(() => previous),
 		)
 	}, [commitSettings, isAndroid, readiness, runEqualizerAction])
 
 	const handleToggleLimiter = useCallback(() => {
 		if (!isAndroid || !canWriteSettings(readiness)) return
 
-		const next = {
-			...settingsRef.current,
-			limiterEnabled: !settingsRef.current.limiterEnabled,
-		}
+		const previous = settingsRef.current
+
+		const next = { ...previous, limiterEnabled: !previous.limiterEnabled }
 
 		commitSettings(() => next)
 
 		void runEqualizerAction(
 			() => Orpheus.setEqualizerLimiterEnabled(next.limiterEnabled),
 			'切换防破音保护失败',
+			() => commitSettings(() => previous),
 		)
 	}, [commitSettings, isAndroid, readiness, runEqualizerAction])
 

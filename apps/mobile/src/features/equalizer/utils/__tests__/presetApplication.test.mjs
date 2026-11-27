@@ -5,6 +5,7 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 import { buildPresetSettings } from '../presetSettings.ts'
+import { commitSettingsToRef } from '../settingsCommit.ts'
 
 const PAGE_FILE = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -135,7 +136,7 @@ test('页面守卫：删除预设按最新 activePresetId 判定', () => {
 	assert.doesNotMatch(deletePreset, /settings\.activePresetId/)
 })
 
-test('页面守卫：开关切换先同步提交设置，再调用原生', () => {
+test('页面守卫：开关切换先同步提交设置，再调用原生，失败回滚到点击前快照', () => {
 	for (const anchor of [
 		'const handleToggleEnabled = useCallback',
 		'const handleToggleLimiter = useCallback',
@@ -146,13 +147,24 @@ test('页面守卫：开关切换先同步提交设置，再调用原生', () =>
 		assert.match(block, /commitSettings\(/, `${anchor} 未同步提交设置`)
 		assert.doesNotMatch(block, /\bsettings\./, `${anchor} 仍在读闭包中的设置`)
 
+		const previousIndex = block.indexOf('const previous = settingsRef.current')
+
 		const commitIndex = block.indexOf('commitSettings(')
 
 		const nativeIndex = block.indexOf('runEqualizerAction(')
 
 		assert.ok(
-			commitIndex !== -1 && nativeIndex > commitIndex,
-			`${anchor} 必须先提交设置再调用原生`,
+			previousIndex !== -1 && previousIndex < commitIndex,
+			`${anchor} 必须在乐观提交前捕获回滚快照`,
+		)
+
+		assert.ok(nativeIndex > commitIndex, `${anchor} 必须先提交设置再调用原生`)
+
+		const rollbackIndex = block.indexOf('() => commitSettings(() => previous)')
+
+		assert.ok(
+			rollbackIndex > nativeIndex,
+			`${anchor} 必须把回滚作为 runEqualizerAction 的失败回调`,
 		)
 	}
 })
@@ -168,4 +180,35 @@ test('页面守卫：另存与覆盖预设的增益取自最新设置', () => {
 		assert.match(block, /settingsRef\.current\.preampDb/)
 		assert.doesNotMatch(block, /\bsettings\.(gainsDb|preampDb)/)
 	}
+})
+
+test('切换失败时 ref 与 state 一起回到点击前值', () => {
+	const initial = createSettings({ enabled: false, limiterEnabled: true })
+
+	const ref = { current: initial }
+
+	const states = []
+
+	const setSettings = (next) => {
+		assert.equal(ref.current, next, 'ref 必须先于 state 更新')
+
+		states.push(next)
+	}
+
+	const previous = ref.current
+
+	const next = { ...previous, enabled: true }
+
+	commitSettingsToRef(ref, setSettings, () => next)
+
+	assert.equal(ref.current, next)
+	assert.equal(states.at(-1), next)
+	assert.equal(next.enabled, true)
+
+	commitSettingsToRef(ref, setSettings, () => previous)
+
+	assert.equal(ref.current, previous)
+	assert.equal(states.at(-1), previous)
+	assert.equal(ref.current.enabled, false)
+	assert.equal(states.at(-1).enabled, false)
 })
