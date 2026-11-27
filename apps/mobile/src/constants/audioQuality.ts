@@ -306,6 +306,28 @@ export function resolveAudioQualitySwitchOutcome(
 	return actualPreference === target ? 'applied' : 'fallback'
 }
 
+export interface AudioQualityReadVersion {
+	begin: () => number
+	invalidate: () => void
+	isCurrent: (token: number) => boolean
+}
+
+export function createAudioQualityReadVersion(): AudioQualityReadVersion {
+	let version = 0
+
+	return {
+		begin: () => {
+			version += 1
+
+			return version
+		},
+		invalidate: () => {
+			version += 1
+		},
+		isCurrent: (token) => token === version,
+	}
+}
+
 export function resolveSelectedAudioQualityPreference(
 	preference: AudioQualityPreference,
 	options: readonly AudioQualityOption[],

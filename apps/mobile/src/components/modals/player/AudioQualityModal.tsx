@@ -9,6 +9,7 @@ import { Dialog } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import {
+	createAudioQualityReadVersion,
 	formatActualAudioQuality,
 	formatAudioQualityLabel,
 	getAudioQualityAccessHint,
@@ -48,6 +49,7 @@ const AudioQualityModal = () => {
 	const [qualityChecking, setQualityChecking] = useState(false)
 
 	const mountedRef = useRef(true)
+	const [readVersion] = useState(createAudioQualityReadVersion)
 
 	const {
 		pendingTarget,
@@ -61,6 +63,8 @@ const AudioQualityModal = () => {
 
 	const loadCurrentQuality = useCallback(
 		async (announce: boolean) => {
+			const readToken = readVersion.begin()
+
 			setQualityLoading(true)
 			setQualityLoadFailed(false)
 
@@ -74,7 +78,7 @@ const AudioQualityModal = () => {
 					QUALITY_CONFIRM_TIMEOUT_MS,
 				)
 
-				if (!mountedRef.current) {
+				if (!mountedRef.current || !readVersion.isCurrent(readToken)) {
 					return
 				}
 
@@ -89,15 +93,14 @@ const AudioQualityModal = () => {
 					}
 				}
 			} catch (error) {
-				if (mountedRef.current) {
-					setQualityLoadFailed(true)
+				if (!mountedRef.current || !readVersion.isCurrent(readToken)) {
+					return
 				}
 
-				if (announce) {
-					if (mountedRef.current) {
-						markUnconfirmed()
-					}
+				setQualityLoadFailed(true)
 
+				if (announce) {
+					markUnconfirmed()
 					showQualityMessage(QUALITY_MESSAGES.recheckTimeout)
 				} else {
 					toastAndLogError(
@@ -113,7 +116,7 @@ const AudioQualityModal = () => {
 				}
 			}
 		},
-		[applyReadQuality, markUnconfirmed],
+		[applyReadQuality, markUnconfirmed, readVersion],
 	)
 
 	useEffect(() => {
@@ -130,6 +133,7 @@ const AudioQualityModal = () => {
 		const subscription = Orpheus.addListener(
 			'onAudioQualityChanged',
 			(info) => {
+				readVersion.invalidate()
 				setActualQuality(info)
 				setQualityLoadFailed(false)
 				handleQualityEvent(info)
@@ -139,7 +143,7 @@ const AudioQualityModal = () => {
 		return () => {
 			subscription.remove()
 		}
-	}, [handleQualityEvent, loadCurrentQuality])
+	}, [handleQualityEvent, loadCurrentQuality, readVersion])
 
 	const actual = formatActualAudioQuality(actualQuality)
 

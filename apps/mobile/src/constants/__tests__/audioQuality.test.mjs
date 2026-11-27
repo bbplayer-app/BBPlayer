@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+	createAudioQualityReadVersion,
 	formatActualAudioQuality,
 	formatAudioQualityLabel,
 	getAudioQualityAccessHint,
@@ -455,4 +456,46 @@ test('resolveAudioQualitySwitchOutcome 对 unknown 实际格式返回 unknown', 
 			?.subtitle,
 		'正在解析音源信息',
 	)
+})
+
+test('createAudioQualityReadVersion 让被新事件顶替的旧读取结果作废', () => {
+	const readVersion = createAudioQualityReadVersion()
+	let actual = null
+
+	const startRead = () => {
+		const token = readVersion.begin()
+
+		return (info) => {
+			if (readVersion.isCurrent(token)) {
+				actual = info
+			}
+		}
+	}
+
+	const applyStaleRead = startRead()
+	const eventInfo = createQualityInfo({ actualKind: 'dolby' })
+
+	readVersion.invalidate()
+	actual = eventInfo
+
+	applyStaleRead(createQualityInfo({ actualKind: 'normal' }))
+	assert.deepEqual(actual, eventInfo)
+
+	const applyFreshRead = startRead()
+	const freshInfo = createQualityInfo({ actualKind: 'hires' })
+
+	applyFreshRead(freshInfo)
+	assert.deepEqual(actual, freshInfo)
+
+	applyStaleRead(createQualityInfo({ actualKind: 'unknown' }))
+	assert.deepEqual(actual, freshInfo)
+})
+
+test('createAudioQualityReadVersion 后发起的读取让先前读取作废', () => {
+	const readVersion = createAudioQualityReadVersion()
+	const first = readVersion.begin()
+	const second = readVersion.begin()
+
+	assert.equal(readVersion.isCurrent(first), false)
+	assert.equal(readVersion.isCurrent(second), true)
 })
