@@ -317,6 +317,7 @@ object GeneralStorage {
 
     fun getEqualizerGainsJson(): String =
         safeKv.decodeString(KEY_EQUALIZER_GAINS_JSON, DEFAULT_EQUALIZER_GAINS_JSON)
+            ?: DEFAULT_EQUALIZER_GAINS_JSON
 
     fun setEqualizerGainsJson(value: String) {
         try {
@@ -349,6 +350,7 @@ object GeneralStorage {
     /** 读取时把空串还原为 null，表示当前增益不属于任何预设 */
     fun getEqualizerActivePresetId(): String? {
         val raw = safeKv.decodeString(KEY_EQUALIZER_ACTIVE_PRESET_ID, DEFAULT_EQUALIZER_ACTIVE_PRESET_ID)
+            ?: DEFAULT_EQUALIZER_ACTIVE_PRESET_ID
         return raw.takeIf { it.isNotBlank() }
     }
 
@@ -364,6 +366,7 @@ object GeneralStorage {
         // 键不存在是首次使用，返回明确的空列表；键存在但读不到值才返回空串（视为存储不可用）
         if (!safeKv.containsKey(KEY_CUSTOM_EQUALIZER_PRESETS_JSON)) return "[]"
         return safeKv.decodeString(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON)
+            ?: DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON
     }
 
     fun setCustomEqualizerPresetsJson(value: String) {
