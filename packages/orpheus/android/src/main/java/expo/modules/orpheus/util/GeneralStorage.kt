@@ -36,7 +36,8 @@ object GeneralStorage {
 
     private const val DEFAULT_EQUALIZER_GAINS_JSON = "[0,0,0,0,0,0,0,0,0,0]"
     private const val DEFAULT_EQUALIZER_ACTIVE_PRESET_ID = "flat"
-    private const val DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON = "[]"
+    /** 空串表示存储不可用；"[]" 才是明确的空列表 */
+    private const val DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON = ""
 
     private const val KEY_LOUDNESS_NORMALIZATION_ENABLED = "config_loudness_normalization_enabled"
     private const val KEY_SAVED_QUEUE = "saved_queue_json_list"
@@ -284,7 +285,7 @@ object GeneralStorage {
         restoreEqualizerConfigToHolder()
     }
 
-    fun isEqualizerEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_ENABLED, false) ?: false
+    fun isEqualizerEnabled(): Boolean = safeKv.decodeBool(KEY_EQUALIZER_ENABLED, false)
 
     fun setEqualizerEnabled(enabled: Boolean) {
         try {
@@ -294,7 +295,7 @@ object GeneralStorage {
         }
     }
 
-    fun getEqualizerPreampDb(): Float = sanitizeEqualizerGain(kv?.decodeFloat(KEY_EQUALIZER_PREAMP_DB, 0f) ?: 0f)
+    fun getEqualizerPreampDb(): Float = sanitizeEqualizerGain(safeKv.decodeFloat(KEY_EQUALIZER_PREAMP_DB, 0f))
 
     fun setEqualizerPreampDb(preampDb: Float) {
         try {
@@ -304,7 +305,7 @@ object GeneralStorage {
         }
     }
 
-    fun isEqualizerLimiterEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_LIMITER_ENABLED, true) ?: true
+    fun isEqualizerLimiterEnabled(): Boolean = safeKv.decodeBool(KEY_EQUALIZER_LIMITER_ENABLED, true)
 
     fun setEqualizerLimiterEnabled(enabled: Boolean) {
         try {
@@ -315,7 +316,7 @@ object GeneralStorage {
     }
 
     fun getEqualizerGainsJson(): String =
-        kv?.decodeString(KEY_EQUALIZER_GAINS_JSON, DEFAULT_EQUALIZER_GAINS_JSON) ?: DEFAULT_EQUALIZER_GAINS_JSON
+        safeKv.decodeString(KEY_EQUALIZER_GAINS_JSON, DEFAULT_EQUALIZER_GAINS_JSON)
 
     fun setEqualizerGainsJson(value: String) {
         try {
@@ -347,8 +348,7 @@ object GeneralStorage {
 
     /** 读取时把空串还原为 null，表示当前增益不属于任何预设 */
     fun getEqualizerActivePresetId(): String? {
-        val raw = kv?.decodeString(KEY_EQUALIZER_ACTIVE_PRESET_ID, DEFAULT_EQUALIZER_ACTIVE_PRESET_ID)
-            ?: DEFAULT_EQUALIZER_ACTIVE_PRESET_ID
+        val raw = safeKv.decodeString(KEY_EQUALIZER_ACTIVE_PRESET_ID, DEFAULT_EQUALIZER_ACTIVE_PRESET_ID)
         return raw.takeIf { it.isNotBlank() }
     }
 
@@ -360,9 +360,11 @@ object GeneralStorage {
         }
     }
 
-    fun getCustomEqualizerPresetsJson(): String =
-        kv?.decodeString(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON)
-            ?: DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON
+    fun getCustomEqualizerPresetsJson(): String {
+        // 键不存在是首次使用，返回明确的空列表；键存在但读不到值才返回空串（视为存储不可用）
+        if (!safeKv.containsKey(KEY_CUSTOM_EQUALIZER_PRESETS_JSON)) return "[]"
+        return safeKv.decodeString(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, DEFAULT_CUSTOM_EQUALIZER_PRESETS_JSON)
+    }
 
     fun setCustomEqualizerPresetsJson(value: String) {
         try {
