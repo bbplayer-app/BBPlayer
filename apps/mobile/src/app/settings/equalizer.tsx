@@ -48,6 +48,7 @@ import {
 	resolvePresetsStatus,
 	resolveSettingsStatus,
 } from '@/features/equalizer/utils/eqReadiness'
+import { buildPresetSettings } from '@/features/equalizer/utils/presetSettings'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
@@ -285,6 +286,19 @@ export default function EqualizerSettingsPage() {
 
 	const [settings, setSettings] = useState<EqualizerSettings>(INITIAL_SETTINGS)
 
+	const settingsRef = useRef<EqualizerSettings>(INITIAL_SETTINGS)
+
+	const commitSettings = useCallback(
+		(update: (previous: EqualizerSettings) => EqualizerSettings) => {
+			const next = update(settingsRef.current)
+
+			settingsRef.current = next
+
+			setSettings(next)
+		},
+		[],
+	)
+
 	const [customPresets, setCustomPresets] = useState<EqualizerPreset[]>([])
 
 	const [readiness, setReadiness] = useState<EqReadiness>(() =>
@@ -434,13 +448,13 @@ export default function EqualizerSettingsPage() {
 
 	const applySettledSettings = useCallback(
 		(next: EqualizerSettings) => {
-			setSettings(next)
+			commitSettings(() => next)
 
 			if (matchesVisualTarget(next)) return
 
 			pushVisualTarget(next.gainsDb, next.preampDb, hasHydratedRef.current)
 		},
-		[matchesVisualTarget, pushVisualTarget],
+		[commitSettings, matchesVisualTarget, pushVisualTarget],
 	)
 
 	const retryLoad = useCallback(() => {
@@ -465,7 +479,7 @@ export default function EqualizerSettingsPage() {
 			let loadedPresets: EqualizerPreset[] | null = null
 
 			if (settingsResult.status === 'fulfilled') {
-				setSettings(settingsResult.value)
+				commitSettings(() => settingsResult.value)
 
 				pushVisualTarget(
 					settingsResult.value.gainsDb,
@@ -519,7 +533,7 @@ export default function EqualizerSettingsPage() {
 		return () => {
 			cancelled = true
 		}
-	}, [isAndroid, loadAttempt, pushVisualTarget])
+	}, [commitSettings, isAndroid, loadAttempt, pushVisualTarget])
 
 	useEffect(() => {
 		if (!isAndroid) return
@@ -570,15 +584,12 @@ export default function EqualizerSettingsPage() {
 	)
 
 	const applyPreset = useCallback(
-		(preset: EqualizerPreset, currentSettings: EqualizerSettings) => {
+		(preset: EqualizerPreset) => {
 			if (!isAndroid || !canWriteSettings(readiness)) return
 
-			setSettings({
-				...currentSettings,
-				activePresetId: preset.id,
-				gainsDb: [...preset.gainsDb],
-				preampDb: preset.preampDb,
-			})
+			const next = buildPresetSettings(preset, settingsRef.current)
+
+			commitSettings(() => next)
 
 			pushVisualTarget(preset.gainsDb, preset.preampDb, true)
 
@@ -587,16 +598,22 @@ export default function EqualizerSettingsPage() {
 			void runEqualizerAction(
 				() =>
 					Orpheus.setEqualizerSettings(
-						currentSettings.enabled,
-						preset.preampDb,
-						currentSettings.limiterEnabled,
-						preset.gainsDb,
-						preset.id,
+						next.enabled,
+						next.preampDb,
+						next.limiterEnabled,
+						next.gainsDb,
+						next.activePresetId,
 					),
 				'应用均衡器预设失败',
 			)
 		},
-		[isAndroid, pushVisualTarget, readiness, runEqualizerAction],
+		[
+			commitSettings,
+			isAndroid,
+			pushVisualTarget,
+			readiness,
+			runEqualizerAction,
+		],
 	)
 
 	const handleToggleEnabled = useCallback(() => {
@@ -652,9 +669,9 @@ export default function EqualizerSettingsPage() {
 
 	const handleSelectPreset = useCallback(
 		(preset: EqualizerPreset) => {
-			applyPreset(preset, settings)
+			applyPreset(preset)
 		},
-		[applyPreset, settings],
+		[applyPreset],
 	)
 
 	const flushBandGain = useCallback(() => {
@@ -697,7 +714,7 @@ export default function EqualizerSettingsPage() {
 		(bandIndex: number, gainDb: number) => {
 			lastVisualTargetRef.current.gainsDb[bandIndex] = gainDb
 
-			setSettings((previous) =>
+			commitSettings((previous) =>
 				previous.activePresetId === null
 					? previous
 					: { ...previous, activePresetId: null },
@@ -723,7 +740,7 @@ export default function EqualizerSettingsPage() {
 				flushBandGain()
 			}, NATIVE_SEND_THROTTLE_MS - elapsed)
 		},
-		[flushBandGain, isAndroid],
+		[commitSettings, flushBandGain, isAndroid],
 	)
 
 	const handleBandCommit = useCallback(
@@ -740,7 +757,7 @@ export default function EqualizerSettingsPage() {
 
 			lastVisualTargetRef.current.gainsDb[bandIndex] = gainDb
 
-			setSettings((previous) => {
+			commitSettings((previous) => {
 				const gainsDb = [...previous.gainsDb]
 
 				gainsDb[bandIndex] = gainDb
@@ -755,7 +772,7 @@ export default function EqualizerSettingsPage() {
 				'保存均衡器设置失败',
 			)
 		},
-		[isAndroid, runEqualizerAction],
+		[commitSettings, isAndroid, runEqualizerAction],
 	)
 
 	const flushPreamp = useCallback(() => {
@@ -839,7 +856,7 @@ export default function EqualizerSettingsPage() {
 
 			preampSharedValue.set(preampDb)
 
-			setSettings((previous) => ({ ...previous, preampDb }))
+			commitSettings((previous) => ({ ...previous, preampDb }))
 
 			if (!isAndroid) return
 
@@ -848,7 +865,7 @@ export default function EqualizerSettingsPage() {
 				'保存前置增益失败',
 			)
 		},
-		[isAndroid, preampSharedValue, runEqualizerAction],
+		[commitSettings, isAndroid, preampSharedValue, runEqualizerAction],
 	)
 
 	useEffect(
@@ -892,7 +909,7 @@ export default function EqualizerSettingsPage() {
 
 			toast.success(`已保存「${preset.name}」`)
 
-			applyPreset(preset, settings)
+			applyPreset(preset)
 		},
 		[applyPreset, customPresets, persistCustomPresets, readiness, settings],
 	)
@@ -919,7 +936,7 @@ export default function EqualizerSettingsPage() {
 
 				toast.success(`已覆盖「${preset.name}」`)
 
-				applyPreset(preset, settings)
+				applyPreset(preset)
 			} catch (error) {
 				toastAndLogError('保存自定义预设失败', error, 'Equalizer')
 			}
@@ -960,32 +977,34 @@ export default function EqualizerSettingsPage() {
 				setEditingCustomPresetId(null)
 			}
 
-			if (settings.activePresetId !== id) return
+			if (settingsRef.current.activePresetId !== id) return
 
-			setSettings((previous) => ({ ...previous, activePresetId: null }))
+			commitSettings((previous) => ({ ...previous, activePresetId: null }))
 
 			if (!isAndroid || !canWriteSettings(readiness)) return
+
+			const current = settingsRef.current
 
 			void runEqualizerAction(
 				() =>
 					Orpheus.setEqualizerSettings(
-						settings.enabled,
-						settings.preampDb,
-						settings.limiterEnabled,
-						settings.gainsDb,
+						current.enabled,
+						current.preampDb,
+						current.limiterEnabled,
+						current.gainsDb,
 						null,
 					),
 				'更新当前预设失败',
 			)
 		},
 		[
+			commitSettings,
 			customPresets,
 			editingCustomPresetId,
 			isAndroid,
 			persistCustomPresets,
 			readiness,
 			runEqualizerAction,
-			settings,
 		],
 	)
 
