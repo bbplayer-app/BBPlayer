@@ -1414,7 +1414,10 @@ class ExpoOrpheusModule : Module() {
         Function("importData") { data: Map<String, Any> ->
             val playerQueue = (data["playerQueue"] as? Map<String, Any>) ?: emptyMap()
             val loudness = (data["loudness"] as? Map<String, Any>) ?: emptyMap()
-            synchronized(equalizerLock) { GeneralStorage.importConfig(playerQueue) }
+            synchronized(equalizerLock) {
+                GeneralStorage.importConfig(playerQueue)
+                runCatching { sendEvent("onEqualizerChanged", buildEqualizerSettingsMap()) }
+            }
             loudness.forEach { (key, value) ->
                 LoudnessStorage.setLoudnessData(key, (value as Number).toDouble())
             }
