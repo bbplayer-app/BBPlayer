@@ -35,6 +35,7 @@ import {
 	serializeCustomPresets,
 	upsertCustomPreset,
 } from '@/features/equalizer/utils/customPresets'
+import { persistCustomPresetsWithRollback } from '@/features/equalizer/utils/customPresetsWrite'
 import {
 	canWriteCustomPresets,
 	canWriteSettings,
@@ -525,19 +526,20 @@ export default function EqualizerSettingsPage() {
 
 	const persistCustomPresets = useCallback(
 		async (nextPresets: EqualizerPreset[]) => {
-			setCustomPresets(nextPresets)
+			await persistCustomPresetsWithRollback(
+				customPresets,
+				nextPresets,
+				setCustomPresets,
+				async (presets) => {
+					if (!isAndroid) return
 
-			if (!isAndroid) return
-
-			try {
-				await Orpheus.setCustomEqualizerPresetsJson(
-					serializeCustomPresets(nextPresets),
-				)
-			} catch (error) {
-				toastAndLogError('保存自定义预设失败', error, 'Equalizer')
-			}
+					await Orpheus.setCustomEqualizerPresetsJson(
+						serializeCustomPresets(presets),
+					)
+				},
+			)
 		},
-		[isAndroid],
+		[customPresets, isAndroid],
 	)
 
 	const applyPreset = useCallback(
@@ -838,7 +840,7 @@ export default function EqualizerSettingsPage() {
 	}, [])
 
 	const handleSavePresetAs = useCallback(
-		(name: string) => {
+		async (name: string) => {
 			if (!canWriteCustomPresets(readiness)) {
 				throw new Error('自定义预设尚未读取完成，暂时无法保存')
 			}
@@ -855,7 +857,7 @@ export default function EqualizerSettingsPage() {
 				return
 			}
 
-			void persistCustomPresets(presets)
+			await persistCustomPresets(presets)
 
 			toast.success(`已保存「${preset.name}」`)
 
@@ -865,7 +867,7 @@ export default function EqualizerSettingsPage() {
 	)
 
 	const handleOverwritePreset = useCallback(
-		(id: string) => {
+		async (id: string) => {
 			if (!canWriteCustomPresets(readiness)) return
 
 			const target = customPresets.find((preset) => preset.id === id)
@@ -881,17 +883,21 @@ export default function EqualizerSettingsPage() {
 
 			if (!preset) return
 
-			void persistCustomPresets(presets)
+			try {
+				await persistCustomPresets(presets)
 
-			toast.success(`已覆盖「${preset.name}」`)
+				toast.success(`已覆盖「${preset.name}」`)
 
-			applyPreset(preset, settings)
+				applyPreset(preset, settings)
+			} catch (error) {
+				toastAndLogError('保存自定义预设失败', error, 'Equalizer')
+			}
 		},
 		[applyPreset, customPresets, persistCustomPresets, readiness, settings],
 	)
 
 	const handleRenamePreset = useCallback(
-		(id: string, name: string) => {
+		async (id: string, name: string) => {
 			if (!canWriteCustomPresets(readiness)) {
 				throw new Error('自定义预设尚未读取完成，暂时无法重命名')
 			}
@@ -902,16 +908,22 @@ export default function EqualizerSettingsPage() {
 				return
 			}
 
-			void persistCustomPresets(renameCustomPreset(customPresets, id, name))
+			await persistCustomPresets(renameCustomPreset(customPresets, id, name))
 		},
 		[customPresets, persistCustomPresets, readiness],
 	)
 
 	const handleDeletePreset = useCallback(
-		(id: string) => {
+		async (id: string) => {
 			if (!canWriteCustomPresets(readiness)) return
 
-			void persistCustomPresets(deleteCustomPreset(customPresets, id))
+			try {
+				await persistCustomPresets(deleteCustomPreset(customPresets, id))
+			} catch (error) {
+				toastAndLogError('删除自定义预设失败', error, 'Equalizer')
+
+				return
+			}
 
 			if (settings.activePresetId !== id) return
 
