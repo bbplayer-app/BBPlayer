@@ -33,6 +33,20 @@ export function canWriteCustomPresets(readiness: EqReadiness): boolean {
 	return readiness.presets === 'ready'
 }
 
+export function resolveSettingsStatus(
+	result: PromiseSettledResult<unknown>,
+): EqDataStatus {
+	return result.status === 'fulfilled' ? 'ready' : 'error'
+}
+
+export function resolvePresetsStatus(
+	result: PromiseSettledResult<string>,
+): EqDataStatus {
+	if (result.status === 'rejected' || result.value === '') return 'error'
+
+	return 'ready'
+}
+
 export function resolveEditingCustomPresetId(
 	activePresetId: string | null,
 	customPresets: readonly EqualizerPreset[],

@@ -45,6 +45,8 @@ import {
 	isPresetsFailed,
 	isSettingsFailed,
 	resolveEditingCustomPresetId,
+	resolvePresetsStatus,
+	resolveSettingsStatus,
 } from '@/features/equalizer/utils/eqReadiness'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -478,21 +480,26 @@ export default function EqualizerSettingsPage() {
 				)
 			}
 
-			if (customPresetsResult.status === 'fulfilled') {
+			if (
+				customPresetsResult.status === 'fulfilled' &&
+				customPresetsResult.value !== ''
+			) {
 				loadedPresets = parseCustomPresetsJson(customPresetsResult.value)
 
 				setCustomPresets(loadedPresets)
 			} else {
 				toastAndLogError(
 					'读取自定义预设失败',
-					customPresetsResult.reason,
+					customPresetsResult.status === 'rejected'
+						? customPresetsResult.reason
+						: new Error('自定义预设存储不可用'),
 					'Equalizer',
 				)
 			}
 
 			setReadiness({
-				settings: settingsResult.status === 'fulfilled' ? 'ready' : 'error',
-				presets: customPresetsResult.status === 'fulfilled' ? 'ready' : 'error',
+				settings: resolveSettingsStatus(settingsResult),
+				presets: resolvePresetsStatus(customPresetsResult),
 			})
 
 			if (settingsResult.status === 'fulfilled' && loadedPresets !== null) {

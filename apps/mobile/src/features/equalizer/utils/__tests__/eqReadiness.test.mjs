@@ -9,6 +9,8 @@ import {
 	isPresetsFailed,
 	isSettingsFailed,
 	resolveEditingCustomPresetId,
+	resolvePresetsStatus,
+	resolveSettingsStatus,
 } from '../eqReadiness.ts'
 
 test('createEqReadiness 在不支持的平台直接视为就绪', () => {
@@ -70,4 +72,53 @@ test('resolveEditingCustomPresetId 只认自定义预设', () => {
 	assert.equal(resolveEditingCustomPresetId('custom-1', presets), 'custom-1')
 	assert.equal(resolveEditingCustomPresetId('flat', presets), null)
 	assert.equal(resolveEditingCustomPresetId(null, presets), null)
+})
+
+test('自定义预设返回空串时视为读取失败并禁止预设写入', () => {
+	const readiness = {
+		settings: resolveSettingsStatus({ status: 'fulfilled', value: {} }),
+		presets: resolvePresetsStatus({ status: 'fulfilled', value: '' }),
+	}
+
+	assert.equal(readiness.presets, 'error')
+	assert.equal(isPresetsFailed(readiness), true)
+	assert.equal(canWriteCustomPresets(readiness), false)
+	assert.equal(canWriteSettings(readiness), true)
+})
+
+test('自定义预设读取被拒时视为失败并禁止预设写入', () => {
+	const readiness = {
+		settings: resolveSettingsStatus({ status: 'fulfilled', value: {} }),
+		presets: resolvePresetsStatus({
+			status: 'rejected',
+			reason: new Error('io'),
+		}),
+	}
+
+	assert.equal(readiness.presets, 'error')
+	assert.equal(canWriteCustomPresets(readiness), false)
+})
+
+test('明确的空列表才是就绪状态', () => {
+	const readiness = {
+		settings: resolveSettingsStatus({ status: 'fulfilled', value: {} }),
+		presets: resolvePresetsStatus({ status: 'fulfilled', value: '[]' }),
+	}
+
+	assert.equal(readiness.presets, 'ready')
+	assert.equal(canWriteCustomPresets(readiness), true)
+})
+
+test('均衡器设置读取被拒时禁止设置写入', () => {
+	const readiness = {
+		settings: resolveSettingsStatus({
+			status: 'rejected',
+			reason: new Error('io'),
+		}),
+		presets: resolvePresetsStatus({ status: 'fulfilled', value: '[]' }),
+	}
+
+	assert.equal(readiness.settings, 'error')
+	assert.equal(isSettingsFailed(readiness), true)
+	assert.equal(canWriteSettings(readiness), false)
 })
