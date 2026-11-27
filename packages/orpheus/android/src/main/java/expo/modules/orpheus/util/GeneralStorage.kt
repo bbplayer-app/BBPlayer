@@ -367,10 +367,16 @@ object GeneralStorage {
     }
 
     fun setCustomEqualizerPresetsJson(value: String) {
-        try {
+        val saved = try {
             safeKv.encode(KEY_CUSTOM_EQUALIZER_PRESETS_JSON, value)
         } catch (e: Exception) {
             NativeLog.error(LogTags.STORAGE, "storage.equalizer.presets.set_failed", error = e)
+            throw e
+        }
+        if (!saved) {
+            val error = IllegalStateException("storage.equalizer.presets.set_failed: encode returned false")
+            NativeLog.error(LogTags.STORAGE, "storage.equalizer.presets.set_failed", error = error)
+            throw error
         }
     }
 

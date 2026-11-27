@@ -266,7 +266,9 @@ class ExpoOrpheusModule : Module() {
             GeneralStorage.setEqualizerLimiterEnabled(next.limiterEnabled)
             GeneralStorage.setEqualizerGains(next.gainsDb)
             GeneralStorage.setEqualizerActivePresetId(next.activePresetId)
-            buildEqualizerSettingsMap().also { sendEvent("onEqualizerChanged", it) }
+            buildEqualizerSettingsMap().also { settings ->
+                runCatching { sendEvent("onEqualizerChanged", settings) }
+            }
         }
 
     @OptIn(UnstableApi::class)
@@ -1381,8 +1383,11 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("setCustomEqualizerPresetsJson") { presetsJson: String ->
-            GeneralStorage.setCustomEqualizerPresetsJson(presetsJson)
-            sendEvent("onEqualizerChanged", buildEqualizerSettingsMap())
+            synchronized(equalizerLock) {
+                GeneralStorage.setCustomEqualizerPresetsJson(presetsJson)
+                runCatching { sendEvent("onEqualizerChanged", buildEqualizerSettingsMap()) }
+                Unit
+            }
         }
 
         Function("updateSpectrumData") { destination: Float32Array ->
