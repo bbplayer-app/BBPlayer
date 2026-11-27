@@ -569,6 +569,8 @@ export default function EqualizerSettingsPage() {
 
 	const applyPreset = useCallback(
 		(preset: EqualizerPreset, currentSettings: EqualizerSettings) => {
+			if (!isAndroid || !canWriteSettings(readiness)) return
+
 			setSettings({
 				...currentSettings,
 				activePresetId: preset.id,
@@ -579,8 +581,6 @@ export default function EqualizerSettingsPage() {
 			pushVisualTarget(preset.gainsDb, preset.preampDb, true)
 
 			setEditingCustomPresetId(preset.isBuiltin ? null : preset.id)
-
-			if (!isAndroid || !canWriteSettings(readiness)) return
 
 			void runEqualizerAction(
 				() =>
