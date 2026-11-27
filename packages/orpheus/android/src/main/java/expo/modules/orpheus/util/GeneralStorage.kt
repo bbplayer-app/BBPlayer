@@ -18,6 +18,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 object GeneralStorage {
+    /** 均衡器配置读写锁：模块的写入与冷启动恢复共用，避免并发时互相覆盖 */
+    val equalizerConfigLock = Any()
+
     private var kv: MMKV? = null
     private val json = Json { ignoreUnknownKeys = true }
     private var lastSavedQueueSnapshot: List<String>? = null
@@ -371,12 +374,14 @@ object GeneralStorage {
 
     /** 冷启动时一次性把持久化状态写进 DSP 共用配置，避免逐项更新时反复重算滤波系数 */
     fun restoreEqualizerConfigToHolder() {
-        EqualizerConfigHolder.update(
-            enabled = isEqualizerEnabled(),
-            preampDb = getEqualizerPreampDb(),
-            limiterEnabled = isEqualizerLimiterEnabled(),
-            gainsDb = getEqualizerGains(),
-        )
+        synchronized(equalizerConfigLock) {
+            EqualizerConfigHolder.update(
+                enabled = isEqualizerEnabled(),
+                preampDb = getEqualizerPreampDb(),
+                limiterEnabled = isEqualizerLimiterEnabled(),
+                gainsDb = getEqualizerGains(),
+            )
+        }
     }
 
     private fun sanitizeEqualizerGain(value: Float): Float =

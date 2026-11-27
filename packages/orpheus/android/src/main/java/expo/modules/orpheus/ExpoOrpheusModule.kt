@@ -96,7 +96,7 @@ class ExpoOrpheusModule : Module() {
     private var tempBuffer: FloatArray? = null
 
     /** EQ 的 holder 与 MMKV 是两份状态，读改写必须在同一把锁内完成 */
-    private val equalizerLock = Any()
+    private val equalizerLock = GeneralStorage.equalizerConfigLock
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
