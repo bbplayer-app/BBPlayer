@@ -285,7 +285,7 @@ object GeneralStorage {
         restoreEqualizerConfigToHolder()
     }
 
-    fun isEqualizerEnabled(): Boolean = safeKv.decodeBool(KEY_EQUALIZER_ENABLED, false)
+    fun isEqualizerEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_ENABLED, false) ?: false
 
     fun setEqualizerEnabled(enabled: Boolean) {
         try {
@@ -295,7 +295,7 @@ object GeneralStorage {
         }
     }
 
-    fun getEqualizerPreampDb(): Float = sanitizeEqualizerGain(safeKv.decodeFloat(KEY_EQUALIZER_PREAMP_DB, 0f))
+    fun getEqualizerPreampDb(): Float = sanitizeEqualizerGain(kv?.decodeFloat(KEY_EQUALIZER_PREAMP_DB, 0f) ?: 0f)
 
     fun setEqualizerPreampDb(preampDb: Float) {
         try {
@@ -305,7 +305,7 @@ object GeneralStorage {
         }
     }
 
-    fun isEqualizerLimiterEnabled(): Boolean = safeKv.decodeBool(KEY_EQUALIZER_LIMITER_ENABLED, true)
+    fun isEqualizerLimiterEnabled(): Boolean = kv?.decodeBool(KEY_EQUALIZER_LIMITER_ENABLED, true) ?: true
 
     fun setEqualizerLimiterEnabled(enabled: Boolean) {
         try {
@@ -316,7 +316,7 @@ object GeneralStorage {
     }
 
     fun getEqualizerGainsJson(): String =
-        safeKv.decodeString(KEY_EQUALIZER_GAINS_JSON, DEFAULT_EQUALIZER_GAINS_JSON)
+        kv?.decodeString(KEY_EQUALIZER_GAINS_JSON, DEFAULT_EQUALIZER_GAINS_JSON)
             ?: DEFAULT_EQUALIZER_GAINS_JSON
 
     fun setEqualizerGainsJson(value: String) {
