@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
 	formatActualAudioQuality,
 	formatAudioQualityLabel,
-	resolveAudioQualitySwitchOutcome,
+	resolveAudioQualityEventOutcome,
 	shouldSkipAudioQualitySwitch,
 } from '@/constants/audioQuality'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -141,13 +141,9 @@ export function useAudioQualitySwitch({
 				return
 			}
 
-			const outcome = resolveAudioQualitySwitchOutcome(info, pending)
+			const outcome = resolveAudioQualityEventOutcome(info, pending)
 
-			if (outcome === 'unknown') {
-				setQualityUnconfirmed(true)
-				clearPendingSwitch()
-				showQualityMessage(QUALITY_MESSAGES.unknownActual)
-
+			if (outcome === 'awaiting') {
 				return
 			}
 

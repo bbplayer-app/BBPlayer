@@ -346,6 +346,17 @@ export function shouldSkipAudioQualitySwitch(params: {
 	return !isDegraded
 }
 
+export type AudioQualityEventOutcome = 'awaiting' | 'applied' | 'fallback'
+
+export function resolveAudioQualityEventOutcome(
+	info: AudioQualityInfo,
+	pending: AudioQualityPreference,
+): AudioQualityEventOutcome {
+	const outcome = resolveAudioQualitySwitchOutcome(info, pending)
+
+	return outcome === 'unknown' ? 'awaiting' : outcome
+}
+
 export function resolveSelectedAudioQualityPreference(
 	preference: AudioQualityPreference,
 	options: readonly AudioQualityOption[],

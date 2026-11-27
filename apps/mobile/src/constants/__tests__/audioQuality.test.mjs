@@ -9,6 +9,7 @@ import {
 	getAudioQualityOption,
 	getVisibleAudioQualityOptions,
 	resolveActualAudioQualityPreference,
+	resolveAudioQualityEventOutcome,
 	resolveAudioQualitySwitchOutcome,
 	resolveBilibiliAccountTier,
 	resolveSelectedAudioQualityPreference,
@@ -561,5 +562,48 @@ test('shouldSkipAudioQualitySwitch 降级中即使实际档位等于目标也要
 			}),
 		}),
 		false,
+	)
+})
+
+test('resolveAudioQualityEventOutcome 结果未确认时返回 awaiting，保留 pending', () => {
+	assert.equal(
+		resolveAudioQualityEventOutcome(
+			createQualityInfo({
+				preferredQuality: 'high',
+				actualKind: 'unknown',
+				actualStreamId: null,
+			}),
+			'high',
+		),
+		'awaiting',
+	)
+	assert.equal(
+		resolveAudioQualityEventOutcome(
+			createQualityInfo({
+				preferredQuality: 'high',
+				isFromDownloadCache: true,
+			}),
+			'high',
+		),
+		'awaiting',
+	)
+	assert.equal(
+		resolveAudioQualityEventOutcome(
+			createQualityInfo({ preferredQuality: 'high', actualStreamId: 30280 }),
+			'high',
+		),
+		'applied',
+	)
+	assert.equal(
+		resolveAudioQualityEventOutcome(
+			createQualityInfo({
+				preferredQuality: 'hires',
+				actualKind: 'normal',
+				actualStreamId: 30280,
+				isFallback: true,
+			}),
+			'hires',
+		),
+		'fallback',
 	)
 })
