@@ -274,7 +274,12 @@ object GeneralStorage {
         (data[KEY_EQUALIZER_ACTIVE_PRESET_ID] as? String)?.let { presetId ->
             setEqualizerActivePresetId(presetId.ifEmpty { null })
         }
-        (data[KEY_CUSTOM_EQUALIZER_PRESETS_JSON] as? String)?.let { setCustomEqualizerPresetsJson(it) }
+        (data[KEY_CUSTOM_EQUALIZER_PRESETS_JSON] as? String)?.let { value ->
+            runCatching { setCustomEqualizerPresetsJson(value) }
+                .onFailure {
+                    NativeLog.error(LogTags.STORAGE, "storage.equalizer.presets.import_failed", error = it)
+                }
+        }
         (data[KEY_STATUS_BAR_LYRICS_ENABLED] as? Boolean)?.let { setStatusBarLyricsEnabled(it) }
         (data[KEY_STATUS_BAR_LYRICS_PROVIDER] as? String)?.let { setStatusBarLyricsProvider(it) }
         (data[KEY_CAR_LYRICS_ENABLED] as? Boolean)?.let { setCarLyricsEnabled(it) }
