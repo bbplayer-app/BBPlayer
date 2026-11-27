@@ -1404,7 +1404,7 @@ class ExpoOrpheusModule : Module() {
         }
 
         Function("exportData") {
-            val playerQueue = GeneralStorage.exportConfig()
+            val playerQueue = synchronized(equalizerLock) { GeneralStorage.exportConfig() }
             val loudness = LoudnessStorage.exportAll()
             val loudnessTruePeak = LoudnessStorage.exportTruePeaks()
             mapOf("playerQueue" to playerQueue, "loudness" to loudness, "loudnessTruePeak" to loudnessTruePeak)
