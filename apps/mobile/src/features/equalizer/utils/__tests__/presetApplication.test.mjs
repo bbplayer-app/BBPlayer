@@ -134,3 +134,38 @@ test('页面守卫：删除预设按最新 activePresetId 判定', () => {
 	assert.match(deletePreset, /settingsRef\.current\.activePresetId !== id/)
 	assert.doesNotMatch(deletePreset, /settings\.activePresetId/)
 })
+
+test('页面守卫：开关切换先同步提交设置，再调用原生', () => {
+	for (const anchor of [
+		'const handleToggleEnabled = useCallback',
+		'const handleToggleLimiter = useCallback',
+	]) {
+		const block = extractCallbackCall(PAGE_SOURCE, anchor)
+
+		assert.match(block, /settingsRef\.current/, `${anchor} 未读取最新设置`)
+		assert.match(block, /commitSettings\(/, `${anchor} 未同步提交设置`)
+		assert.doesNotMatch(block, /\bsettings\./, `${anchor} 仍在读闭包中的设置`)
+
+		const commitIndex = block.indexOf('commitSettings(')
+
+		const nativeIndex = block.indexOf('runEqualizerAction(')
+
+		assert.ok(
+			commitIndex !== -1 && nativeIndex > commitIndex,
+			`${anchor} 必须先提交设置再调用原生`,
+		)
+	}
+})
+
+test('页面守卫：另存与覆盖预设的增益取自最新设置', () => {
+	for (const anchor of [
+		'const handleSavePresetAs = useCallback',
+		'const handleOverwritePreset = useCallback',
+	]) {
+		const block = extractCallbackCall(PAGE_SOURCE, anchor)
+
+		assert.match(block, /settingsRef\.current\.gainsDb/)
+		assert.match(block, /settingsRef\.current\.preampDb/)
+		assert.doesNotMatch(block, /\bsettings\.(gainsDb|preampDb)/)
+	}
+})

@@ -619,27 +619,41 @@ export default function EqualizerSettingsPage() {
 	const handleToggleEnabled = useCallback(() => {
 		if (!isAndroid || !canWriteSettings(readiness)) return
 
+		const next = {
+			...settingsRef.current,
+			enabled: !settingsRef.current.enabled,
+		}
+
+		commitSettings(() => next)
+
 		void runEqualizerAction(
 			() =>
 				Orpheus.setEqualizerSettings(
-					!settings.enabled,
-					settings.preampDb,
-					settings.limiterEnabled,
-					settings.gainsDb,
-					settings.activePresetId,
+					next.enabled,
+					next.preampDb,
+					next.limiterEnabled,
+					next.gainsDb,
+					next.activePresetId,
 				),
 			'切换均衡器失败',
 		)
-	}, [isAndroid, readiness, runEqualizerAction, settings])
+	}, [commitSettings, isAndroid, readiness, runEqualizerAction])
 
 	const handleToggleLimiter = useCallback(() => {
 		if (!isAndroid || !canWriteSettings(readiness)) return
 
+		const next = {
+			...settingsRef.current,
+			limiterEnabled: !settingsRef.current.limiterEnabled,
+		}
+
+		commitSettings(() => next)
+
 		void runEqualizerAction(
-			() => Orpheus.setEqualizerLimiterEnabled(!settings.limiterEnabled),
+			() => Orpheus.setEqualizerLimiterEnabled(next.limiterEnabled),
 			'切换防破音保护失败',
 		)
-	}, [isAndroid, readiness, runEqualizerAction, settings.limiterEnabled])
+	}, [commitSettings, isAndroid, readiness, runEqualizerAction])
 
 	const handleReset = useCallback(() => {
 		if (!isAndroid) return
@@ -895,8 +909,8 @@ export default function EqualizerSettingsPage() {
 
 			const { presets, preset } = upsertCustomPreset(customPresets, {
 				name,
-				gainsDb: settings.gainsDb,
-				preampDb: settings.preampDb,
+				gainsDb: settingsRef.current.gainsDb,
+				preampDb: settingsRef.current.preampDb,
 			})
 
 			if (!preset) {
@@ -911,7 +925,7 @@ export default function EqualizerSettingsPage() {
 
 			applyPreset(preset)
 		},
-		[applyPreset, customPresets, persistCustomPresets, readiness, settings],
+		[applyPreset, customPresets, persistCustomPresets, readiness],
 	)
 
 	const handleOverwritePreset = useCallback(
@@ -925,8 +939,8 @@ export default function EqualizerSettingsPage() {
 			const { presets, preset } = upsertCustomPreset(customPresets, {
 				id,
 				name: target.name,
-				gainsDb: settings.gainsDb,
-				preampDb: settings.preampDb,
+				gainsDb: settingsRef.current.gainsDb,
+				preampDb: settingsRef.current.preampDb,
 			})
 
 			if (!preset) return
@@ -941,7 +955,7 @@ export default function EqualizerSettingsPage() {
 				toastAndLogError('保存自定义预设失败', error, 'Equalizer')
 			}
 		},
-		[applyPreset, customPresets, persistCustomPresets, readiness, settings],
+		[applyPreset, customPresets, persistCustomPresets, readiness],
 	)
 
 	const handleRenamePreset = useCallback(
