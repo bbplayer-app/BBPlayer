@@ -8,6 +8,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export interface EqPresetBarProps {
 	activePresetId: string | null
+	editingCustomPresetId: string | null
 	customPresets: readonly EqualizerPreset[]
 	enabled: boolean
 	presetsReady: boolean
@@ -20,6 +21,7 @@ export interface EqPresetBarProps {
 
 export default function EqPresetBar({
 	activePresetId,
+	editingCustomPresetId,
 	customPresets,
 	enabled,
 	presetsReady,
@@ -32,8 +34,10 @@ export default function EqPresetBar({
 	const { colors } = useTheme()
 
 	const activeCustomPreset = useMemo(
-		() => customPresets.find((preset) => preset.id === activePresetId) ?? null,
-		[activePresetId, customPresets],
+		() =>
+			customPresets.find((preset) => preset.id === editingCustomPresetId) ??
+			null,
+		[customPresets, editingCustomPresetId],
 	)
 
 	const openSaveDialog = useCallback(() => {

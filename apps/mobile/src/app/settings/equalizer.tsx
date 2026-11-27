@@ -44,6 +44,7 @@ import {
 	isEqDataLoading,
 	isPresetsFailed,
 	isSettingsFailed,
+	resolveEditingCustomPresetId,
 } from '@/features/equalizer/utils/eqReadiness'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -288,6 +289,10 @@ export default function EqualizerSettingsPage() {
 		createEqReadiness(isAndroid),
 	)
 
+	const [editingCustomPresetId, setEditingCustomPresetId] = useState<
+		string | null
+	>(null)
+
 	const [loadAttempt, setLoadAttempt] = useState(0)
 
 	const [scrollEnabled, setScrollEnabled] = useState(true)
@@ -455,6 +460,8 @@ export default function EqualizerSettingsPage() {
 
 			if (cancelled) return
 
+			let loadedPresets: EqualizerPreset[] | null = null
+
 			if (settingsResult.status === 'fulfilled') {
 				setSettings(settingsResult.value)
 
@@ -472,7 +479,9 @@ export default function EqualizerSettingsPage() {
 			}
 
 			if (customPresetsResult.status === 'fulfilled') {
-				setCustomPresets(parseCustomPresetsJson(customPresetsResult.value))
+				loadedPresets = parseCustomPresetsJson(customPresetsResult.value)
+
+				setCustomPresets(loadedPresets)
 			} else {
 				toastAndLogError(
 					'读取自定义预设失败',
@@ -485,6 +494,15 @@ export default function EqualizerSettingsPage() {
 				settings: settingsResult.status === 'fulfilled' ? 'ready' : 'error',
 				presets: customPresetsResult.status === 'fulfilled' ? 'ready' : 'error',
 			})
+
+			if (settingsResult.status === 'fulfilled' && loadedPresets !== null) {
+				setEditingCustomPresetId(
+					resolveEditingCustomPresetId(
+						settingsResult.value.activePresetId,
+						loadedPresets,
+					),
+				)
+			}
 
 			hasHydratedRef.current = true
 		})()
@@ -553,6 +571,8 @@ export default function EqualizerSettingsPage() {
 
 			pushVisualTarget(preset.gainsDb, preset.preampDb, true)
 
+			setEditingCustomPresetId(preset.isBuiltin ? null : preset.id)
+
 			if (!isAndroid || !canWriteSettings(readiness)) return
 
 			void runEqualizerAction(
@@ -609,6 +629,8 @@ export default function EqualizerSettingsPage() {
 				const next = await Orpheus.resetEqualizer()
 
 				applySettledSettings(next)
+
+				setEditingCustomPresetId(null)
 
 				toast.success('已恢复平坦响应')
 			} catch (error) {
@@ -925,6 +947,10 @@ export default function EqualizerSettingsPage() {
 				return
 			}
 
+			if (editingCustomPresetId === id) {
+				setEditingCustomPresetId(null)
+			}
+
 			if (settings.activePresetId !== id) return
 
 			setSettings((previous) => ({ ...previous, activePresetId: null }))
@@ -945,6 +971,7 @@ export default function EqualizerSettingsPage() {
 		},
 		[
 			customPresets,
+			editingCustomPresetId,
 			isAndroid,
 			persistCustomPresets,
 			readiness,
@@ -1070,6 +1097,7 @@ export default function EqualizerSettingsPage() {
 					) : null}
 					<EqPresetBar
 						activePresetId={settings.activePresetId}
+						editingCustomPresetId={editingCustomPresetId}
 						customPresets={customPresets}
 						enabled={settings.enabled}
 						presetsReady={canWriteCustomPresets(readiness)}
