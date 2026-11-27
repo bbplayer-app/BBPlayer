@@ -248,11 +248,11 @@ class ExpoOrpheusModule : Module() {
     )
 
     /**
-     * 以当前状态为基准写入一次 EQ 变更：读当前状态、更新 holder、落盘与生成快照都在锁内，
-     * 事件放到锁外，避免持锁时回到主线程
+     * 以当前状态为基准写入一次 EQ 变更：读当前状态、更新 holder、落盘、生成快照与发送事件都在锁内，
+     * 保证并发提交时事件顺序与状态提交顺序一致
      */
-    private fun applyEqualizerSettings(update: (EqualizerState) -> EqualizerUpdate): Map<String, Any?> {
-        val settings = synchronized(equalizerLock) {
+    private fun applyEqualizerSettings(update: (EqualizerState) -> EqualizerUpdate): Map<String, Any?> =
+        synchronized(equalizerLock) {
             val state = EqualizerConfigHolder.get()
             val next = update(state)
             EqualizerConfigHolder.update(
@@ -266,11 +266,8 @@ class ExpoOrpheusModule : Module() {
             GeneralStorage.setEqualizerLimiterEnabled(next.limiterEnabled)
             GeneralStorage.setEqualizerGains(next.gainsDb)
             GeneralStorage.setEqualizerActivePresetId(next.activePresetId)
-            buildEqualizerSettingsMap()
+            buildEqualizerSettingsMap().also { sendEvent("onEqualizerChanged", it) }
         }
-        sendEvent("onEqualizerChanged", settings)
-        return settings
-    }
 
     @OptIn(UnstableApi::class)
     override fun definition() = ModuleDefinition {
