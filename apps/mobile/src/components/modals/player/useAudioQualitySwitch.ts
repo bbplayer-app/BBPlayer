@@ -16,10 +16,7 @@ import toast from '@/utils/toast'
 
 import { QUALITY_MESSAGES, showQualityMessage } from './audioQualityMessages'
 import {
-	createDelayedVisibilityController,
 	createPendingSwitchTimer,
-	SWITCH_INDICATOR_DELAY_MS,
-	type DelayedVisibilityController,
 	type PendingSwitchTimer,
 } from './audioQualityModalState'
 
@@ -43,7 +40,6 @@ export interface UseAudioQualitySwitchOptions {
 export interface UseAudioQualitySwitchResult {
 	pendingTarget: AudioQualityPreference | null
 	qualityUnconfirmed: boolean
-	showReloadIndicator: boolean
 	handleQualityEvent: (info: AudioQualityInfo) => void
 	applyReadQuality: (info: AudioQualityInfo | null) => void
 	markUnconfirmed: () => void
@@ -59,11 +55,9 @@ export function useAudioQualitySwitch({
 		useState<AudioQualityPreference | null>(null)
 
 	const [qualityUnconfirmed, setQualityUnconfirmed] = useState(false)
-	const [showReloadIndicator, setShowReloadIndicator] = useState(false)
 
 	const switchingRef = useRef(false)
 	const mountedRef = useRef(true)
-	const reloadIndicatorRef = useRef<DelayedVisibilityController | null>(null)
 	const switchTimerRef = useRef<PendingSwitchTimer | null>(null)
 
 	const pendingRef = useRef<AudioQualityPreference | null>(null)
@@ -78,7 +72,6 @@ export function useAudioQualitySwitch({
 		}
 
 		setPendingTarget(null)
-		reloadIndicatorRef.current?.finish()
 	}, [])
 
 	const handleSwitchTimeout = useCallback(() => {
@@ -96,19 +89,11 @@ export function useAudioQualitySwitch({
 		pendingRef.current = target
 		switchingRef.current = true
 		setPendingTarget(target)
-		reloadIndicatorRef.current?.start()
 		switchTimerRef.current?.start()
 	}, [])
 
 	useEffect(() => {
 		mountedRef.current = true
-
-		const controller = createDelayedVisibilityController(
-			SWITCH_INDICATOR_DELAY_MS,
-			setShowReloadIndicator,
-		)
-
-		reloadIndicatorRef.current = controller
 
 		const switchTimer = createPendingSwitchTimer(
 			QUALITY_CONFIRM_TIMEOUT_MS,
@@ -119,14 +104,9 @@ export function useAudioQualitySwitch({
 
 		return () => {
 			mountedRef.current = false
-			controller.dispose()
 			switchTimer.dispose()
 			switchTimerRef.current = null
 			pendingRef.current = null
-
-			if (reloadIndicatorRef.current === controller) {
-				reloadIndicatorRef.current = null
-			}
 		}
 	}, [handleSwitchTimeout])
 
@@ -238,7 +218,6 @@ export function useAudioQualitySwitch({
 	return {
 		pendingTarget,
 		qualityUnconfirmed,
-		showReloadIndicator,
 		handleQualityEvent,
 		applyReadQuality,
 		markUnconfirmed,

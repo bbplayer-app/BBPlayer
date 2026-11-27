@@ -15,7 +15,6 @@ import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.scheduler.Requirements
 import expo.modules.orpheus.OrpheusConfig
-import expo.modules.orpheus.bilibili.BilibiliAudioQualityId
 import expo.modules.orpheus.bilibili.BilibiliRepository
 import expo.modules.orpheus.manager.AudioQualityInfo
 import expo.modules.orpheus.manager.AudioQualityRequest
@@ -109,22 +108,9 @@ object DownloadUtil {
     fun playbackCacheKey(uriString: String): String = "$uriString|q=${GeneralStorage.getPreferredAudioQuality()}"
 
     /**
-     * 下载缓存 key：剥掉下载定档参数 q，让下载写入、播放读取与导出命中同一条缓存；
-     * 不含 q 的 B 站 URI 原样返回，保证与既有下载缓存字节级兼容
+     * 下载缓存 key：B 站 URI 不含定档参数，直接使用 URI 本身，保持与既有下载缓存兼容
      */
-    fun downloadCacheKeyOf(uri: Uri): String {
-        if (uri.scheme != "orpheus" || uri.host != "bilibili") return uri.toString()
-        val parameterNames = uri.queryParameterNames
-        if (!parameterNames.contains("q")) return uri.toString()
-        val builder = uri.buildUpon().clearQuery()
-        for (name in parameterNames) {
-            if (name == "q") continue
-            for (value in uri.getQueryParameters(name)) {
-                builder.appendQueryParameter(name, value)
-            }
-        }
-        return builder.build().toString()
-    }
+    fun downloadCacheKeyOf(uri: Uri): String = uri.toString()
 
     fun downloadCacheKeyOf(uriString: String): String = downloadCacheKeyOf(uriString.toUri())
 
@@ -159,23 +145,8 @@ object DownloadUtil {
         }
     }
 
-    private fun resolveAudioQualityRequest(uri: Uri): AudioQualityRequest {
-        AudioQualityStore.preferenceFromQuery(uri.getQueryParameter("q"))?.let { preference ->
-            return AudioQualityStore.requestFor(preference)
-        }
-        if (uri.getQueryParameter("dolby") == "1") {
-            return AudioQualityStore.requestFor(AudioQualityStore.PREF_DOLBY)
-        }
-        if (uri.getQueryParameter("hires") == "1") {
-            return AudioQualityStore.requestFor(AudioQualityStore.PREF_HIRES)
-        }
-        val explicitQuality = uri.getQueryParameter("quality")?.toIntOrNull()
-        if (explicitQuality != null && explicitQuality != BilibiliAudioQualityId.HIGH) {
-            val preference = AudioQualityStore.preferenceForStreamId(explicitQuality) ?: AudioQualityStore.PREF_HIGH
-            return AudioQualityRequest(preference, explicitQuality, false, false)
-        }
-        return AudioQualityStore.requestFor(GeneralStorage.getPreferredAudioQuality())
-    }
+    private fun resolveAudioQualityRequest(): AudioQualityRequest =
+        AudioQualityStore.requestFor(GeneralStorage.getPreferredAudioQuality())
 
 
     @Synchronized
@@ -227,7 +198,7 @@ object DownloadUtil {
                 try {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
-                    val request = resolveAudioQualityRequest(uri)
+                    val request = resolveAudioQualityRequest()
                     val resolved = BilibiliRepository.resolveAudioUrls(
                         bvid = bvid!!,
                         cid = cid,

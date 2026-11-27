@@ -54,7 +54,6 @@ const AudioQualityModal = () => {
 	const {
 		pendingTarget,
 		qualityUnconfirmed,
-		showReloadIndicator,
 		handleQualityEvent,
 		applyReadQuality,
 		markUnconfirmed,
@@ -222,7 +221,7 @@ const AudioQualityModal = () => {
 						indicatorKind={pendingTarget !== null ? 'pending' : 'none'}
 						titleText={actualTitleText}
 						subtitleText={actualSubtitleText}
-						showSpinner={showReloadIndicator}
+						showSpinner={pendingTarget !== null}
 						showRecheckButton={
 							pendingTarget === null &&
 							(qualityUnconfirmed || (qualityLoadFailed && actual === null))
