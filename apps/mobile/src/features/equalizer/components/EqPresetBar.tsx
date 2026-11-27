@@ -10,6 +10,7 @@ export interface EqPresetBarProps {
 	activePresetId: string | null
 	customPresets: readonly EqualizerPreset[]
 	enabled: boolean
+	presetsReady: boolean
 	onDelete: (id: string) => void
 	onOverwrite: (id: string) => void
 	onRename: (id: string, name: string) => void
@@ -21,6 +22,7 @@ export default function EqPresetBar({
 	activePresetId,
 	customPresets,
 	enabled,
+	presetsReady,
 	onDelete,
 	onOverwrite,
 	onRename,
@@ -103,6 +105,7 @@ export default function EqPresetBar({
 				<Chip
 					icon='plus'
 					compact
+					disabled={!presetsReady}
 					testID='eq-save-preset-button'
 					onPress={openSaveDialog}
 				>
@@ -120,6 +123,7 @@ export default function EqPresetBar({
 					<Button
 						mode='text'
 						compact
+						disabled={!presetsReady}
 						testID='eq-overwrite-preset-button'
 						onPress={() => onOverwrite(activeCustomPreset.id)}
 					>
@@ -128,6 +132,7 @@ export default function EqPresetBar({
 					<Button
 						mode='text'
 						compact
+						disabled={!presetsReady}
 						testID='eq-rename-preset-button'
 						onPress={() => openRenameDialog(activeCustomPreset)}
 					>
@@ -136,6 +141,7 @@ export default function EqPresetBar({
 					<Button
 						mode='text'
 						compact
+						disabled={!presetsReady}
 						testID='eq-delete-preset-button'
 						onPress={() => confirmDelete(activeCustomPreset)}
 					>

@@ -20,6 +20,7 @@ import {
 import { Easing, useSharedValue, withTiming } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
@@ -34,6 +35,15 @@ import {
 	serializeCustomPresets,
 	upsertCustomPreset,
 } from '@/features/equalizer/utils/customPresets'
+import {
+	canWriteCustomPresets,
+	canWriteSettings,
+	createEqReadiness,
+	type EqReadiness,
+	isEqDataLoading,
+	isPresetsFailed,
+	isSettingsFailed,
+} from '@/features/equalizer/utils/eqReadiness'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
@@ -273,7 +283,11 @@ export default function EqualizerSettingsPage() {
 
 	const [customPresets, setCustomPresets] = useState<EqualizerPreset[]>([])
 
-	const [loading, setLoading] = useState(isAndroid)
+	const [readiness, setReadiness] = useState<EqReadiness>(() =>
+		createEqReadiness(isAndroid),
+	)
+
+	const [loadAttempt, setLoadAttempt] = useState(0)
 
 	const [scrollEnabled, setScrollEnabled] = useState(true)
 
@@ -421,10 +435,16 @@ export default function EqualizerSettingsPage() {
 		[matchesVisualTarget, pushVisualTarget],
 	)
 
+	const retryLoad = useCallback(() => {
+		setLoadAttempt((attempt) => attempt + 1)
+	}, [])
+
 	useEffect(() => {
 		if (!isAndroid) return
 
 		let cancelled = false
+
+		setReadiness(() => ({ settings: 'loading', presets: 'loading' }))
 
 		void (async () => {
 			const [settingsResult, customPresetsResult] = await Promise.allSettled([
@@ -460,15 +480,18 @@ export default function EqualizerSettingsPage() {
 				)
 			}
 
-			hasHydratedRef.current = true
+			setReadiness({
+				settings: settingsResult.status === 'fulfilled' ? 'ready' : 'error',
+				presets: customPresetsResult.status === 'fulfilled' ? 'ready' : 'error',
+			})
 
-			setLoading(false)
+			hasHydratedRef.current = true
 		})()
 
 		return () => {
 			cancelled = true
 		}
-	}, [isAndroid, pushVisualTarget])
+	}, [isAndroid, loadAttempt, pushVisualTarget])
 
 	useEffect(() => {
 		if (!isAndroid) return
@@ -528,7 +551,7 @@ export default function EqualizerSettingsPage() {
 
 			pushVisualTarget(preset.gainsDb, preset.preampDb, true)
 
-			if (!isAndroid) return
+			if (!isAndroid || !canWriteSettings(readiness)) return
 
 			void runEqualizerAction(
 				() =>
@@ -542,11 +565,11 @@ export default function EqualizerSettingsPage() {
 				'应用均衡器预设失败',
 			)
 		},
-		[isAndroid, pushVisualTarget, runEqualizerAction],
+		[isAndroid, pushVisualTarget, readiness, runEqualizerAction],
 	)
 
 	const handleToggleEnabled = useCallback(() => {
-		if (!isAndroid) return
+		if (!isAndroid || !canWriteSettings(readiness)) return
 
 		void runEqualizerAction(
 			() =>
@@ -559,16 +582,16 @@ export default function EqualizerSettingsPage() {
 				),
 			'切换均衡器失败',
 		)
-	}, [isAndroid, runEqualizerAction, settings])
+	}, [isAndroid, readiness, runEqualizerAction, settings])
 
 	const handleToggleLimiter = useCallback(() => {
-		if (!isAndroid) return
+		if (!isAndroid || !canWriteSettings(readiness)) return
 
 		void runEqualizerAction(
 			() => Orpheus.setEqualizerLimiterEnabled(!settings.limiterEnabled),
 			'切换防破音保护失败',
 		)
-	}, [isAndroid, runEqualizerAction, settings.limiterEnabled])
+	}, [isAndroid, readiness, runEqualizerAction, settings.limiterEnabled])
 
 	const handleReset = useCallback(() => {
 		if (!isAndroid) return
@@ -816,6 +839,10 @@ export default function EqualizerSettingsPage() {
 
 	const handleSavePresetAs = useCallback(
 		(name: string) => {
+			if (!canWriteCustomPresets(readiness)) {
+				throw new Error('自定义预设尚未读取完成，暂时无法保存')
+			}
+
 			const { presets, preset } = upsertCustomPreset(customPresets, {
 				name,
 				gainsDb: settings.gainsDb,
@@ -834,11 +861,13 @@ export default function EqualizerSettingsPage() {
 
 			applyPreset(preset, settings)
 		},
-		[applyPreset, customPresets, persistCustomPresets, settings],
+		[applyPreset, customPresets, persistCustomPresets, readiness, settings],
 	)
 
 	const handleOverwritePreset = useCallback(
 		(id: string) => {
+			if (!canWriteCustomPresets(readiness)) return
+
 			const target = customPresets.find((preset) => preset.id === id)
 
 			if (!target) return
@@ -858,11 +887,15 @@ export default function EqualizerSettingsPage() {
 
 			applyPreset(preset, settings)
 		},
-		[applyPreset, customPresets, persistCustomPresets, settings],
+		[applyPreset, customPresets, persistCustomPresets, readiness, settings],
 	)
 
 	const handleRenamePreset = useCallback(
 		(id: string, name: string) => {
+			if (!canWriteCustomPresets(readiness)) {
+				throw new Error('自定义预设尚未读取完成，暂时无法重命名')
+			}
+
 			if (!name.trim()) {
 				toast.error('预设名称不能为空')
 
@@ -871,18 +904,20 @@ export default function EqualizerSettingsPage() {
 
 			void persistCustomPresets(renameCustomPreset(customPresets, id, name))
 		},
-		[customPresets, persistCustomPresets],
+		[customPresets, persistCustomPresets, readiness],
 	)
 
 	const handleDeletePreset = useCallback(
 		(id: string) => {
+			if (!canWriteCustomPresets(readiness)) return
+
 			void persistCustomPresets(deleteCustomPreset(customPresets, id))
 
 			if (settings.activePresetId !== id) return
 
 			setSettings((previous) => ({ ...previous, activePresetId: null }))
 
-			if (!isAndroid) return
+			if (!isAndroid || !canWriteSettings(readiness)) return
 
 			void runEqualizerAction(
 				() =>
@@ -900,6 +935,7 @@ export default function EqualizerSettingsPage() {
 			customPresets,
 			isAndroid,
 			persistCustomPresets,
+			readiness,
 			runEqualizerAction,
 			settings,
 		],
@@ -914,7 +950,7 @@ export default function EqualizerSettingsPage() {
 					icon='restart'
 					testID='eq-reset-button'
 					accessibilityLabel='重置为平坦响应'
-					disabled={!isAndroid || loading}
+					disabled={!isAndroid || readiness.settings !== 'ready'}
 					onPress={handleReset}
 				/>
 			</Appbar.Header>
@@ -927,9 +963,32 @@ export default function EqualizerSettingsPage() {
 						均衡器目前仅支持 Android 设备。
 					</Text>
 				</View>
-			) : loading ? (
+			) : isEqDataLoading(readiness) ? (
 				<View style={styles.placeholder}>
 					<ActivityIndicator />
+				</View>
+			) : isSettingsFailed(readiness) ? (
+				<View style={styles.placeholder}>
+					<Text
+						variant='bodyLarge'
+						style={{ textAlign: 'center' }}
+					>
+						均衡器设置读取失败
+					</Text>
+					<Text
+						variant='bodySmall'
+						style={[styles.retryHint, { color: colors.onSurfaceVariant }]}
+					>
+						读取成功前不会提交任何均衡器设置，请重试。
+					</Text>
+					<Button
+						mode='contained-tonal'
+						style={styles.retryButton}
+						testID='eq-retry-settings'
+						onPress={retryLoad}
+					>
+						重试
+					</Button>
 				</View>
 			) : (
 				<ScrollView
@@ -972,10 +1031,36 @@ export default function EqualizerSettingsPage() {
 						/>
 					</Surface>
 					<SettingsSectionTitle title='预设' />
+					{isPresetsFailed(readiness) ? (
+						<Surface
+							mode='flat'
+							style={[styles.card, { backgroundColor: colors.surfaceVariant }]}
+						>
+							<View style={styles.row}>
+								<View style={styles.rowText}>
+									<Text variant='bodyLarge'>自定义预设读取失败</Text>
+									<Text
+										variant='bodySmall'
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										读取成功前不能另存、覆盖、重命名或删除预设。
+									</Text>
+								</View>
+								<Button
+									mode='text'
+									testID='eq-retry-presets'
+									onPress={retryLoad}
+								>
+									重试
+								</Button>
+							</View>
+						</Surface>
+					) : null}
 					<EqPresetBar
 						activePresetId={settings.activePresetId}
 						customPresets={customPresets}
 						enabled={settings.enabled}
+						presetsReady={canWriteCustomPresets(readiness)}
 						onDelete={handleDeletePreset}
 						onOverwrite={handleOverwritePreset}
 						onRename={handleRenamePreset}
@@ -1049,6 +1134,13 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: 'center',
 		paddingHorizontal: 32,
+	},
+	retryHint: {
+		marginTop: 8,
+		textAlign: 'center',
+	},
+	retryButton: {
+		marginTop: 16,
 	},
 	card: {
 		borderRadius: 16,
