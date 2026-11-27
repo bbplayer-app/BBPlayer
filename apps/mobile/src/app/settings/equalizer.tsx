@@ -480,9 +480,11 @@ export default function EqualizerSettingsPage() {
 				)
 			}
 
+			const presetsStatus = resolvePresetsStatus(customPresetsResult)
+
 			if (
 				customPresetsResult.status === 'fulfilled' &&
-				customPresetsResult.value !== ''
+				presetsStatus === 'ready'
 			) {
 				loadedPresets = parseCustomPresetsJson(customPresetsResult.value)
 
@@ -499,7 +501,7 @@ export default function EqualizerSettingsPage() {
 
 			setReadiness({
 				settings: resolveSettingsStatus(settingsResult),
-				presets: resolvePresetsStatus(customPresetsResult),
+				presets: presetsStatus,
 			})
 
 			if (settingsResult.status === 'fulfilled' && loadedPresets !== null) {
