@@ -48,8 +48,6 @@ import {
 	resolvePresetsStatus,
 	resolveSettingsStatus,
 } from '@/features/equalizer/utils/eqReadiness'
-import { buildPresetSettings } from '@/features/equalizer/utils/presetSettings'
-import { commitSettingsToRef } from '@/features/equalizer/utils/settingsCommit'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
@@ -291,7 +289,11 @@ export default function EqualizerSettingsPage() {
 
 	const commitSettings = useCallback(
 		(update: (previous: EqualizerSettings) => EqualizerSettings) => {
-			commitSettingsToRef(settingsRef, setSettings, update)
+			const next = update(settingsRef.current)
+
+			settingsRef.current = next
+
+			setSettings(next)
 		},
 		[],
 	)
@@ -587,7 +589,12 @@ export default function EqualizerSettingsPage() {
 		(preset: EqualizerPreset) => {
 			if (!isAndroid || !canWriteSettings(readiness)) return
 
-			const next = buildPresetSettings(preset, settingsRef.current)
+			const next = {
+				...settingsRef.current,
+				activePresetId: preset.id,
+				gainsDb: [...preset.gainsDb],
+				preampDb: preset.preampDb,
+			}
 
 			commitSettings(() => next)
 

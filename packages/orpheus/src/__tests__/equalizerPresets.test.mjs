@@ -9,11 +9,14 @@ import {
 	EQ_MAX_GAIN_DB,
 	EQ_MIN_GAIN_DB,
 	clampEqGain,
+	normalizeEqGains,
+} from '../equalizerPresets.ts'
+
+import {
 	computeBiquadCoefficients,
 	computeEqFrequencyResponse,
 	generateLogFrequencyPoints,
-	normalizeEqGains,
-} from '../equalizerPresets.ts'
+} from './eqResponseOracle.mjs'
 
 const FLAT_GAINS = Array.from({ length: EQ_BAND_COUNT }, () => 0)
 

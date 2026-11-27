@@ -2,13 +2,15 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+	computeEqFrequencyResponse,
+	generateLogFrequencyPoints,
+} from '@bbplayer/orpheus/src/__tests__/eqResponseOracle.mjs'
+import {
 	BUILTIN_EQ_PRESETS,
 	EQ_DEFAULT_SAMPLE_RATE,
 	EQ_FREQUENCIES,
 	EQ_MAX_GAIN_DB,
 	EQ_MIN_GAIN_DB,
-	computeEqFrequencyResponse,
-	generateLogFrequencyPoints,
 } from '@bbplayer/orpheus/src/equalizerPresets.ts'
 
 import {

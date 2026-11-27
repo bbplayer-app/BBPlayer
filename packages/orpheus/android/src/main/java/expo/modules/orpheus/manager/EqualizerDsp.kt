@@ -65,13 +65,7 @@ class EqualizerState(
         sanitizeEqGain(if (index < gainsDb.size) gainsDb[index] else 0f)
     }
 
-    val gainsDb: FloatArray
-        get() = gainsInternal.copyOf()
-
     fun copyOfGains(): FloatArray = gainsInternal.copyOf()
-
-    fun gainAt(index: Int): Float =
-        if (index in gainsInternal.indices) gainsInternal[index] else 0f
 }
 
 object EqualizerConfigHolder {
@@ -95,36 +89,6 @@ object EqualizerConfigHolder {
         )
     }
 
-    fun setEnabled(enabled: Boolean): EqualizerState = publish { state ->
-        copyState(state, enabled = enabled)
-    }
-
-    fun setPreampDb(preampDb: Float): EqualizerState = publish { state ->
-        copyState(state, preampDb = preampDb)
-    }
-
-    fun setLimiterEnabled(limiterEnabled: Boolean): EqualizerState =
-        publish { state ->
-            copyState(state, limiterEnabled = limiterEnabled)
-        }
-
-    fun setBandGain(index: Int, gainDb: Float): EqualizerState {
-        if (index !in 0 until EQ_BAND_COUNT) return stateRef.get()
-        return publish { state ->
-            val gains = state.copyOfGains()
-            gains[index] = gainDb
-            copyState(state, gainsDb = gains)
-        }
-    }
-
-    fun setBands(gainsDb: FloatArray): EqualizerState = publish { state ->
-        copyState(state, gainsDb = gainsDb)
-    }
-
-    fun resetFlat(): EqualizerState = publish { state ->
-        copyState(state, preampDb = 0f, gainsDb = FloatArray(EQ_BAND_COUNT))
-    }
-
     private fun publish(transform: (EqualizerState) -> EqualizerState): EqualizerState {
         while (true) {
             val current = stateRef.get()
@@ -132,20 +96,6 @@ object EqualizerConfigHolder {
             if (stateRef.compareAndSet(current, next)) return next
         }
     }
-
-    private fun copyState(
-        state: EqualizerState,
-        enabled: Boolean = state.enabled,
-        preampDb: Float = state.preampDb,
-        limiterEnabled: Boolean = state.limiterEnabled,
-        gainsDb: FloatArray = state.copyOfGains(),
-    ): EqualizerState = EqualizerState(
-        enabled = enabled,
-        preampDb = preampDb,
-        limiterEnabled = limiterEnabled,
-        gainsDb = gainsDb,
-        version = versionCounter.incrementAndGet(),
-    )
 }
 
 class EqualizerDsp(

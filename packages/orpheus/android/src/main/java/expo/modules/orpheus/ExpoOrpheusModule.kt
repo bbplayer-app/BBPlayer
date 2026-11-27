@@ -461,17 +461,6 @@ class ExpoOrpheusModule : Module() {
 
         Property("isEqualizerEnabled")
             .get { GeneralStorage.isEqualizerEnabled() }
-            .set { enabled: Boolean ->
-                applyEqualizerSettings { state ->
-                    EqualizerUpdate(
-                        enabled = enabled,
-                        preampDb = state.preampDb,
-                        limiterEnabled = state.limiterEnabled,
-                        gainsDb = state.copyOfGains(),
-                        activePresetId = GeneralStorage.getEqualizerActivePresetId(),
-                    )
-                }
-            }
 
         Property("isDesktopLyricsShown")
             .get { GeneralStorage.isDesktopLyricsShown() }
