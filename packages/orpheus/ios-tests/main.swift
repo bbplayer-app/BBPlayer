@@ -879,6 +879,18 @@ test("a lookup a failure started during a reload doesn't replace the reloaded st
     check(f.player.currentItem?.url == hlsPlaylist, "the older MP4 lookup must not replace it")
 }
 
+test("a reload that lands after a failure resumes where the failure happened") {
+    let f = playingHlsA()
+    f.player.advance(to: 42)
+    GeneralStorage.shared.preferredAudioQuality = .hires
+    _ = f.manager.reloadCurrentTrackForQualityChange()
+    f.player.failItem(offline)
+    pump()
+    f.player.calls.removeAll()
+    answerHls("A")
+    check(f.player.calls.contains("seek:42"), "the reloaded stream should start where the failed one stopped, not from the top")
+}
+
 test("with the spectrum on, a new choice is kept for when it is off") {
     GeneralStorage.shared.isSpectrumVisualizerEnabled = true
     let f = playingA()

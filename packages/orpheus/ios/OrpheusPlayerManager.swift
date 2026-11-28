@@ -162,6 +162,9 @@ class OrpheusPlayerManager: NSObject {
         if var load = currentLoad {
             let position = player.currentTime().finiteSeconds
             let resumeAt = position > 0 ? position : load.startPosition
+            // The failed item no longer tells where the entry is, so whatever loads it next,
+            // a quality reload included, starts here.
+            pendingStartPosition = resumeAt
 
             if let refresh = load.refresh, Date().timeIntervalSince(load.loadedAt) >= Self.streamRefreshAge {
                 NSLog("[OrpheusPlayer] stream failed, fetching new links: %@", message)
