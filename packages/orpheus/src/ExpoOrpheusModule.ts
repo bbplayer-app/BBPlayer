@@ -85,6 +85,12 @@ export type AudioQualityActualKind =
 	| 'local'
 	| 'unknown'
 
+/**
+ * 没按所选音质播放、又不是因为视频没有这一档时的原因。
+ * - spectrum：iOS 的频谱只能从 MP4 里取音频数据，开着频谱时放的都是 MP4
+ */
+export type AudioQualityFallbackReason = 'spectrum'
+
 export interface AudioQualityInfo {
 	preferredQuality: AudioQualityPreference
 	actualKind: AudioQualityActualKind
@@ -94,6 +100,7 @@ export interface AudioQualityInfo {
 	isFallback: boolean
 	isFromDownloadCache: boolean
 	availableQualities?: AudioQuality[]
+	fallbackReason?: AudioQualityFallbackReason
 }
 
 /**
@@ -115,7 +122,8 @@ export interface DolbySupportInfo {
 
 export interface ReloadAudioQualityResult {
 	reloaded: boolean
-	reason: 'reloaded' | 'downloaded' | 'not_bilibili' | 'no_track'
+	/** spectrum：iOS 开着频谱时只能放 MP4，不重新加载，所选音质在关掉频谱后生效 */
+	reason: 'reloaded' | 'downloaded' | 'not_bilibili' | 'no_track' | 'spectrum'
 }
 
 export interface AndroidPlaybackErrorEvent {

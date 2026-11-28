@@ -71,6 +71,10 @@ public class ExpoOrpheusModule: Module {
         manager.onPlaybackSpeedChanged = { [weak self] speed in
             self?.sendEvent("onPlaybackSpeedChanged", ["speed": speed])
         }
+
+        manager.onAudioQualityChanged = { [weak self] info in
+            self?.sendEvent("onAudioQualityChanged", info.dictionary)
+        }
     }
 
     public func definition() -> ModuleDefinition {
@@ -92,7 +96,8 @@ public class ExpoOrpheusModule: Module {
             "onCoverDownloadProgress",
             "onExportProgress",
             "onStatusBarLyricsStatusChanged",
-            "onRequestClearLyrics"
+            "onRequestClearLyrics",
+            "onAudioQualityChanged"
         )
 
         OnCreate {
@@ -105,6 +110,12 @@ public class ExpoOrpheusModule: Module {
         Property("preferredBilibiliCdn")
             .get { GeneralStorage.shared.preferredBilibiliCdn }
             .set { GeneralStorage.shared.preferredBilibiliCdn = $0 }
+
+        Property("preferredAudioQuality")
+            .get { GeneralStorage.shared.preferredAudioQuality.rawValue }
+            .set { (quality: String) in
+                GeneralStorage.shared.preferredAudioQuality = AudioQualityPreference.normalize(quality)
+            }
 
         Property("restorePlaybackPositionEnabled")
             .get { GeneralStorage.shared.isRestoreEnabled }
@@ -193,6 +204,15 @@ public class ExpoOrpheusModule: Module {
 
     AsyncFunction("getPlaybackSpeed") { () -> Double in
         return Double(OrpheusPlayerManager.shared.getPlaybackSpeed())
+    }.runOnQueue(.main)
+
+    AsyncFunction("getCurrentAudioQuality") { () -> [String: Any]? in
+        return OrpheusPlayerManager.shared.getCurrentAudioQuality()?.dictionary
+    }.runOnQueue(.main)
+
+    AsyncFunction("reloadCurrentTrackForQualityChange") { () -> [String: Any] in
+        let result = OrpheusPlayerManager.shared.reloadCurrentTrackForQualityChange()
+        return ["reloaded": result.reloaded, "reason": result.reason]
     }.runOnQueue(.main)
 
     AsyncFunction("getRepeatMode") { () -> Int in

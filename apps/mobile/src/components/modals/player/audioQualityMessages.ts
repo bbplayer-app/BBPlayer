@@ -38,6 +38,10 @@ export const QUALITY_MESSAGES = {
 		message: `默认音质已改为 ${label}`,
 		description: '下一首开始生效',
 	}),
+	setDefaultSpectrum: (label: string): AudioQualityMessage => ({
+		message: `默认音质已改为 ${label}`,
+		description: '开着频谱时只能放普通音质，关掉频谱后下一首起生效',
+	}),
 	switchFailed: {
 		message: '切换失败',
 		description: '这首没能重新加载，可以再试一次',

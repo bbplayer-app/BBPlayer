@@ -64,13 +64,54 @@ struct BilibiliPlayUrlResponse: Codable {
     
     struct Dash: Codable {
         let audio: [DashAudio]?
+        /// Hi-Res and Dolby only come with a 大会员 account, and only for some videos.
+        let flac: Flac?
+        let dolby: Dolby?
+
+        enum CodingKeys: String, CodingKey {
+            case audio, flac, dolby
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            audio = try container.decodeIfPresent([DashAudio].self, forKey: .audio)
+            // A shape these don't expect costs only their quality, never the whole answer.
+            flac = try? container.decodeIfPresent(Flac.self, forKey: .flac)
+            dolby = try? container.decodeIfPresent(Dolby.self, forKey: .dolby)
+        }
     }
-    
+
+    struct Flac: Codable {
+        let audio: DashAudio?
+    }
+
+    struct Dolby: Codable {
+        let audio: [DashAudio]?
+    }
+
     struct DashAudio: Codable {
         let id: Int
         let baseUrl: String
         let backupUrl: [String]?
         let segment_base: SegmentBase?
+        /// In bits per second.
+        let bandwidth: Int?
+        let codecs: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id, baseUrl, backupUrl, segment_base, bandwidth, codecs
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(Int.self, forKey: .id)
+            baseUrl = try container.decode(String.self, forKey: .baseUrl)
+            backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl)
+            segment_base = try container.decodeIfPresent(SegmentBase.self, forKey: .segment_base)
+            // Only the quality panel shows these, so a surprise in them must not cost the stream.
+            bandwidth = try? container.decodeIfPresent(Int.self, forKey: .bandwidth)
+            codecs = try? container.decodeIfPresent(String.self, forKey: .codecs)
+        }
     }
 
     struct SegmentBase: Codable {
@@ -99,6 +140,13 @@ struct BilibiliStream {
     let segmentBase: BilibiliPlayUrlResponse.SegmentBase?
     /// Bilibili's integrated loudness for this stream, in LUFS.
     let measuredLoudness: Double?
+    /// What the quality panel shows about the stream.
+    var kind: AudioQualityKind = .durl
+    var streamId: Int? = nil
+    var codecs: String? = nil
+    var bandwidth: Int? = nil
+    /// What the video offers; empty for the MP4, which comes without that list.
+    var availableQualities: [AudioQualityPreference] = []
 }
 
 class BilibiliApi {
@@ -115,7 +163,9 @@ class BilibiliApi {
     
     // Constants for API parameters
     private let BiliQualityHigh = 80 // 1080P
-    private let BiliFnvalDash = 16 
+    /// DASH with every format flag, as Android sends. With fewer flags the answer can leave out
+    /// the Hi-Res and Dolby streams.
+    private let BiliFnvalDash = 4048
     private let FnvalMp4 = 1
     private let FnverDefault = 0
     private let FourKEnabled = 1
@@ -305,8 +355,10 @@ class BilibiliApi {
         waiters.forEach { $0(result) }
     }
     
-    /// Resolves a video to its audio-only stream, or to the progressive MP4 when asked or when it has none.
-    func getPlayStream(bvid: String, cid: String, audioOnly: Bool = true, completion: @escaping (Result<BilibiliStream, Error>) -> Void) {
+    /// Resolves a video to the audio stream that best matches `quality`, or to the progressive MP4
+    /// when asked or when none of its audio streams can be played.
+    func getPlayStream(bvid: String, cid: String, audioOnly: Bool = true, quality: AudioQualityPreference = .high,
+                       completion: @escaping (Result<BilibiliStream, Error>) -> Void) {
         // voice_balance is what makes the response include the loudness data.
         let common: [String: Any] = ["bvid": bvid, "cid": cid, "fnver": FnverDefault, "fourk": FourKEnabled, "voice_balance": 1]
         guard audioOnly else {
@@ -317,17 +369,46 @@ class BilibiliApi {
         requestPlayUrl(common.merging(["fnval": BiliFnvalDash]) { $1 }) { result in
             switch result {
             case .success(let data):
-                // Ids rise with quality; Hi-Res and Dolby are listed separately.
-                if let audio = data.dash?.audio?.max(by: { $0.id < $1.id }), let segmentBase = audio.segment_base {
-                    let urls = self.streamUrls(primary: audio.baseUrl, backups: audio.backupUrl)
-                    completion(.success(BilibiliStream(urls: urls, segmentBase: segmentBase, measuredLoudness: data.volume?.measured_i)))
-                } else {
+                guard let dash = data.dash, let choice = Self.chooseAudio(in: dash, quality: quality),
+                      let segmentBase = choice.audio.segment_base else {
                     self.requestMp4Stream(common, completion: completion)
+                    return
                 }
+                let audio = choice.audio
+                let offered = AudioStreamChooser.offeredQualities(aacIds: dash.audio?.map(\.id) ?? [],
+                                                                  hasHiRes: dash.flac?.audio != nil,
+                                                                  hasDolby: !(dash.dolby?.audio ?? []).isEmpty)
+                let urls = self.streamUrls(primary: audio.baseUrl, backups: audio.backupUrl)
+                completion(.success(BilibiliStream(urls: urls, segmentBase: segmentBase, measuredLoudness: data.volume?.measured_i,
+                                                   kind: choice.kind, streamId: audio.id, codecs: audio.codecs,
+                                                   bandwidth: audio.bandwidth, availableQualities: offered)))
             case .failure(let error):
                 completion(.failure(error))
             }
         }
+    }
+
+    /// Picks the audio stream for `quality`, and logs what the video offered by id and codec only.
+    private static func chooseAudio(in dash: BilibiliPlayUrlResponse.Dash,
+                                    quality: AudioQualityPreference) -> (audio: BilibiliPlayUrlResponse.DashAudio, kind: AudioQualityKind)? {
+        typealias Audio = BilibiliPlayUrlResponse.DashAudio
+        func candidate(_ audio: Audio) -> AudioStreamCandidate<Audio> {
+            return AudioStreamCandidate(stream: audio, id: audio.id, playable: audio.segment_base != nil)
+        }
+        let aac = dash.audio ?? []
+        let dolby = dash.dolby?.audio ?? []
+        let choice = AudioStreamChooser.choose(quality, aac: aac.map(candidate), hiRes: dash.flac?.audio.map(candidate),
+                                               dolby: dolby.map(candidate))
+
+        func describe(_ streams: [Audio]) -> String {
+            guard !streams.isEmpty else { return "none" }
+            return streams.map { "\($0.id)/\($0.codecs ?? "?")/\($0.segment_base == nil ? "no index" : "indexed")" }
+                .joined(separator: " ")
+        }
+        let taken = choice.map { "\($0.kind.rawValue) \($0.candidate.id)" } ?? "the MP4"
+        NSLog("[OrpheusQuality] asked %@ | aac %@ | hires %@ | dolby %@ | took %@",
+              quality.rawValue, describe(aac), describe(dash.flac?.audio.map { [$0] } ?? []), describe(dolby), taken)
+        return choice.map { ($0.candidate.stream, $0.kind) }
     }
 
     private func requestMp4Stream(_ common: [String: Any], completion: @escaping (Result<BilibiliStream, Error>) -> Void) {
