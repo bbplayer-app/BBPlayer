@@ -258,6 +258,7 @@ class ExpoOrpheusModule : Module() {
             LoudnessStorage.initialize(context)
             TrackResumeStorage.initialize(context)
             AudioQualityStore.init(context)
+            expo.modules.orpheus.manager.DownloadQualityStore.init(context)
             expo.modules.orpheus.manager.DolbySupport.init(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
             val sessionToken = SessionToken(

@@ -13,6 +13,7 @@ import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.ContentMetadata
+import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.scheduler.Requirements
@@ -23,6 +24,7 @@ import expo.modules.orpheus.manager.AudioQualityStore
 import expo.modules.orpheus.manager.CachedUriManager
 import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.manager.DolbySupport
+import expo.modules.orpheus.manager.DownloadQualityStore
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
 import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.telemetry.LogTags
@@ -62,6 +64,12 @@ object DownloadUtil {
             ).apply {
                 maxParallelDownloads = this@DownloadUtil.maxParallelDownloads
                 requirements = Requirements(0)
+                addListener(object : DownloadManager.Listener {
+                    // 所有删除路径（单个、批量、全部、清理未完成）最终都会走到这里
+                    override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
+                        DownloadQualityStore.remove(downloadCacheKeyOf(download.request.uri))
+                    }
+                })
             }
         }
         return downloadManager!!
@@ -362,7 +370,20 @@ object DownloadUtil {
                         parent = resolveSpan,
                     )
                     val urls = resolved.urls
-                    // 下载和播放可能是同一首歌，下载取到的流不能覆盖播放的
+                    val qualityInfo = AudioQualityInfo(
+                        preferredQuality = preferred,
+                        actualKind = resolved.kind,
+                        actualStreamId = resolved.streamId,
+                        codecs = resolved.codecs,
+                        bandwidth = resolved.bandwidth,
+                        isFallback = AudioQualityStore.isFallback(preferred, resolved.kind, resolved.streamId),
+                        isFromDownloadCache = false,
+                        availableQualities = resolved.availableQualities,
+                    )
+                    // 下载和播放可能是同一首歌，下载取到的流不能覆盖播放的，各存各的
+                    if (!forPlayback) {
+                        DownloadQualityStore.put(downloadCacheKeyOf(requestUri), qualityInfo)
+                    }
                     if (forPlayback) {
                         OrpheusTelemetry.recordStream(
                             uri.toString(),
@@ -374,19 +395,7 @@ object DownloadUtil {
                                 put("mirrors", urls.size)
                             },
                         )
-                        AudioQualityStore.put(
-                            uri.toString(),
-                            AudioQualityInfo(
-                                preferredQuality = preferred,
-                                actualKind = resolved.kind,
-                                actualStreamId = resolved.streamId,
-                                codecs = resolved.codecs,
-                                bandwidth = resolved.bandwidth,
-                                isFallback = AudioQualityStore.isFallback(preferred, resolved.kind, resolved.streamId),
-                                isFromDownloadCache = false,
-                                availableQualities = resolved.availableQualities,
-                            ),
-                        )
+                        AudioQualityStore.put(uri.toString(), qualityInfo)
                     }
                     // 在这里保存响度均衡数据，并且直接发一个事件，在 OrpheusMusicService 监听
                     val volume = resolved.volume

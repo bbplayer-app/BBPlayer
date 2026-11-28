@@ -40,6 +40,7 @@ import expo.modules.orpheus.manager.AudioDebugTracker
 import expo.modules.orpheus.manager.AudioQualityInfo
 import expo.modules.orpheus.manager.AudioQualityStore
 import expo.modules.orpheus.manager.DolbySupport
+import expo.modules.orpheus.manager.DownloadQualityStore
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
@@ -191,6 +192,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
         GeneralStorage.initialize(this)
         AudioQualityStore.init(applicationContext)
+        DownloadQualityStore.init(applicationContext)
         DolbySupport.init(applicationContext)
         LoudnessStorage.initialize(this)
         TrackResumeStorage.initialize(this)
@@ -520,8 +522,14 @@ class OrpheusMusicService : MediaLibraryService() {
         val fromDownload = DownloadUtil.pinnedPlaybackSourceIsDownloadOf(uriString)
             ?: DownloadUtil.isFullyCachedInDownloadCache(this, uriString)
         if (fromDownload) {
+            // 下载时记下的实际音轨；升级前下好的没有记录，只能从解码格式认出 Hi-Res / 杜比
+            DownloadQualityStore.get(DownloadUtil.downloadCacheKeyOf(uriString))?.let { return it }
             val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
-            return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, null, null, false, true)
+            // 下载的歌不受偏好影响，谈不上降级
+            inferPlaybackQuality(uri, preferred)?.let { return it.copy(isFallback = false, isFromDownloadCache = true) }
+            // AAC 的三档从格式上分不出来，只带上编码，界面显示「已下载 · AAC」
+            val codecs = currentInputFormatOf(uri)?.let { it.codecs?.takeIf(String::isNotBlank) ?: it.sampleMimeType }
+            return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, codecs, null, false, true)
         }
         val preferred = playbackQualityOf(uriString)
         AudioQualityStore.get(uriString, preferred)?.let { return it }
@@ -529,11 +537,15 @@ class OrpheusMusicService : MediaLibraryService() {
             ?: AudioQualityInfo(preferred, AudioQualityStore.KIND_UNKNOWN, null, null, null, false, false)
     }
 
-    private fun inferPlaybackQuality(uri: android.net.Uri, preferredQuality: String): AudioQualityInfo? {
+    private fun currentInputFormatOf(uri: android.net.Uri): Format? {
         val item = player?.currentMediaItem ?: return null
         if (item.localConfiguration?.uri?.toString() != uri.toString()) return null
         // player.audioFormat 在切歌后、新格式到达前仍是上一首的，只认确实属于这首歌的格式
-        val format = audioDebugTracker?.inputFormatOf(item.mediaId) ?: return null
+        return audioDebugTracker?.inputFormatOf(item.mediaId)
+    }
+
+    private fun inferPlaybackQuality(uri: android.net.Uri, preferredQuality: String): AudioQualityInfo? {
+        val format = currentInputFormatOf(uri) ?: return null
         val bitrate = if (format.bitrate > 0) format.bitrate else format.averageBitrate
         return AudioQualityStore.inferFromAudioFormat(preferredQuality, format.sampleMimeType, format.codecs, bitrate)
     }

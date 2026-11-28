@@ -258,6 +258,45 @@ function describeActualKind(info: AudioQualityInfo): ActualKindDescription {
 	return { title: '普通音质', detail: bandwidth }
 }
 
+const DOWNLOADED_HINT = '改音质不影响这首'
+
+function formatCodecName(codecs: string | null): string | undefined {
+	const probe = codecs?.toLowerCase() ?? ''
+
+	if (probe.includes('mp4a') || probe.includes('aac')) return 'AAC'
+
+	if (probe.includes('flac')) return 'FLAC'
+
+	if (probe.includes('ec-3') || probe.includes('eac3')) return 'E-AC-3'
+
+	return undefined
+}
+
+/**
+ * 下载时记下了实际音轨就照常显示档位；升级前下好的没有记录，
+ * Hi-Res / 杜比能从解码格式认出来，AAC 分不出档位，只显示编码
+ */
+function describeDownloaded(
+	info: AudioQualityInfo,
+): ActualAudioQualityDescription {
+	if (info.actualKind === 'local') {
+		const codec = formatCodecName(info.codecs)
+
+		return {
+			title: codec ? `已下载 · ${codec}` : '已下载',
+			subtitle: `播放的是下载好的文件，${DOWNLOADED_HINT}`,
+		}
+	}
+
+	const detail = describeActualKind(info)
+
+	const notes = [detail.detail, DOWNLOADED_HINT].filter(
+		(note): note is string => note !== undefined,
+	)
+
+	return { title: `已下载 · ${detail.title}`, subtitle: notes.join(' · ') }
+}
+
 /**
  * @param currentPreference 当前的音质偏好。音质按曲目固定在开始加载时的偏好上，
  * 在设置页改了默认档位后，正在播放的这首仍是旧档位，需要说明一下
@@ -271,10 +310,7 @@ export function formatActualAudioQuality(
 	}
 
 	if (info.actualKind === 'local' || info.isFromDownloadCache) {
-		return {
-			title: '已下载',
-			subtitle: '播放的是下载好的文件，改音质不影响这首',
-		}
+		return describeDownloaded(info)
 	}
 
 	const detail = describeActualKind(info)

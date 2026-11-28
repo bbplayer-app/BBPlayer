@@ -279,9 +279,32 @@ test('formatActualAudioQuality 对离线缓存与 durl 给出专门说明', () =
 		createQualityInfo({ isFromDownloadCache: true }),
 	)
 
-	assert.equal(local?.title, '已下载')
-	assert.equal(downloaded?.title, '已下载')
-	assert.match(downloaded?.subtitle ?? '', /改音质不影响这首/)
+	assert.equal(local?.title, '已下载 · AAC')
+	assert.equal(downloaded?.title, '已下载 · 高品 192k')
+	assert.match(downloaded?.subtitle ?? '', /约 192 kbps · 改音质不影响这首/)
+
+	const legacyHires = formatActualAudioQuality(
+		createQualityInfo({
+			actualKind: 'hires',
+			actualStreamId: 30251,
+			codecs: 'flac',
+			bandwidth: null,
+			isFromDownloadCache: true,
+		}),
+	)
+
+	assert.equal(legacyHires?.title, '已下载 · Hi-Res 无损')
+	assert.equal(legacyHires?.subtitle, '改音质不影响这首')
+
+	const unknownCodec = formatActualAudioQuality(
+		createQualityInfo({
+			actualKind: 'local',
+			codecs: null,
+			isFromDownloadCache: true,
+		}),
+	)
+
+	assert.equal(unknownCodec?.title, '已下载')
 
 	const durl = formatActualAudioQuality(
 		createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
