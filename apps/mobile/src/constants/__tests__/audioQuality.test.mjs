@@ -313,6 +313,32 @@ test('formatActualAudioQuality 对离线缓存与 durl 给出专门说明', () =
 	assert.equal(durl?.title, '普通音质')
 })
 
+test('formatActualAudioQuality 说明 iOS 开着频谱时放的是 MP4', () => {
+	const spectrum = formatActualAudioQuality(
+		createQualityInfo({
+			preferredQuality: 'hires',
+			actualKind: 'durl',
+			actualStreamId: null,
+			isFallback: true,
+			fallbackReason: 'spectrum',
+		}),
+		'dolby',
+	)
+
+	assert.equal(spectrum?.title, '普通音质')
+	assert.match(spectrum?.subtitle ?? '', /开着频谱时只能放普通音质/)
+	assert.doesNotMatch(
+		spectrum?.subtitle ?? '',
+		/这个视频只有一种音质|已自动换成|下一首起用/,
+	)
+
+	const plainDurl = formatActualAudioQuality(
+		createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
+	)
+
+	assert.match(plainDurl?.subtitle ?? '', /这个视频只有一种音质/)
+})
+
 test('formatActualAudioQuality 在降级时追加降级提示', () => {
 	const degraded = formatActualAudioQuality(
 		createQualityInfo({ preferredQuality: 'hires', isFallback: true }),

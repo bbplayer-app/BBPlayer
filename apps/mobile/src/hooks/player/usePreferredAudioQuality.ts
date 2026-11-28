@@ -1,8 +1,6 @@
 import { Orpheus, type AudioQualityPreference } from '@bbplayer/orpheus'
 import { useSyncExternalStore } from 'react'
-import { Platform } from 'react-native'
 
-const canConfigureAudioQuality = Platform.OS === 'android'
 const listeners = new Set<() => void>()
 
 function subscribe(listener: () => void) {
@@ -14,7 +12,7 @@ function subscribe(listener: () => void) {
 }
 
 export function getPreferredAudioQuality(): AudioQualityPreference {
-	return canConfigureAudioQuality ? Orpheus.preferredAudioQuality : 'high'
+	return Orpheus.preferredAudioQuality
 }
 
 /** 写入首选音质，并通知所有正在显示首选音质的组件 */

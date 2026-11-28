@@ -32,7 +32,7 @@ sed -E 's/@objc private func/func/; s/#selector\(([A-Za-z]+)\)/"\1"/' \
 
 "$swiftc" -I "$out" -module-name OrpheusTests -suppress-warnings -o "$out/tests" \
   "$here/Mocks.swift" "$here/main.swift" "$out/OrpheusPlayerManager.swift" \
-  "$ios/OrpheusQueueManager.swift" "$ios/GeneralStorage.swift" "$ios/OrpheusModels.swift"
+  "$ios/OrpheusQueueManager.swift" "$ios/GeneralStorage.swift" "$ios/OrpheusModels.swift" "$ios/AudioQuality.swift"
 
 # The player logs its retries, which would bury the results.
 "$out/tests" 2> >(grep -v '\[OrpheusPlayer\]' >&2)

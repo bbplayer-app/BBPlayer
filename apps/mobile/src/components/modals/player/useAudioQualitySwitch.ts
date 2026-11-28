@@ -193,6 +193,8 @@ export function useAudioQualitySwitch({
 				showQualityMessage(QUALITY_MESSAGES.setDefault(label))
 			} else if (result.reason === 'no_track') {
 				showQualityMessage(QUALITY_MESSAGES.setDefaultNoTrack(label))
+			} else if (result.reason === 'spectrum') {
+				showQualityMessage(QUALITY_MESSAGES.setDefaultSpectrum(label))
 			} else {
 				toast.error(QUALITY_MESSAGES.switchFailed.message, {
 					description: QUALITY_MESSAGES.switchFailed.description,

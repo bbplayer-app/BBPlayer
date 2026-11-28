@@ -1,7 +1,7 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
-import { Platform, ScrollView, StyleSheet, View } from 'react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Icon,
@@ -40,7 +40,6 @@ export default function PlaybackSettingsPage() {
 	)
 
 	const openModal = useModalStore((state) => state.open)
-	const canConfigureAudioQuality = Platform.OS === 'android'
 	const audioQuality = usePreferredAudioQuality()
 
 	const defaultPlayerMode = useAppStore(
@@ -112,38 +111,36 @@ export default function PlaybackSettingsPage() {
 						/>
 					</MenuView>
 				</View>
-				{canConfigureAudioQuality && (
-					<TouchableRipple
-						testID='playback-audio-quality'
-						borderless
-						style={styles.audioQualityRow}
-						onPress={() => openModal('AudioQuality', undefined)}
-					>
-						<View style={styles.audioQualityRowContent}>
-							<View style={styles.settingDescription}>
-								<Text>默认音质</Text>
-								<Text
-									variant='bodySmall'
-									style={{ color: colors.onSurfaceVariant }}
-								>
-									{audioQualityDescription}
-								</Text>
-							</View>
-							<View style={styles.audioQualityValue}>
-								<Text
-									variant='labelLarge'
-									numberOfLines={1}
-								>
-									{audioQualityLabel}
-								</Text>
-								<Icon
-									source='chevron-right'
-									size={20}
-								/>
-							</View>
+				<TouchableRipple
+					testID='playback-audio-quality'
+					borderless
+					style={styles.audioQualityRow}
+					onPress={() => openModal('AudioQuality', undefined)}
+				>
+					<View style={styles.audioQualityRowContent}>
+						<View style={styles.settingDescription}>
+							<Text>默认音质</Text>
+							<Text
+								variant='bodySmall'
+								style={{ color: colors.onSurfaceVariant }}
+							>
+								{audioQualityDescription}
+							</Text>
 						</View>
-					</TouchableRipple>
-				)}
+						<View style={styles.audioQualityValue}>
+							<Text
+								variant='labelLarge'
+								numberOfLines={1}
+							>
+								{audioQualityLabel}
+							</Text>
+							<Icon
+								source='chevron-right'
+								size={20}
+							/>
+						</View>
+					</View>
+				</TouchableRipple>
 				<View style={styles.settingRow}>
 					<View style={styles.settingDescription}>
 						<Text>响度均衡（实验性）</Text>

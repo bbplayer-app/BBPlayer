@@ -40,6 +40,9 @@ class OrpheusPlayerManager: NSObject {
         let playlistLoader: DashAudioPlaylistLoader?
         /// The video the stream was resolved from, so it can be fetched again in another form.
         let source: BilibiliSource?
+        /// What the quality panel shows for this load. New links, a mirror and the MP4 fallback
+        /// keep its quality choice; only a reload for a new choice changes it.
+        let quality: AudioQualityInfo
     }
     private struct BilibiliSource {
         let bvid: String
@@ -49,6 +52,9 @@ class OrpheusPlayerManager: NSObject {
     /// A move to the MP4 started because the spectrum was turned on while an HLS item played;
     /// nil when none is running. Main thread only.
     private var tapSwitch: UUID?
+    /// A new lookup of the current track after the quality choice changed; nil when none is
+    /// running. Main thread only.
+    private var qualitySwitch: UUID?
     /// One failure can arrive as both a failed status and a failure to play to the end.
     private weak var failedItem: AVPlayerItem?
 
@@ -86,7 +92,8 @@ class OrpheusPlayerManager: NSObject {
     var onPlayerError: ((String) -> Void)?
     var onQueueChanged: (() -> Void)?
     var onPlaybackSpeedChanged: ((Float) -> Void)?
-    
+    var onAudioQualityChanged: ((AudioQualityInfo) -> Void)?
+
     override init() {
         self.player = AVPlayer()
         super.init()
@@ -134,6 +141,9 @@ class OrpheusPlayerManager: NSObject {
             } else if status == .readyToPlay {
                 // The real duration is only known once the item is ready.
                 updateNowPlayingInfo()
+                DispatchQueue.main.async { [weak self] in
+                    self?.reportAudioQuality()
+                }
             }
         }
     }
@@ -162,7 +172,8 @@ class OrpheusPlayerManager: NSObject {
             if !load.mirrors.isEmpty {
                 let next = load.mirrors.removeFirst()
                 NSLog("[OrpheusPlayer] stream failed, trying the next mirror: %@", message)
-                loadAvPlayerItem(trackId: load.trackId, url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback, refresh: load.refresh, source: load.source)
+                loadAvPlayerItem(trackId: load.trackId, url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback, refresh: load.refresh, source: load.source,
+                                 quality: load.quality)
                 return
             }
 
@@ -578,6 +589,7 @@ class OrpheusPlayerManager: NSObject {
         // Anything still being fetched belonged to the entry this one replaces.
         pendingLookup = nil
         tapSwitch = nil
+        qualitySwitch = nil
 
         // Index is BACKING index
         queueManager.skipTo(backingIndex: index)
@@ -592,27 +604,30 @@ class OrpheusPlayerManager: NSObject {
         saveState()
         
         let urlString = track.url
-        
+        let quality = GeneralStorage.shared.preferredAudioQuality
+
         // Check for local download first
         if let localUrl = OrpheusDownloadManager.shared.getDownloadedFileUrl(id: track.id) {
              // Use local file
-             loadAvPlayerItem(trackId: track.id, url: localUrl.absoluteString, headers: nil, startPosition: startPosition)
+             loadAvPlayerItem(trackId: track.id, url: localUrl.absoluteString, headers: nil, startPosition: startPosition,
+                              quality: AudioQualityInfo(preferredQuality: quality, actualKind: .local, isFromDownloadCache: true))
              return
         }
-        
+
         if urlString.starts(with: "orpheus://bilibili") {
             // The previous track must not play on, or lend its position, under this one while the
             // stream is fetched. Nothing is audible until then, so keep the app running.
             beginTransitionTask()
             player.pause()
             player.replaceCurrentItem(with: nil)
-            resolveAndPlayBilibili(url: urlString, trackId: track.id, startPosition: startPosition)
+            resolveAndPlayBilibili(url: urlString, trackId: track.id, startPosition: startPosition, quality: quality)
         } else {
-            loadAvPlayerItem(trackId: track.id, url: urlString, headers: nil, startPosition: startPosition)
+            loadAvPlayerItem(trackId: track.id, url: urlString, headers: nil, startPosition: startPosition,
+                             quality: AudioQualityInfo(preferredQuality: quality, actualKind: .local))
         }
     }
-    
-    private func resolveAndPlayBilibili(url: String, trackId: String, startPosition: Double? = nil) {
+
+    private func resolveAndPlayBilibili(url: String, trackId: String, startPosition: Double? = nil, quality: AudioQualityPreference) {
         guard let uri = URL(string: url),
               let components = URLComponents(url: uri, resolvingAgainstBaseURL: false) else {
 
@@ -630,7 +645,7 @@ class OrpheusPlayerManager: NSObject {
         }
         
         if let cid = cid {
-            fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: startPosition)
+            fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: startPosition, quality: quality)
         } else {
             let lookup = beginLookup()
             BilibiliApi.shared.getPageList(bvid: bvid) { [weak self] result in
@@ -639,7 +654,7 @@ class OrpheusPlayerManager: NSObject {
                     switch result {
                     case .success(let cidInt):
 
-                        self.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), trackId: trackId, startPosition: startPosition)
+                        self.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), trackId: trackId, startPosition: startPosition, quality: quality)
                     case .failure(let error):
                         self.pendingLookup = nil
                         self.failLoad(Self.describe(error))
@@ -660,41 +675,60 @@ class OrpheusPlayerManager: NSObject {
         return lookup
     }
 
-    private func fetchBilibiliPlayUrl(bvid: String, cid: String, trackId: String, startPosition: Double? = nil, audioOnly: Bool = true) {
+    private func fetchBilibiliPlayUrl(bvid: String, cid: String, trackId: String, startPosition: Double? = nil, audioOnly: Bool = true,
+                                      quality: AudioQualityPreference) {
         // The spectrum tap needs a real audio track, which an HLS asset doesn't expose.
-        let audioOnly = audioOnly && !GeneralStorage.shared.isSpectrumVisualizerEnabled
+        let forSpectrum = audioOnly && GeneralStorage.shared.isSpectrumVisualizerEnabled
         let lookup = beginLookup()
-        BilibiliApi.shared.getPlayStream(bvid: bvid, cid: cid, audioOnly: audioOnly) { [weak self] result in
+        BilibiliApi.shared.getPlayStream(bvid: bvid, cid: cid, audioOnly: audioOnly && !forSpectrum, quality: quality) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self, self.pendingLookup == lookup else { return }
                 self.pendingLookup = nil
                 switch result {
                 case .success(let stream):
-                    guard let url = stream.urls.first else {
+                    guard !stream.urls.isEmpty else {
                         self.failLoad("AudioStreamError: no playable stream")
                         return
                     }
-                    if let measured = stream.measuredLoudness, let uri = self.queueManager.getCurrentTrack()?.url {
-                        GeneralStorage.shared.saveLoudness(uri: uri, measured: measured)
-                    }
-                    // Keep the MP4 as a last resort if the audio stream can't be played.
-                    let fallback: ((Double?) -> Void)? = stream.segmentBase == nil ? nil : { [weak self] position in
-                        self?.fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: position, audioOnly: false)
-                    }
-                    let refresh: (Double?) -> Void = { [weak self] position in
-                        self?.fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: position, audioOnly: audioOnly)
-                    }
                     // A seek made while the first stream was on the way moved where the entry starts.
                     let startPosition = self.loadedTrackId == nil ? self.pendingStartPosition : startPosition
-                    self.loadAvPlayerItem(trackId: trackId, url: url, headers: BilibiliApi.browserHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
-                                          mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh,
-                                          source: BilibiliSource(bvid: bvid, cid: cid))
+                    self.loadResolvedStream(stream, source: BilibiliSource(bvid: bvid, cid: cid), trackId: trackId,
+                                            startPosition: startPosition, audioOnly: audioOnly, forSpectrum: forSpectrum, quality: quality)
                 case .failure(let error):
 
                     self.failLoad(Self.describe(error))
                 }
             }
         }
+    }
+
+    /// Plays a stream looked up for the current entry, with the MP4 and new links within reach.
+    /// Both are looked up with the quality this stream was, not with the current choice.
+    /// `audioOnly` is what was asked for, and `forSpectrum` that the spectrum made it the MP4.
+    /// New links are asked for the same way, so they come as the MP4 only while the spectrum is on.
+    private func loadResolvedStream(_ stream: BilibiliStream, source: BilibiliSource, trackId: String, startPosition: Double?,
+                                    audioOnly: Bool, forSpectrum: Bool, quality: AudioQualityPreference) {
+        guard let url = stream.urls.first else { return }
+        if let measured = stream.measuredLoudness, let uri = queueManager.getCurrentTrack()?.url {
+            GeneralStorage.shared.saveLoudness(uri: uri, measured: measured)
+        }
+        // Keep the MP4 as a last resort if the audio stream can't be played.
+        let fallback: ((Double?) -> Void)? = stream.segmentBase == nil ? nil : { [weak self] position in
+            self?.fetchBilibiliPlayUrl(bvid: source.bvid, cid: source.cid, trackId: trackId, startPosition: position, audioOnly: false, quality: quality)
+        }
+        let refresh: (Double?) -> Void = { [weak self] position in
+            self?.fetchBilibiliPlayUrl(bvid: source.bvid, cid: source.cid, trackId: trackId, startPosition: position, audioOnly: audioOnly, quality: quality)
+        }
+        loadAvPlayerItem(trackId: trackId, url: url, headers: BilibiliApi.browserHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
+                         mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh,
+                         source: source, quality: Self.qualityInfo(of: stream, preferred: quality, fallbackReason: forSpectrum ? .spectrum : nil))
+    }
+
+    private static func qualityInfo(of stream: BilibiliStream, preferred: AudioQualityPreference,
+                                    fallbackReason: AudioQualityFallbackReason? = nil) -> AudioQualityInfo {
+        return AudioQualityInfo(preferredQuality: preferred, actualKind: stream.kind, actualStreamId: stream.streamId,
+                                codecs: stream.codecs, bandwidth: stream.bandwidth, availableQualities: stream.availableQualities,
+                                fallbackReason: fallbackReason)
     }
 
     /// Same rule as Android: only tracks louder than Bilibili's -14 LUFS target are turned down.
@@ -716,11 +750,11 @@ class OrpheusPlayerManager: NSObject {
     /// `preparedAsset` and `audioMix` come from a move to the MP4 whose tracks are already loaded.
     private func loadAvPlayerItem(trackId: String, url: String, headers: [String: String]?, segmentBase: BilibiliPlayUrlResponse.SegmentBase? = nil, startPosition: Double? = nil,
                                   mirrors: [String] = [], fallback: ((Double?) -> Void)? = nil, refresh: ((Double?) -> Void)? = nil,
-                                  source: BilibiliSource? = nil, preparedAsset: AVURLAsset? = nil, audioMix: AVMutableAudioMix? = nil) {
+                                  source: BilibiliSource? = nil, quality: AudioQualityInfo, preparedAsset: AVURLAsset? = nil, audioMix: AVMutableAudioMix? = nil) {
         guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
                 self?.loadAvPlayerItem(trackId: trackId, url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh,
-                                       source: source, preparedAsset: preparedAsset, audioMix: audioMix)
+                                       source: source, quality: quality, preparedAsset: preparedAsset, audioMix: audioMix)
             }
             return
         }
@@ -749,7 +783,7 @@ class OrpheusPlayerManager: NSObject {
             asset = AVURLAsset(url: nsUrl, options: options)
         }
         currentLoad = StreamLoad(trackId: trackId, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh,
-                                 playlistLoader: playlistLoader, source: source)
+                                 playlistLoader: playlistLoader, source: source, quality: quality)
         loadedTrackId = trackId
         loadedTrackFinished = false
         pendingStartPosition = startPosition
@@ -817,12 +851,14 @@ class OrpheusPlayerManager: NSObject {
     /// The HLS item keeps playing while the MP4 is fetched and its tracks load, so the swap only
     /// waits for the MP4 to buffer at the position playback has reached by then.
     private func startTapSwitch() {
-        guard tapSwitch == nil, pendingLookup == nil, !loadedTrackFinished,
+        // A reload for a new quality choice loads an item of its own, and starts this move after it if still needed.
+        guard tapSwitch == nil, qualitySwitch == nil, pendingLookup == nil, !loadedTrackFinished,
               let load = currentLoad, load.segmentBase != nil, let source = load.source,
               let trackId = loadedTrackId, trackId == load.trackId,
               let item = player.currentItem, item.status != .failed, item !== failedItem else { return }
         let token = UUID()
         tapSwitch = token
+        let quality = load.quality.preferredQuality
         // Anything that replaced the HLS item meanwhile, or turned the spectrum off, ends the move.
         let stillWanted: () -> Bool = { [weak self, weak item] in
             guard let self = self, self.tapSwitch == token else { return false }
@@ -857,11 +893,14 @@ class OrpheusPlayerManager: NSObject {
                         NSLog("[OrpheusPlayer] spectrum turned on, moving to the MP4 at %.1fs", position)
                         // Nothing is audible until the MP4 has buffered, as at a failover.
                         self.beginTransitionTask()
+                        // Asked for as audio, new links come as the MP4 while the spectrum stays on.
                         let refresh: (Double?) -> Void = { [weak self] position in
-                            self?.fetchBilibiliPlayUrl(bvid: source.bvid, cid: source.cid, trackId: trackId, startPosition: position, audioOnly: false)
+                            self?.fetchBilibiliPlayUrl(bvid: source.bvid, cid: source.cid, trackId: trackId, startPosition: position, audioOnly: true,
+                                                       quality: quality)
                         }
                         self.loadAvPlayerItem(trackId: trackId, url: url, headers: BilibiliApi.browserHeaders, startPosition: position,
                                               mirrors: Array(stream.urls.dropFirst()), refresh: refresh, source: source,
+                                              quality: Self.qualityInfo(of: stream, preferred: quality, fallbackReason: .spectrum),
                                               preparedAsset: asset, audioMix: audioMix)
                     }
                 }
@@ -869,8 +908,84 @@ class OrpheusPlayerManager: NSObject {
         }
     }
 
+    // MARK: - Audio quality
+
+    /// What the quality panel shows for the current entry; nil without one. A stream AVPlayer
+    /// hasn't accepted yet reads as unknown, so a quality it refuses is never shown as playing.
+    func getCurrentAudioQuality() -> AudioQualityInfo? {
+        guard let track = queueManager.getCurrentTrack() else { return nil }
+        guard let load = currentLoad, load.trackId == track.id, loadedTrackId == track.id else {
+            // The stream is still on its way, or never arrived.
+            return AudioQualityInfo(preferredQuality: GeneralStorage.shared.preferredAudioQuality, actualKind: .unknown)
+        }
+        return player.currentItem?.status == .readyToPlay ? load.quality : load.quality.unconfirmed
+    }
+
+    /// Tells JS what the current item plays, once AVPlayer has accepted it.
+    private func reportAudioQuality() {
+        guard let item = player.currentItem, item.status == .readyToPlay, item !== failedItem,
+              let load = currentLoad, load.trackId == loadedTrackId else { return }
+        onAudioQualityChanged?(load.quality)
+    }
+
+    /// Looks the current track up again with the quality choice just made. The reasons for not
+    /// reloading are Android's, which JS turns into messages.
+    func reloadCurrentTrackForQualityChange() -> (reloaded: Bool, reason: String) {
+        guard let track = queueManager.getCurrentTrack() else { return (false, "no_track") }
+        guard track.url.starts(with: "orpheus://bilibili") else { return (false, "not_bilibili") }
+        if OrpheusDownloadManager.shared.getDownloadedFileUrl(id: track.id) != nil {
+            return (false, "downloaded")
+        }
+        // The spectrum needs the MP4, which comes in one quality. The choice applies once it is off.
+        if GeneralStorage.shared.isSpectrumVisualizerEnabled {
+            return (false, "spectrum")
+        }
+        let quality = GeneralStorage.shared.preferredAudioQuality
+        guard loadedTrackId == track.id else {
+            // Nothing of this track plays yet. A lookup on its way is made again with the new
+            // choice; a restored or failed entry reads the choice when it is next played.
+            guard pendingLookup != nil else { return (false, "no_track") }
+            resolveAndPlayBilibili(url: track.url, trackId: track.id, startPosition: pendingStartPosition, quality: quality)
+            return (true, "reloaded")
+        }
+        // A queue that has ended starts its last track over on play, which looks it up afresh.
+        guard !loadedTrackFinished, let source = currentLoad?.source else { return (false, "no_track") }
+        startQualitySwitch(trackId: track.id, source: source, quality: quality)
+        return (true, "reloaded")
+    }
+
+    /// The track keeps playing while its new stream is looked up. The swap happens at the
+    /// position playback has reached by then, as with the move to the MP4.
+    private func startQualitySwitch(trackId: String, source: BilibiliSource, quality: AudioQualityPreference) {
+        guard let item = player.currentItem else { return }
+        let token = UUID()
+        qualitySwitch = token
+        // Only reached with the spectrum off. Turned on meanwhile, it moves the new item to the MP4.
+        BilibiliApi.shared.getPlayStream(bvid: source.bvid, cid: source.cid, audioOnly: true, quality: quality) { [weak self, weak item] result in
+            DispatchQueue.main.async {
+                guard let self = self, self.qualitySwitch == token else { return }
+                self.qualitySwitch = nil
+                // A skip, a failover or the end of the track replaced the item meanwhile.
+                guard let item = item, self.player.currentItem === item, self.loadedTrackId == trackId, !self.loadedTrackFinished else { return }
+                switch result {
+                case .success(let stream) where !stream.urls.isEmpty:
+                    let position = self.currentEntryPosition()
+                    NSLog("[OrpheusPlayer] reloading for quality %@ at %.1fs", quality.rawValue, position)
+                    // Nothing is audible until the new stream has buffered, as at a failover.
+                    self.beginTransitionTask()
+                    self.loadResolvedStream(stream, source: source, trackId: trackId, startPosition: position, audioOnly: true, forSpectrum: false,
+                                            quality: quality)
+                case .success:
+                    NSLog("[OrpheusPlayer] the stream for quality %@ has no links, keeping the current one", quality.rawValue)
+                case .failure(let error):
+                    NSLog("[OrpheusPlayer] couldn't reload for quality %@: %@", quality.rawValue, Self.describe(error))
+                }
+            }
+        }
+    }
+
     // MARK: - Notification
-    
+
     private func notifyPositionUpdate() {
         onPositionUpdate?(currentEntryPosition(), currentEntryDuration(), getBufferedPosition())
         

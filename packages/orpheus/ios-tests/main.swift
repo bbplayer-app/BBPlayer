@@ -704,6 +704,205 @@ test("shuffle outlives a cleared queue") {
     check(queue.getPlaybackQueue().first?.id == queue.getCurrentTrack()?.id, "and start on the current track")
 }
 
+// MARK: - Audio quality
+
+/// What the chooser takes from a video with these streams, as "kind id", or "none" for the MP4.
+func choose(_ preference: AudioQualityPreference, aac: [Int] = [30216, 30232, 30280], hiRes: Bool = false, dolby: Bool = false,
+            unindexed: Set<Int> = []) -> String {
+    func candidate(_ id: Int) -> AudioStreamCandidate<Int> {
+        return AudioStreamCandidate(stream: id, id: id, playable: !unindexed.contains(id))
+    }
+    let choice = AudioStreamChooser.choose(preference, aac: aac.map(candidate), hiRes: hiRes ? candidate(AudioStreamId.hires) : nil,
+                                           dolby: dolby ? [candidate(AudioStreamId.dolby)] : [])
+    return choice.map { "\($0.kind.rawValue) \($0.candidate.id)" } ?? "none"
+}
+
+test("each AAC choice takes its own stream") {
+    check(choose(.low) == "normal 30216", "低 should take 64k")
+    check(choose(.standard) == "normal 30232", "标准 should take 132k")
+    check(choose(.high) == "normal 30280", "高品 should take 192k")
+}
+
+test("a missing AAC stream gives way to the best one below it, else the lowest") {
+    check(choose(.high, aac: [30216, 30232]) == "normal 30232", "高品 should settle for 132k")
+    check(choose(.standard, aac: [30216, 30280]) == "normal 30216", "a stream below comes before one above")
+    check(choose(.low, aac: [30232, 30280]) == "normal 30232", "with nothing below, the lowest")
+}
+
+test("Hi-Res and Dolby are taken only when asked for and offered") {
+    check(choose(.high, hiRes: true, dolby: true) == "normal 30280", "高品 stays with AAC")
+    check(choose(.hires, hiRes: true, dolby: true) == "hires 30251", "Hi-Res should take the FLAC stream")
+    check(choose(.dolby, hiRes: true, dolby: true) == "dolby 30250", "Dolby should take the Dolby stream")
+    check(choose(.dolby, hiRes: true) == "hires 30251", "Dolby without a Dolby stream should take Hi-Res")
+    check(choose(.hires) == "normal 30280", "Hi-Res without a FLAC stream should take 高品")
+    check(choose(.dolby) == "normal 30280", "Dolby with neither should take 高品")
+}
+
+test("a stream without an index gives way to the next choice") {
+    check(choose(.dolby, hiRes: true, dolby: true, unindexed: [30250]) == "hires 30251", "Dolby should give way to Hi-Res")
+    check(choose(.hires, hiRes: true, unindexed: [30251]) == "normal 30280", "Hi-Res should give way to 高品")
+    check(choose(.high, unindexed: [30280]) == "normal 30232", "192k should give way to 132k")
+    check(choose(.high, unindexed: [30216, 30232, 30280]) == "none", "with no playable stream it's the MP4")
+}
+
+test("the offered qualities follow the answer, not what can play") {
+    check(AudioStreamChooser.offeredQualities(aacIds: [30216, 30232, 30280], hasHiRes: true, hasDolby: false) == [.low, .standard, .high, .hires],
+          "three AAC streams and Hi-Res")
+    check(AudioStreamChooser.offeredQualities(aacIds: [30280], hasHiRes: false, hasDolby: true) == [.high, .dolby], "高品 and Dolby")
+}
+
+test("a fallback is anything short of the choice") {
+    func info(_ preference: AudioQualityPreference, _ kind: AudioQualityKind, _ id: Int? = nil) -> AudioQualityInfo {
+        return AudioQualityInfo(preferredQuality: preference, actualKind: kind, actualStreamId: id)
+    }
+    check(!info(.high, .normal, 30280).isFallback, "192k for 高品 is what was asked for")
+    check(info(.high, .normal, 30232).isFallback, "132k for 高品 is a fallback")
+    check(!info(.low, .normal, 30280).isFallback, "a better stream than asked for is not")
+    check(info(.hires, .normal, 30280).isFallback, "AAC for Hi-Res is a fallback")
+    check(info(.dolby, .hires, 30251).isFallback, "Hi-Res for Dolby is a fallback")
+    check(info(.high, .durl).isFallback, "the MP4 is a fallback")
+    check(!info(.high, .unknown).isFallback && !info(.high, .local).isFallback, "an unknown or local stream is not")
+}
+
+test("an unknown saved choice reads as 高品") {
+    check(AudioQualityPreference.normalize(nil) == .high, "nothing saved")
+    check(AudioQualityPreference.normalize("lossless") == .high, "a value this version doesn't know")
+    check(AudioQualityPreference.normalize("dolby") == .dolby, "a known value")
+}
+
+test("the panel reads a stream only once AVPlayer has accepted it") {
+    let f = makeFixture()
+    var reported: [AudioQualityInfo] = []
+    f.manager.onAudioQualityChanged = { reported.append($0) }
+    GeneralStorage.shared.preferredAudioQuality = .hires
+    f.manager.setQueue(["A", "B"].map { track($0) }, startIndex: 0)
+    check(f.manager.getCurrentAudioQuality()?.actualKind == .unknown, "unknown while the lookup runs")
+    let segmentBase = BilibiliPlayUrlResponse.SegmentBase(initialization: "0-999", index_range: "1000-1999")
+    BilibiliApi.shared.answerStream(.success(BilibiliStream(urls: ["https://cdn0.test/A.m4s"], segmentBase: segmentBase, measuredLoudness: nil,
+                                                            kind: .hires, streamId: AudioStreamId.hires, codecs: "fLaC",
+                                                            availableQualities: [.high, .hires])))
+    pump()
+    check(f.manager.getCurrentAudioQuality()?.actualKind == .unknown, "still unknown before the item is ready")
+    check(reported.isEmpty, "nothing reported before the item is ready")
+    f.player.becomeReady(duration: 200)
+    pump()
+    check(f.manager.getCurrentAudioQuality()?.actualKind == .hires, "Hi-Res once ready")
+    check(reported.map(\.actualKind) == [.hires], "reported once, when ready")
+    GeneralStorage.shared.preferredAudioQuality = .low
+    check(f.manager.getCurrentAudioQuality()?.preferredQuality == .hires, "the playing track keeps the choice it was loaded with")
+}
+
+test("the MP4 fallback keeps the choice the track was loaded with") {
+    GeneralStorage.shared.preferredAudioQuality = .low
+    let f = playingHlsA()
+    check(BilibiliApi.shared.streamRequestCount == 1, "A should have been looked up once")
+    GeneralStorage.shared.preferredAudioQuality = .hires
+    f.player.failItem(offline)
+    pump()
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [false], "the MP4 should be fetched")
+    check(BilibiliApi.shared.streamRequests.map(\.quality) == [.low], "with A's own choice, not the new one")
+    answer("A")
+    f.manager.playNext()
+    check(BilibiliApi.shared.streamRequests.map(\.quality) == [.hires], "the next track should use the new choice")
+}
+
+test("a new quality choice reloads the track where playback has got to") {
+    let f = playingHlsA()
+    f.player.advance(to: 30)
+    GeneralStorage.shared.preferredAudioQuality = .hires
+    let result = f.manager.reloadCurrentTrackForQualityChange()
+    check(result.reloaded && result.reason == "reloaded", "A should reload")
+    check(BilibiliApi.shared.streamRequests.map(\.quality) == [.hires], "with the new choice")
+    check(f.player.currentItem?.url == hlsPlaylist && f.player.rate > 0, "A should play on meanwhile")
+    f.player.advance(to: 33)
+    f.player.calls.removeAll()
+    answerHls("A")
+    check(f.player.calls.contains("seek:33"), "at the position reached when the stream came back")
+    check(f.player.rate > 0, "and keep playing")
+    check(f.events.errors.isEmpty, "a reload is not an error")
+}
+
+test("a reload that comes back after a skip is dropped") {
+    let f = playingHlsA()
+    GeneralStorage.shared.preferredAudioQuality = .low
+    _ = f.manager.reloadCurrentTrackForQualityChange()
+    f.manager.playNext()
+    answerHls("A")
+    check(f.player.currentItem == nil || f.player.currentItem?.url != hlsPlaylist, "A's reload must not load over B")
+    answer("B")
+    check(f.player.currentItem?.url == mediaUrl("B"), "B should play")
+}
+
+test("a reload that comes back after a failover is dropped") {
+    let f = playingHlsA(mirrors: 1)
+    GeneralStorage.shared.preferredAudioQuality = .low
+    _ = f.manager.reloadCurrentTrackForQualityChange()
+    f.player.calls.removeAll()
+    f.player.failItem(offline)
+    pump()
+    check(f.player.count("replace:\(hlsPlaylist)") == 1, "the mirror should replace the failed item")
+    answerHls("A")
+    check(f.player.count("replace:\(hlsPlaylist)") == 1, "the reload must not replace the mirror")
+}
+
+test("with the spectrum on, a new choice is kept for when it is off") {
+    GeneralStorage.shared.isSpectrumVisualizerEnabled = true
+    let f = playingA()
+    GeneralStorage.shared.preferredAudioQuality = .hires
+    let result = f.manager.reloadCurrentTrackForQualityChange()
+    check(!result.reloaded && result.reason == "spectrum", "the MP4 the spectrum needs comes in one quality")
+    check(BilibiliApi.shared.streamRequestCount == 1, "nothing more should be looked up")
+    setSpectrum(f, false)
+    f.manager.playNext()
+    check(BilibiliApi.shared.streamRequests.map(\.quality) == [.hires], "the next track should use the choice")
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [true], "as audio, now the spectrum is off")
+}
+
+test("an MP4 played for the spectrum says why") {
+    GeneralStorage.shared.isSpectrumVisualizerEnabled = true
+    let f = playingA()
+    check(BilibiliApi.shared.streamRequests.isEmpty, "the lookup should have been answered")
+    check(f.manager.getCurrentAudioQuality()?.fallbackReason == .spectrum, "the spectrum's MP4 should say so")
+    check(f.manager.getCurrentAudioQuality()?.dictionary["fallbackReason"] as? String == "spectrum", "and JS should get the reason")
+}
+
+test("the MP4 a failed stream falls back to gives no reason") {
+    let f = playingHlsA()
+    f.player.failItem(offline)
+    pump()
+    answer("A")
+    f.player.becomeReady(duration: 200)
+    pump()
+    check(f.manager.getCurrentAudioQuality()?.actualKind == .durl, "the failed HLS item should have fallen back to the MP4")
+    check(f.manager.getCurrentAudioQuality()?.fallbackReason == nil, "which is a plain fallback")
+    check(f.manager.getCurrentAudioQuality()?.dictionary["fallbackReason"] == nil, "so JS gets no reason at all")
+}
+
+test("the move to the MP4 for the spectrum says why") {
+    let f = playingHlsA()
+    setSpectrum(f, true)
+    answer("A")
+    check(finishTrackLoad(mediaUrl("A")), "the MP4's tracks should be loading")
+    f.player.becomeReady(duration: 200)
+    pump()
+    check(f.manager.getCurrentAudioQuality()?.fallbackReason == .spectrum, "the MP4 should say it is there for the spectrum")
+}
+
+test("a reload is declined for a download or a track not from Bilibili") {
+    let f = makeFixture()
+    check(f.manager.reloadCurrentTrackForQualityChange().reason == "no_track", "an empty queue has nothing to reload")
+    OrpheusDownloadManager.shared.localFiles["A"] = URL(fileURLWithPath: "/downloads/A.mp4")
+    var web = track("C")
+    web.url = "https://example.test/C.mp3"
+    f.manager.setQueue([track("A"), web], startIndex: 0)
+    pump()
+    check(f.manager.reloadCurrentTrackForQualityChange().reason == "downloaded", "a download plays as it was downloaded")
+    f.manager.playNext()
+    pump()
+    check(f.manager.reloadCurrentTrackForQualityChange().reason == "not_bilibili", "a web stream has no qualities")
+    check(BilibiliApi.shared.streamRequestCount == 0, "nothing should have been looked up")
+}
+
 // MARK: - Result
 
 print("")

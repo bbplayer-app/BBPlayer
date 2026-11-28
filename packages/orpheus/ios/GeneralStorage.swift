@@ -19,12 +19,14 @@ class GeneralStorage {
     private let KEY_BILIBILI_CDN = "preferredBilibiliCdn"
     private let KEY_NOTIFICATION_ARTWORK_ENABLED = "notificationArtworkEnabled"
     private let KEY_RESUME_STRATEGY = "playbackResumeStrategy"
+    private let KEY_PREFERRED_AUDIO_QUALITY = "preferredAudioQuality"
 
     private let EXPORT_KEY_BILIBILI_CDN = "config_bilibili_cdn"
     private let EXPORT_KEY_RESTORE_ENABLED = "config_restore_position_enabled"
     private let EXPORT_KEY_LOUDNESS_ENABLED = "config_loudness_normalization_enabled"
     private let EXPORT_KEY_AUTOPLAY_ENABLED = "config_autoplay_on_start_enabled"
     private let EXPORT_KEY_SPECTRUM_ENABLED = "config_spectrum_visualizer_enabled"
+    private let EXPORT_KEY_AUDIO_QUALITY = "config_preferred_audio_quality"
     
     // MARK: - Preferences
 
@@ -62,6 +64,13 @@ class GeneralStorage {
     var isNotificationArtworkEnabled: Bool {
         get { return mmkv?.bool(forKey: KEY_NOTIFICATION_ARTWORK_ENABLED, defaultValue: true) ?? true }
         set { mmkv?.set(newValue, forKey: KEY_NOTIFICATION_ARTWORK_ENABLED) }
+    }
+
+    /// Streams looked up from now on use it. The track playing keeps the quality it was loaded
+    /// with until it is looked up again.
+    var preferredAudioQuality: AudioQualityPreference {
+        get { return AudioQualityPreference.normalize(mmkv?.string(forKey: KEY_PREFERRED_AUDIO_QUALITY)) }
+        set { mmkv?.set(newValue.rawValue, forKey: KEY_PREFERRED_AUDIO_QUALITY) }
     }
 
     var playbackResumeStrategy: Int {
@@ -132,6 +141,7 @@ class GeneralStorage {
             EXPORT_KEY_LOUDNESS_ENABLED: isLoudnessNormalizationEnabled,
             EXPORT_KEY_AUTOPLAY_ENABLED: isAutoplayOnStartEnabled,
             EXPORT_KEY_SPECTRUM_ENABLED: isSpectrumVisualizerEnabled,
+            EXPORT_KEY_AUDIO_QUALITY: preferredAudioQuality.rawValue,
         ]
     }
 
@@ -141,6 +151,7 @@ class GeneralStorage {
         if let value = config[EXPORT_KEY_LOUDNESS_ENABLED] as? Bool { isLoudnessNormalizationEnabled = value }
         if let value = config[EXPORT_KEY_AUTOPLAY_ENABLED] as? Bool { isAutoplayOnStartEnabled = value }
         if let value = config[EXPORT_KEY_SPECTRUM_ENABLED] as? Bool { isSpectrumVisualizerEnabled = value }
+        if let value = config[EXPORT_KEY_AUDIO_QUALITY] as? String { preferredAudioQuality = AudioQualityPreference.normalize(value) }
     }
 
     // MARK: - Playback State

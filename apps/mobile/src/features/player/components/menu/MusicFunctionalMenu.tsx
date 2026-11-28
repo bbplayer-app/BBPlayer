@@ -1,4 +1,3 @@
-import { Platform } from 'react-native'
 import { Divider, List } from 'react-native-paper'
 
 import { formatAudioQualityLabel } from '@/constants/audioQuality'
@@ -42,22 +41,18 @@ export function MusicFunctionalMenu({
 				/>
 				<PlayerDownloadButton onAction={handleAction} />
 			</HighFreqRow>
-			{Platform.OS === 'android' && (
-				<List.Item
-					testID='player-menu-audio-quality'
-					title='默认音质'
-					description={audioQualityLabel}
-					left={(props) => (
-						<List.Icon
-							{...props}
-							icon='music-note'
-						/>
-					)}
-					onPress={() =>
-						handleAction(() => openModal('AudioQuality', undefined))
-					}
-				/>
-			)}
+			<List.Item
+				testID='player-menu-audio-quality'
+				title='默认音质'
+				description={audioQualityLabel}
+				left={(props) => (
+					<List.Icon
+						{...props}
+						icon='music-note'
+					/>
+				)}
+				onPress={() => handleAction(() => openModal('AudioQuality', undefined))}
+			/>
 			<PlayerModeSwitch onAction={handleAction} />
 			<Divider />
 			<SharedTrackActions onAction={handleAction} />

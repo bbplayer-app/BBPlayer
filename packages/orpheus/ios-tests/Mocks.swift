@@ -456,6 +456,11 @@ struct BilibiliStream {
     let urls: [String]
     let segmentBase: BilibiliPlayUrlResponse.SegmentBase?
     let measuredLoudness: Double?
+    var kind: AudioQualityKind = .durl
+    var streamId: Int? = nil
+    var codecs: String? = nil
+    var bandwidth: Int? = nil
+    var availableQualities: [AudioQualityPreference] = []
 }
 
 final class DashAudioPlaylistLoader {
@@ -475,6 +480,7 @@ final class BilibiliApi {
     struct StreamRequest {
         let bvid: String
         let audioOnly: Bool
+        let quality: AudioQualityPreference
         let completion: (Result<BilibiliStream, Error>) -> Void
     }
 
@@ -487,9 +493,10 @@ final class BilibiliApi {
         pageListRequests.append((bvid, completion))
     }
 
-    func getPlayStream(bvid: String, cid: String, audioOnly: Bool = true, completion: @escaping (Result<BilibiliStream, Error>) -> Void) {
+    func getPlayStream(bvid: String, cid: String, audioOnly: Bool = true, quality: AudioQualityPreference = .high,
+                       completion: @escaping (Result<BilibiliStream, Error>) -> Void) {
         streamRequestCount += 1
-        streamRequests.append(StreamRequest(bvid: bvid, audioOnly: audioOnly, completion: completion))
+        streamRequests.append(StreamRequest(bvid: bvid, audioOnly: audioOnly, quality: quality, completion: completion))
     }
 
     /// Answers the oldest unanswered stream lookup.

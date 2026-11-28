@@ -188,6 +188,9 @@ const NORMAL_STREAM_PREFERENCES = new Map<number, AudioQualityPreference>([
 
 const FALLBACK_HINT = '这首没有所选音质，已自动换成能用的最高档'
 
+const SPECTRUM_HINT =
+	'开着频谱时只能放普通音质，关掉频谱后下一首起按所选音质播放'
+
 interface ActualKindDescription {
 	title: string
 	detail?: string
@@ -311,6 +314,11 @@ export function formatActualAudioQuality(
 
 	if (info.actualKind === 'local' || info.isFromDownloadCache) {
 		return describeDownloaded(info)
+	}
+
+	// iOS 的频谱只能从 MP4 里取音频数据，这时不是视频没有所选音质，「下一首起用」也不成立
+	if (info.fallbackReason === 'spectrum') {
+		return { title: '普通音质', subtitle: SPECTRUM_HINT }
 	}
 
 	const detail = describeActualKind(info)
