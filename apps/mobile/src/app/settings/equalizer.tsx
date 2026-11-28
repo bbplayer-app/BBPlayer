@@ -35,18 +35,10 @@ import {
 	serializeCustomPresets,
 	upsertCustomPreset,
 } from '@/features/equalizer/utils/customPresets'
-import { persistCustomPresetsWithRollback } from '@/features/equalizer/utils/customPresetsWrite'
 import {
-	canWriteCustomPresets,
-	canWriteSettings,
-	createEqReadiness,
 	type EqReadiness,
-	isEqDataLoading,
-	isPresetsFailed,
-	isSettingsFailed,
 	resolveEditingCustomPresetId,
 	resolvePresetsStatus,
-	resolveSettingsStatus,
 } from '@/features/equalizer/utils/eqReadiness'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -300,9 +292,15 @@ export default function EqualizerSettingsPage() {
 
 	const [customPresets, setCustomPresets] = useState<EqualizerPreset[]>([])
 
-	const [readiness, setReadiness] = useState<EqReadiness>(() =>
-		createEqReadiness(isAndroid),
-	)
+	const customPresetsRef = useRef<EqualizerPreset[]>([])
+
+	const writingCustomPresetsRef = useRef(false)
+
+	const [readiness, setReadiness] = useState<EqReadiness>(() => {
+		const initial = isAndroid ? 'loading' : 'ready'
+
+		return { settings: initial, presets: initial }
+	})
 
 	const [editingCustomPresetId, setEditingCustomPresetId] = useState<
 		string | null
@@ -501,6 +499,8 @@ export default function EqualizerSettingsPage() {
 			) {
 				loadedPresets = parseCustomPresetsJson(customPresetsResult.value)
 
+				customPresetsRef.current = loadedPresets
+
 				setCustomPresets(loadedPresets)
 			} else {
 				toastAndLogError(
@@ -513,7 +513,7 @@ export default function EqualizerSettingsPage() {
 			}
 
 			setReadiness({
-				settings: resolveSettingsStatus(settingsResult),
+				settings: settingsResult.status === 'fulfilled' ? 'ready' : 'error',
 				presets: presetsStatus,
 			})
 
@@ -552,7 +552,6 @@ export default function EqualizerSettingsPage() {
 		async (
 			action: () => Promise<EqualizerSettings>,
 			failureMessage: string,
-			onFailure?: () => void,
 		) => {
 			try {
 				const next = await action()
@@ -560,8 +559,6 @@ export default function EqualizerSettingsPage() {
 				applySettledSettings(next)
 			} catch (error) {
 				toastAndLogError(failureMessage, error, 'Equalizer')
-
-				onFailure?.()
 			}
 		},
 		[applySettledSettings],
@@ -569,25 +566,32 @@ export default function EqualizerSettingsPage() {
 
 	const persistCustomPresets = useCallback(
 		async (nextPresets: EqualizerPreset[]) => {
-			await persistCustomPresetsWithRollback(
-				customPresets,
-				nextPresets,
-				setCustomPresets,
-				async (presets) => {
-					if (!isAndroid) return
+			if (writingCustomPresetsRef.current) return false
 
+			writingCustomPresetsRef.current = true
+
+			try {
+				if (isAndroid) {
 					await Orpheus.setCustomEqualizerPresetsJson(
-						serializeCustomPresets(presets),
+						serializeCustomPresets(nextPresets),
 					)
-				},
-			)
+				}
+
+				customPresetsRef.current = nextPresets
+
+				setCustomPresets(nextPresets)
+
+				return true
+			} finally {
+				writingCustomPresetsRef.current = false
+			}
 		},
-		[customPresets, isAndroid],
+		[isAndroid],
 	)
 
 	const applyPreset = useCallback(
 		(preset: EqualizerPreset) => {
-			if (!isAndroid || !canWriteSettings(readiness)) return
+			if (!isAndroid || readiness.settings !== 'ready') return
 
 			const next = {
 				...settingsRef.current,
@@ -624,11 +628,11 @@ export default function EqualizerSettingsPage() {
 	)
 
 	const handleToggleEnabled = useCallback(() => {
-		if (!isAndroid || !canWriteSettings(readiness)) return
+		if (!isAndroid || readiness.settings !== 'ready') return
 
-		const previous = settingsRef.current
+		const current = settingsRef.current
 
-		const next = { ...previous, enabled: !previous.enabled }
+		const next = { ...current, enabled: !current.enabled }
 
 		commitSettings(() => next)
 
@@ -642,23 +646,21 @@ export default function EqualizerSettingsPage() {
 					next.activePresetId,
 				),
 			'切换均衡器失败',
-			() => commitSettings(() => previous),
 		)
 	}, [commitSettings, isAndroid, readiness, runEqualizerAction])
 
 	const handleToggleLimiter = useCallback(() => {
-		if (!isAndroid || !canWriteSettings(readiness)) return
+		if (!isAndroid || readiness.settings !== 'ready') return
 
-		const previous = settingsRef.current
+		const current = settingsRef.current
 
-		const next = { ...previous, limiterEnabled: !previous.limiterEnabled }
+		const next = { ...current, limiterEnabled: !current.limiterEnabled }
 
 		commitSettings(() => next)
 
 		void runEqualizerAction(
 			() => Orpheus.setEqualizerLimiterEnabled(next.limiterEnabled),
 			'切换防破音保护失败',
-			() => commitSettings(() => previous),
 		)
 	}, [commitSettings, isAndroid, readiness, runEqualizerAction])
 
@@ -910,11 +912,11 @@ export default function EqualizerSettingsPage() {
 
 	const handleSavePresetAs = useCallback(
 		async (name: string) => {
-			if (!canWriteCustomPresets(readiness)) {
+			if (readiness.presets !== 'ready') {
 				throw new Error('自定义预设尚未读取完成，暂时无法保存')
 			}
 
-			const { presets, preset } = upsertCustomPreset(customPresets, {
+			const { presets, preset } = upsertCustomPreset(customPresetsRef.current, {
 				name,
 				gainsDb: settingsRef.current.gainsDb,
 				preampDb: settingsRef.current.preampDb,
@@ -926,24 +928,24 @@ export default function EqualizerSettingsPage() {
 				return
 			}
 
-			await persistCustomPresets(presets)
+			if (!(await persistCustomPresets(presets))) return
 
 			toast.success(`已保存「${preset.name}」`)
 
 			applyPreset(preset)
 		},
-		[applyPreset, customPresets, persistCustomPresets, readiness],
+		[applyPreset, persistCustomPresets, readiness],
 	)
 
 	const handleOverwritePreset = useCallback(
 		async (id: string) => {
-			if (!canWriteCustomPresets(readiness)) return
+			if (readiness.presets !== 'ready') return
 
-			const target = customPresets.find((preset) => preset.id === id)
+			const target = customPresetsRef.current.find((preset) => preset.id === id)
 
 			if (!target) return
 
-			const { presets, preset } = upsertCustomPreset(customPresets, {
+			const { presets, preset } = upsertCustomPreset(customPresetsRef.current, {
 				id,
 				name: target.name,
 				gainsDb: settingsRef.current.gainsDb,
@@ -953,7 +955,7 @@ export default function EqualizerSettingsPage() {
 			if (!preset) return
 
 			try {
-				await persistCustomPresets(presets)
+				if (!(await persistCustomPresets(presets))) return
 
 				toast.success(`已覆盖「${preset.name}」`)
 
@@ -962,12 +964,12 @@ export default function EqualizerSettingsPage() {
 				toastAndLogError('保存自定义预设失败', error, 'Equalizer')
 			}
 		},
-		[applyPreset, customPresets, persistCustomPresets, readiness],
+		[applyPreset, persistCustomPresets, readiness],
 	)
 
 	const handleRenamePreset = useCallback(
 		async (id: string, name: string) => {
-			if (!canWriteCustomPresets(readiness)) {
+			if (readiness.presets !== 'ready') {
 				throw new Error('自定义预设尚未读取完成，暂时无法重命名')
 			}
 
@@ -977,17 +979,23 @@ export default function EqualizerSettingsPage() {
 				return
 			}
 
-			await persistCustomPresets(renameCustomPreset(customPresets, id, name))
+			await persistCustomPresets(
+				renameCustomPreset(customPresetsRef.current, id, name),
+			)
 		},
-		[customPresets, persistCustomPresets, readiness],
+		[persistCustomPresets, readiness],
 	)
 
 	const handleDeletePreset = useCallback(
 		async (id: string) => {
-			if (!canWriteCustomPresets(readiness)) return
+			if (readiness.presets !== 'ready') return
 
 			try {
-				await persistCustomPresets(deleteCustomPreset(customPresets, id))
+				const deleted = await persistCustomPresets(
+					deleteCustomPreset(customPresetsRef.current, id),
+				)
+
+				if (!deleted) return
 			} catch (error) {
 				toastAndLogError('删除自定义预设失败', error, 'Equalizer')
 
@@ -1002,7 +1010,7 @@ export default function EqualizerSettingsPage() {
 
 			commitSettings((previous) => ({ ...previous, activePresetId: null }))
 
-			if (!isAndroid || !canWriteSettings(readiness)) return
+			if (!isAndroid || readiness.settings !== 'ready') return
 
 			const current = settingsRef.current
 
@@ -1020,7 +1028,6 @@ export default function EqualizerSettingsPage() {
 		},
 		[
 			commitSettings,
-			customPresets,
 			editingCustomPresetId,
 			isAndroid,
 			persistCustomPresets,
@@ -1051,11 +1058,12 @@ export default function EqualizerSettingsPage() {
 						均衡器目前仅支持 Android 设备。
 					</Text>
 				</View>
-			) : isEqDataLoading(readiness) ? (
+			) : readiness.settings === 'loading' ||
+			  readiness.presets === 'loading' ? (
 				<View style={styles.placeholder}>
 					<ActivityIndicator />
 				</View>
-			) : isSettingsFailed(readiness) ? (
+			) : readiness.settings === 'error' ? (
 				<View style={styles.placeholder}>
 					<Text
 						variant='bodyLarge'
@@ -1119,7 +1127,7 @@ export default function EqualizerSettingsPage() {
 						/>
 					</Surface>
 					<SettingsSectionTitle title='预设' />
-					{isPresetsFailed(readiness) ? (
+					{readiness.presets === 'error' ? (
 						<Surface
 							mode='flat'
 							style={[styles.card, { backgroundColor: colors.surfaceVariant }]}
@@ -1149,7 +1157,7 @@ export default function EqualizerSettingsPage() {
 						editingCustomPresetId={editingCustomPresetId}
 						customPresets={customPresets}
 						enabled={settings.enabled}
-						presetsReady={canWriteCustomPresets(readiness)}
+						presetsReady={readiness.presets === 'ready'}
 						onDelete={handleDeletePreset}
 						onOverwrite={handleOverwritePreset}
 						onRename={handleRenamePreset}

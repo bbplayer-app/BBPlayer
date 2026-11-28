@@ -78,7 +78,7 @@ test('页面守卫：删除预设按最新 activePresetId 判定', () => {
 	assert.doesNotMatch(deletePreset, /settings\.activePresetId/)
 })
 
-test('页面守卫：开关切换先同步提交设置，再调用原生，失败回滚到点击前快照', () => {
+test('页面守卫：开关切换先同步提交设置，再调用原生', () => {
 	for (const anchor of [
 		'const handleToggleEnabled = useCallback',
 		'const handleToggleLimiter = useCallback',
@@ -89,24 +89,15 @@ test('页面守卫：开关切换先同步提交设置，再调用原生，失�
 		assert.match(block, /commitSettings\(/, `${anchor} 未同步提交设置`)
 		assert.doesNotMatch(block, /\bsettings\./, `${anchor} 仍在读闭包中的设置`)
 
-		const previousIndex = block.indexOf('const previous = settingsRef.current')
-
 		const commitIndex = block.indexOf('commitSettings(')
 
 		const nativeIndex = block.indexOf('runEqualizerAction(')
 
-		assert.ok(
-			previousIndex !== -1 && previousIndex < commitIndex,
-			`${anchor} 必须在乐观提交前捕获回滚快照`,
-		)
-
 		assert.ok(nativeIndex > commitIndex, `${anchor} 必须先提交设置再调用原生`)
-
-		const rollbackIndex = block.indexOf('() => commitSettings(() => previous)')
-
-		assert.ok(
-			rollbackIndex > nativeIndex,
-			`${anchor} 必须把回滚作为 runEqualizerAction 的失败回调`,
+		assert.doesNotMatch(
+			block,
+			/previous|onFailure/,
+			`${anchor} 不应再有失败回滚`,
 		)
 	}
 })
@@ -122,4 +113,34 @@ test('页面守卫：另存与覆盖预设的增益取自最新设置', () => {
 		assert.match(block, /settingsRef\.current\.preampDb/)
 		assert.doesNotMatch(block, /\bsettings\.(gainsDb|preampDb)/)
 	}
+})
+
+test('页面守卫：runEqualizerAction 不再接受失败回调', () => {
+	const block = extractCallbackCall(
+		PAGE_SOURCE,
+		'const runEqualizerAction = useCallback',
+	)
+
+	assert.doesNotMatch(block, /onFailure/)
+	assert.match(block, /toastAndLogError\(failureMessage/)
+})
+
+test('页面守卫：自定义预设先写原生再更新本地，并防止写入重入', () => {
+	const block = extractCallbackCall(
+		PAGE_SOURCE,
+		'const persistCustomPresets = useCallback',
+	)
+
+	assert.match(block, /writingCustomPresetsRef\.current/)
+
+	const nativeIndex = block.indexOf('Orpheus.setCustomEqualizerPresetsJson')
+
+	const refIndex = block.indexOf('customPresetsRef.current = nextPresets')
+
+	const stateIndex = block.indexOf('setCustomPresets(nextPresets)')
+
+	assert.notEqual(nativeIndex, -1, '必须先写原生')
+	assert.ok(refIndex > nativeIndex, '原生成功后才能更新本地列表')
+	assert.ok(stateIndex > nativeIndex, '原生成功后才能更新界面状态')
+	assert.doesNotMatch(block, /persistCustomPresetsWithRollback/)
 })
