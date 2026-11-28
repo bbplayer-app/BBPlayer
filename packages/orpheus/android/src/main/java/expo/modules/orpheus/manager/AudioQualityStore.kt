@@ -150,9 +150,6 @@ object AudioQualityStore {
         val (actualKind, actualStreamId) = when {
             probe.contains("flac") -> KIND_HIRES to HIRES_STREAM_ID
             DOLBY_CODEC_TOKENS.any { token -> probe.contains(token) } -> KIND_DOLBY to DOLBY_STREAM_ID
-            bitrate >= 160_000 -> KIND_NORMAL to BilibiliAudioQualityId.HIGH
-            bitrate >= 96_000 -> KIND_NORMAL to BilibiliAudioQualityId.STANDARD
-            bitrate > 0 -> KIND_NORMAL to BilibiliAudioQualityId.LOW
             else -> return null
         }
         return AudioQualityInfo(

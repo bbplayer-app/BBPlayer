@@ -8,7 +8,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.ContentMetadata
 import androidx.media3.exoplayer.offline.DownloadManager
@@ -17,7 +19,6 @@ import androidx.media3.exoplayer.scheduler.Requirements
 import expo.modules.orpheus.OrpheusConfig
 import expo.modules.orpheus.bilibili.BilibiliRepository
 import expo.modules.orpheus.manager.AudioQualityInfo
-import expo.modules.orpheus.manager.AudioQualityRequest
 import expo.modules.orpheus.manager.AudioQualityStore
 import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
@@ -100,17 +101,46 @@ object DownloadUtil {
                     }
                 }
 
-            playerDataSourceFactory = downloadFactory
+            val appContext = context.applicationContext
+            playerDataSourceFactory = DataSource.Factory {
+                DownloadCacheAwareDataSource(
+                    appContext,
+                    downloadFactory.createDataSource(),
+                    cacheFactory.createDataSource(),
+                )
+            }
         }
         return playerDataSourceFactory!!
     }
 
+    const val AUDIO_QUALITY_QUERY_PARAM = "q"
+
     fun playbackCacheKey(uriString: String): String = "$uriString|q=${GeneralStorage.getPreferredAudioQuality()}"
 
     /**
-     * 下载缓存 key：B 站 URI 不含定档参数，直接使用 URI 本身，保持与既有下载缓存兼容
+     * 下载请求的 URI 固定记录发起时的音质，恢复下载时沿用同一档位
      */
-    fun downloadCacheKeyOf(uri: Uri): String = uri.toString()
+    fun downloadRequestUriOf(url: String): Uri {
+        val uri = url.toUri()
+        if (uri.scheme != "orpheus" || uri.host != "bilibili") return uri
+        return uri.buildUpon()
+            .appendQueryParameter(AUDIO_QUALITY_QUERY_PARAM, GeneralStorage.getPreferredAudioQuality())
+            .build()
+    }
+
+    /**
+     * 下载缓存 key：B 站 URI 去掉定档参数后直接使用 URI 本身，保持与既有下载缓存兼容
+     */
+    fun downloadCacheKeyOf(uri: Uri): String {
+        val uriString = uri.toString()
+        if (uri.scheme != "orpheus" || uri.host != "bilibili") return uriString
+        val quality = uri.getQueryParameter(AUDIO_QUALITY_QUERY_PARAM) ?: return uriString
+        val suffix = "&$AUDIO_QUALITY_QUERY_PARAM=$quality"
+        if (uriString.endsWith(suffix)) return uriString.dropLast(suffix.length)
+        val onlyParam = "?$AUDIO_QUALITY_QUERY_PARAM=$quality"
+        if (uriString.endsWith(onlyParam)) return uriString.dropLast(onlyParam.length)
+        return uriString
+    }
 
     fun downloadCacheKeyOf(uriString: String): String = downloadCacheKeyOf(uriString.toUri())
 
@@ -122,31 +152,20 @@ object DownloadUtil {
         return dataSpec.key ?: uri.toString()
     }
 
-    fun isFullyCachedInLruCache(context: Context, cacheKey: String): Boolean {
-        return try {
-            val cache = DownloadCache.getLruCache(context)
-            val contentLength = ContentMetadata.getContentLength(cache.getContentMetadata(cacheKey))
-            if (contentLength == C.LENGTH_UNSET.toLong() || contentLength <= 0L) return false
+    private fun isFullyCached(cache: Cache, cacheKey: String): Boolean = try {
+        val contentLength = ContentMetadata.getContentLength(cache.getContentMetadata(cacheKey))
+        contentLength != C.LENGTH_UNSET.toLong() &&
+            contentLength > 0L &&
             cache.getCachedSpans(cacheKey).sumOf { it.length } >= contentLength
-        } catch (e: Exception) {
-            false
-        }
+    } catch (e: Exception) {
+        false
     }
 
-    fun isFullyCachedInDownloadCache(context: Context, uriString: String): Boolean {
-        return try {
-            val cacheKey = downloadCacheKeyOf(uriString)
-            val cache = DownloadCache.getStableCache(context)
-            val contentLength = ContentMetadata.getContentLength(cache.getContentMetadata(cacheKey))
-            if (contentLength == C.LENGTH_UNSET.toLong() || contentLength <= 0L) return false
-            cache.getCachedSpans(cacheKey).sumOf { it.length } >= contentLength
-        } catch (e: Exception) {
-            false
-        }
-    }
+    fun isFullyCachedInLruCache(context: Context, cacheKey: String): Boolean =
+        isFullyCached(DownloadCache.getLruCache(context), cacheKey)
 
-    private fun resolveAudioQualityRequest(): AudioQualityRequest =
-        AudioQualityStore.requestFor(GeneralStorage.getPreferredAudioQuality())
+    fun isFullyCachedInDownloadCache(context: Context, uriString: String): Boolean =
+        isFullyCached(DownloadCache.getStableCache(context), downloadCacheKeyOf(uriString))
 
 
     @Synchronized
@@ -188,6 +207,45 @@ object DownloadUtil {
             .createDataSource()
     }
 
+    private class DownloadCacheAwareDataSource(
+        private val context: Context,
+        private val downloadDataSource: DataSource,
+        private val fallbackDataSource: DataSource,
+    ) : DataSource {
+        private var activeDataSource: DataSource = downloadDataSource
+
+        override fun addTransferListener(transferListener: TransferListener) {
+            downloadDataSource.addTransferListener(transferListener)
+            fallbackDataSource.addTransferListener(transferListener)
+        }
+
+        override fun open(dataSpec: DataSpec): Long {
+            val uri = dataSpec.uri
+            activeDataSource = if (
+                uri.scheme == "orpheus" &&
+                uri.host == "bilibili" &&
+                !DownloadUtil.isFullyCachedInDownloadCache(context, uri.toString())
+            ) {
+                fallbackDataSource
+            } else {
+                downloadDataSource
+            }
+            return activeDataSource.open(dataSpec)
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+            activeDataSource.read(buffer, offset, length)
+
+        override fun getUri(): Uri? = activeDataSource.uri
+
+        override fun getResponseHeaders(): Map<String, List<String>> =
+            activeDataSource.responseHeaders
+
+        override fun close() {
+            activeDataSource.close()
+        }
+    }
+
     private class BilibiliResolver(private val forPlayback: Boolean) :
         ResolvingDataSource.Resolver {
         override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
@@ -198,7 +256,10 @@ object DownloadUtil {
                 try {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
-                    val request = resolveAudioQualityRequest()
+                    val request = AudioQualityStore.requestFor(
+                        uri.getQueryParameter(AUDIO_QUALITY_QUERY_PARAM)
+                            ?: GeneralStorage.getPreferredAudioQuality()
+                    )
                     val resolved = BilibiliRepository.resolveAudioUrls(
                         bvid = bvid!!,
                         cid = cid,

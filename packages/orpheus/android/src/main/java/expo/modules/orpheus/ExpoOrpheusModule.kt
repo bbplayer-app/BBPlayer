@@ -864,7 +864,10 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("downloadTrack") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
-            val downloadRequest = DownloadRequest.Builder(track.id, track.url.toUri())
+            val downloadRequest = DownloadRequest.Builder(
+                track.id,
+                DownloadUtil.downloadRequestUriOf(track.url)
+            )
                 .setCustomCacheKey(DownloadUtil.downloadCacheKeyOf(track.url))
                 .setData(json.encodeToString(track).toByteArray())
                 .build()
@@ -880,7 +883,10 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("multiDownload") { tracks: List<TrackRecord> ->
             val context = appContext.reactContext ?: return@AsyncFunction
             tracks.forEach { track ->
-                val downloadRequest = DownloadRequest.Builder(track.id, track.url.toUri())
+                val downloadRequest = DownloadRequest.Builder(
+                    track.id,
+                    DownloadUtil.downloadRequestUriOf(track.url)
+                )
                     .setCustomCacheKey(DownloadUtil.downloadCacheKeyOf(track.url))
                     .setData(json.encodeToString(track).toByteArray())
                     .build()
@@ -907,7 +913,10 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("retryDownload") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
-            val downloadRequest = DownloadRequest.Builder(track.id, track.url.toUri())
+            val downloadRequest = DownloadRequest.Builder(
+                track.id,
+                DownloadUtil.downloadRequestUriOf(track.url)
+            )
                 .setCustomCacheKey(DownloadUtil.downloadCacheKeyOf(track.url))
                 .setData(json.encodeToString(track).toByteArray())
                 .build()
