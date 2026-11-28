@@ -266,7 +266,7 @@ test('formatActualAudioQuality 把普通音轨的 streamId 映射到具体档位
 		formatActualAudioQuality(
 			createQualityInfo({ actualStreamId: null, bandwidth: null }),
 		)?.title,
-		'B 站普通音轨',
+		'普通音质',
 	)
 })
 
@@ -279,15 +279,15 @@ test('formatActualAudioQuality 对离线缓存与 durl 给出专门说明', () =
 		createQualityInfo({ isFromDownloadCache: true }),
 	)
 
-	assert.equal(local?.title, '离线已下载缓存')
-	assert.equal(downloaded?.title, '离线已下载缓存')
-	assert.match(downloaded?.subtitle ?? '', /不受音质偏好影响/)
+	assert.equal(local?.title, '已下载')
+	assert.equal(downloaded?.title, '已下载')
+	assert.match(downloaded?.subtitle ?? '', /改音质不影响这首/)
 
 	const durl = formatActualAudioQuality(
 		createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
 	)
 
-	assert.equal(durl?.title, '普通整段音轨')
+	assert.equal(durl?.title, '普通音质')
 })
 
 test('formatActualAudioQuality 在降级时追加降级提示', () => {
@@ -295,13 +295,13 @@ test('formatActualAudioQuality 在降级时追加降级提示', () => {
 		createQualityInfo({ preferredQuality: 'hires', isFallback: true }),
 	)
 
-	assert.match(degraded?.subtitle ?? '', /已自动降级/)
+	assert.match(degraded?.subtitle ?? '', /已自动换成/)
 
 	const applied = formatActualAudioQuality(
 		createQualityInfo({ preferredQuality: 'high', isFallback: false }),
 	)
 
-	assert.doesNotMatch(applied?.subtitle ?? '', /已自动降级/)
+	assert.doesNotMatch(applied?.subtitle ?? '', /已自动换成/)
 })
 
 test('resolveActualAudioQualityPreference 把实际音轨映射为档位', () => {
@@ -469,7 +469,7 @@ test('resolveAudioQualityEventOutcome 对 unknown 实际格式返回 awaiting', 
 	assert.equal(
 		formatActualAudioQuality(createQualityInfo({ actualKind: 'unknown' }))
 			?.subtitle,
-		'正在解析音源信息',
+		'稍等一下',
 	)
 })
 

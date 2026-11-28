@@ -33,6 +33,18 @@ export function AudioQualityOptionList({
 
 	return (
 		<>
+			<Text
+				variant='labelLarge'
+				style={styles.optionSectionTitle}
+			>
+				默认音质
+			</Text>
+			<Text
+				variant='bodySmall'
+				style={[styles.accessHint, { color: colors.onSurfaceVariant }]}
+			>
+				所有歌曲都按这里播放，选好后正在播放的这首也会马上切换。没有所选音质的歌会自动用能用的最高档。
+			</Text>
 			{accessHint !== null && (
 				<Text
 					variant='bodySmall'

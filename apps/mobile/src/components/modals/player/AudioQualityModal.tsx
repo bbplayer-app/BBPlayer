@@ -159,31 +159,31 @@ const AudioQualityModal = () => {
 			actualTitleText = pendingTarget
 				? `切换到 ${formatAudioQualityLabel(pendingTarget)}…`
 				: '正在切换音质…'
-			actualSubtitleText = '正在请求播放器重新加载当前曲目。'
+			actualSubtitleText = '正在重新加载这首歌'
 			break
 		case 'checking':
 			actualTitleText = '正在检查当前音质…'
-			actualSubtitleText = '正在向播放服务重新读取实际音质。'
+			actualSubtitleText = undefined
 			break
 		case 'unconfirmed':
-			actualTitleText = '音质未确认'
-			actualSubtitleText = '播放器没有回填实际音质，可点「重新检查」。'
+			actualTitleText = '暂时没拿到当前音质'
+			actualSubtitleText = '可以点「重新检查」再试一次'
 			break
 		case 'actual':
 			actualTitleText = actual ? actual.title : '暂无正在播放的曲目'
 			actualSubtitleText = actual ? actual.subtitle : undefined
 			break
 		case 'loading':
-			actualTitleText = '正在读取当前音质'
-			actualSubtitleText = '正在向播放服务查询当前音质。'
+			actualTitleText = '正在读取当前音质…'
+			actualSubtitleText = undefined
 			break
 		case 'load_failed':
 			actualTitleText = '读取当前音质失败'
-			actualSubtitleText = '播放服务暂时没有返回结果，可以重试。'
+			actualSubtitleText = '可以点「重试」再试一次'
 			break
 		default:
-			actualTitleText = '暂无正在播放的曲目'
-			actualSubtitleText = '选好档位会存为默认音质，下一首播放时生效。'
+			actualTitleText = '没有正在播放的歌'
+			actualSubtitleText = '选好的默认音质从下一首开始用'
 	}
 
 	const accountAccess = useBilibiliAccountAccess()

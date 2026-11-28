@@ -48,6 +48,10 @@ export const styles = StyleSheet.create({
 	optionList: {
 		gap: 2,
 	},
+	optionSectionTitle: {
+		marginTop: 4,
+		marginBottom: 4,
+	},
 	accessHint: {
 		marginBottom: 8,
 	},

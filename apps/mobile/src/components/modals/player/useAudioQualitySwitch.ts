@@ -24,8 +24,8 @@ import {
 export const QUALITY_CONFIRM_TIMEOUT_MS = 3_000
 
 const SWITCH_IN_PROGRESS_MESSAGE = {
-	message: '正在切换音质，请稍候',
-	description: '当前切换还未结束，完成后可以再选择其他档位',
+	message: '正在切换，请稍等',
+	description: '这次切换完成后再选别的档位',
 }
 
 export interface UseAudioQualitySwitchOptions {

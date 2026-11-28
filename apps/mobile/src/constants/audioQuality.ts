@@ -21,32 +21,31 @@ const AUDIO_QUALITY_BY_PREFERENCE = {
 		value: 'low',
 		label: '省流',
 		badge: '64k',
-		description: '约 64kbps，最省流量，适合流量紧张时听个响。',
+		description: '最省流量，能听个响。',
 	},
 	standard: {
 		value: 'standard',
 		label: '标准',
 		badge: '132k',
-		description: '约 132kbps，普通耳机够用，比省流更耐听。',
+		description: '普通耳机够用。',
 	},
 	high: {
 		value: 'high',
 		label: '高品',
 		badge: '192k',
-		description: '约 192kbps，音质与流量均衡（默认）。',
+		description: '音质和流量兼顾，推荐。',
 	},
 	hires: {
 		value: 'hires',
 		label: 'Hi-Res 无损',
 		badge: '无损',
-		description: 'B 站 Hi-Res 无损音源，需登录且有大会员，不支持时自动降级。',
+		description: '无损音质，需要大会员。',
 	},
 	dolby: {
 		value: 'dolby',
 		label: '杜比全景声',
 		badge: '杜比',
-		description:
-			'B 站杜比全景声音源，需视频本身支持与大会员，不支持时自动降级。设备支持杜比全景声才有空间效果；直通播放时不参与响度均衡。',
+		description: '空间音频，需要大会员，设备也要支持。',
 	},
 } satisfies Record<AudioQualityPreference, AudioQualityOption>
 
@@ -150,14 +149,14 @@ export function getDolbyOptionNotice(
 	if (level === 'none') {
 		return {
 			disabled: true,
-			text: '此设备不能解码或直通杜比全景声，软解只有普通多声道下混，所以不可选；之前选了杜比的会按 Hi-Res 无损播放。',
+			text: '这台设备不支持杜比全景声，不能选。',
 		}
 	}
 
 	if (level === 'dolby') {
 		return {
 			disabled: false,
-			text: '此设备能解码杜比数字+，但没有全景声解码器，空间效果取决于厂商实现，可能只是普通多声道下混。',
+			text: '这台设备能播杜比音频，但不一定有空间效果。',
 		}
 	}
 
@@ -171,11 +170,11 @@ export function getAudioQualityAccessHint(
 	accountTier: BilibiliAccountTier,
 ): string | null {
 	if (accountTier === 'guest') {
-		return '未登录仅显示省流与标准音质，登录 B 站账号可解锁高品及以上'
+		return '登录 B 站后可选高品及以上'
 	}
 
 	if (accountTier === 'logged_in') {
-		return '当前账号非大会员，已隐藏 Hi-Res 无损与杜比全景声'
+		return '开通大会员后可选 Hi-Res 无损和杜比全景声'
 	}
 
 	return null
@@ -187,7 +186,7 @@ const NORMAL_STREAM_PREFERENCES = new Map<number, AudioQualityPreference>([
 	[30280, 'high'],
 ])
 
-const FALLBACK_HINT = '该曲不支持所选档位或权限不足，已自动降级'
+const FALLBACK_HINT = '这首没有所选音质，已自动换成能用的最高档'
 
 interface ActualKindDescription {
 	title: string
@@ -230,19 +229,19 @@ function describeActualKind(info: AudioQualityInfo): ActualKindDescription {
 	const bandwidth = formatBandwidth(info.bandwidth)
 
 	if (info.actualKind === 'dolby') {
-		return { title: '杜比全景声', detail: bandwidth ?? 'B 站杜比全景声音源' }
+		return { title: '杜比全景声', detail: bandwidth }
 	}
 
 	if (info.actualKind === 'hires') {
-		return { title: 'Hi-Res 无损', detail: bandwidth ?? 'B 站 Hi-Res 无损音源' }
+		return { title: 'Hi-Res 无损', detail: bandwidth }
 	}
 
 	if (info.actualKind === 'durl') {
-		return { title: '普通整段音轨', detail: '老视频只有整段音轨，无法单独选档' }
+		return { title: '普通音质', detail: '这个视频只有一种音质' }
 	}
 
 	if (info.actualKind === 'unknown') {
-		return { title: '识别中', detail: '正在解析音源信息' }
+		return { title: '识别中', detail: '稍等一下' }
 	}
 
 	const preference =
@@ -256,7 +255,7 @@ function describeActualKind(info: AudioQualityInfo): ActualKindDescription {
 		return { title: `${option.label} ${option.badge}`, detail: bandwidth }
 	}
 
-	return { title: 'B 站普通音轨', detail: bandwidth }
+	return { title: '普通音质', detail: bandwidth }
 }
 
 /**
@@ -273,8 +272,8 @@ export function formatActualAudioQuality(
 
 	if (info.actualKind === 'local' || info.isFromDownloadCache) {
 		return {
-			title: '离线已下载缓存',
-			subtitle: '正在播放本地文件，不受音质偏好影响',
+			title: '已下载',
+			subtitle: '播放的是下载好的文件，改音质不影响这首',
 		}
 	}
 
@@ -294,7 +293,7 @@ export function formatActualAudioQuality(
 		info.preferredQuality !== currentPreference
 	) {
 		notes.push(
-			`这首按之前的「${getAudioQualityOption(info.preferredQuality).label}」加载，「${getAudioQualityOption(currentPreference).label}」从下一首起生效`,
+			`这首仍按「${getAudioQualityOption(info.preferredQuality).label}」播放，下一首起用「${getAudioQualityOption(currentPreference).label}」`,
 		)
 	}
 

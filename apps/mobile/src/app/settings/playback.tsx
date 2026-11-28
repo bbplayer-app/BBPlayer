@@ -121,7 +121,7 @@ export default function PlaybackSettingsPage() {
 					>
 						<View style={styles.audioQualityRowContent}>
 							<View style={styles.settingDescription}>
-								<Text>首选音质</Text>
+								<Text>默认音质</Text>
 								<Text
 									variant='bodySmall'
 									style={{ color: colors.onSurfaceVariant }}

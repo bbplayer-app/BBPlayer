@@ -43,7 +43,7 @@ export function AudioQualityCard({
 						{ color: colors.onSecondaryContainer },
 					]}
 				>
-					当前实际播放音质
+					正在播放
 				</Text>
 				<View style={styles.actualStatus}>
 					{showPendingIndicator && (

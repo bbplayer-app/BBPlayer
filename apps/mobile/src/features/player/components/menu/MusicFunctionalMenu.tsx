@@ -45,7 +45,7 @@ export function MusicFunctionalMenu({
 			{Platform.OS === 'android' && (
 				<List.Item
 					testID='player-menu-audio-quality'
-					title='音质'
+					title='默认音质'
 					description={audioQualityLabel}
 					left={(props) => (
 						<List.Icon
