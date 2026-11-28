@@ -1,3 +1,4 @@
+import { Orpheus } from '@bbplayer/orpheus'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -16,6 +17,7 @@ import useCheckLinkedToPlaylist from '@/features/playlist/remote/hooks/useCheckL
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
+import { useMultiPageResume } from '@/features/playlist/resume/useMultiPageResume'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import {
@@ -131,6 +133,48 @@ export default function MultipagePage() {
 	const listRef = useRef<LegendListRef>(null)
 	const { handleDoubleTap } = useDoubleTapScrollToTop(listRef)
 
+	const { resumeIndex, resumePart, isResumePartInPlayer, resumeCard } =
+		useMultiPageResume(bvid, tracksData)
+
+	const scrollToPart = useCallback((index: number) => {
+		void listRef.current?.scrollToIndex({
+			index,
+			animated: true,
+			viewPosition: 0.5,
+		})
+	}, [])
+
+	// 点续播时要闪的分 P。seq 每点一次加一，对同一 P 再点一次续播也会重新闪；
+	// 带上 id 是为了只让目标条目闪，不受 cid 什么时候更新的影响
+	const [resumeFlash, setResumeFlash] = useState<{ id: string; seq: number }>()
+
+	const handleResume = useCallback(() => {
+		if (!resumePart) return
+
+		// 播放器里暂停着的就是这一 P：接着放，不再加进队列
+		if (isResumePartInPlayer) {
+			void Orpheus.play()
+		} else {
+			void playTrack(resumePart)
+		}
+
+		// 和从播放器跳过来时一样，滚到这一 P 并闪一下。直接滚、单独发闪烁信号，而不等 cid 变化：
+		// 再次续播同一 P 时 cid 不变，下面定位的 effect 不会重新执行，条目也不会再闪
+		scrollToPart(resumeIndex)
+		setResumeFlash((prev) => ({
+			id: String(resumePart.id),
+			seq: (prev?.seq ?? 0) + 1,
+		}))
+		router.setParams({ cid: String(resumePart.id) })
+	}, [
+		resumePart,
+		resumeIndex,
+		isResumePartInPlayer,
+		playTrack,
+		scrollToPart,
+		router,
+	])
+
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
 	const handleSync = useCallback(() => {
@@ -162,20 +206,14 @@ export default function MultipagePage() {
 
 			if (index !== -1) {
 				// 给一点延时给列表渲染
-				const timer = setTimeout(() => {
-					void listRef.current?.scrollToIndex({
-						index,
-						animated: true,
-						viewPosition: 0.5,
-					})
-				}, 500)
+				const timer = setTimeout(() => scrollToPart(index), 500)
 
 				return () => {
 					clearTimeout(timer)
 				}
 			}
 		}
-	}, [cid, tracksData, isListReady])
+	}, [cid, tracksData, isListReady, scrollToPart])
 
 	const renderCustomItem = useCallback(
 		({
@@ -192,11 +230,15 @@ export default function MultipagePage() {
 				showItemCover,
 			} = extraData
 
-			const shouldFlash = String(item.id) === cid
+			const itemId = String(item.id)
+
+			const resumeFlashKey =
+				resumeFlash?.id === itemId ? resumeFlash.seq : undefined
 
 			return (
 				<FlashingTrackListItem
-					shouldFlash={shouldFlash}
+					shouldFlash={itemId === cid || resumeFlashKey !== undefined}
+					flashKey={resumeFlashKey}
 					index={index}
 					onTrackPress={() => play(item)}
 					menuItems={_trackMenuItems(item)}
@@ -223,7 +265,7 @@ export default function MultipagePage() {
 				/>
 			)
 		},
-		[cid, selection],
+		[cid, resumeFlash, selection],
 	)
 
 	useEffect(() => {
@@ -316,6 +358,8 @@ export default function MultipagePage() {
 						description={videoData.desc}
 						onClickMainButton={handleSync}
 						mainButtonIcon={'sync'}
+						resumeCard={resumeCard}
+						onClickResume={handleResume}
 						secondaryButtonText='打开原视频'
 						secondaryButtonIcon='open-in-new'
 						onClickSecondaryButton={() =>

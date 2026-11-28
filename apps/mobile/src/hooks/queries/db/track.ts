@@ -29,6 +29,9 @@ export const trackKeys = {
 		] as const,
 	totalPlaybackDuration: (onlyCompleted: boolean) =>
 		[...trackKeys.history(), 'totalPlaybackDuration', onlyCompleted] as const,
+	// 放在 history 下面：每写入一条播放记录都会让它失效，页面开着也能跟着更新
+	lastPlayRecordOfVideo: (bvid: string) =>
+		[...trackKeys.history(), 'lastPlayRecordOfVideo', bvid] as const,
 }
 
 export function usePlayCountHistoryPaginated(
@@ -61,6 +64,25 @@ export function usePlayCountHistoryPaginated(
 		},
 		// 每次打开页面都重新获取数据，避免直接加载缓存中的大量数据导致卡顿
 		gcTime: 0,
+	})
+}
+
+/** bvid 为空时不查询（例如本地播放列表还没加载出来） */
+export function useLastPlayRecordOfVideo(bvid: string | undefined) {
+	return useTracedQuery({
+		span: { name: 'play_history.last_record_of_video' },
+		queryKey: trackKeys.lastPlayRecordOfVideo(bvid ?? ''),
+		queryFn: async ({ span }) => {
+			const result = await trackService
+				.withTrace(span)
+				.getLastPlayRecordOfVideo(bvid ?? '')
+
+			if (result.isErr()) throw result.error
+
+			// 没有播放记录时返回 null，这是正常结果；returnOrThrowAsync 会把 null 当成错误抛出
+			return result.value
+		},
+		enabled: !!bvid,
 	})
 }
 

@@ -90,6 +90,12 @@ class OrpheusMusicService : MediaLibraryService() {
     private val serviceHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private var lastTrackFinishedAt: Long = 0
+
+    /**
+     * 队列最后一首自然播完（STATE_ENDED）时已经补发过 onTrackFinished 的音频。
+     * 之后切走它时不能再发一次，否则会多出一条播放记录；重新开始播放时清空
+     */
+    private var finishedAtQueueEndId: String? = null
     private val durationCache = mutableMapOf<String, Long>()
     lateinit var shuffleManager: ShuffleManager
     lateinit var lyricsManager: UnifiedLyricsManager
@@ -814,6 +820,21 @@ class OrpheusMusicService : MediaLibraryService() {
         }
     }
 
+    /**
+     * 队列最后一首播完时不会有 onPositionDiscontinuity，onTrackFinished 只能在 STATE_ENDED 里补发，
+     * 否则 JS 侧收不到，这一首就不会写进播放记录。iOS 在播完时就会发
+     */
+    private fun sendQueueEndTrackFinished() {
+        val player = player ?: return
+        val mediaId = player.currentMediaItem?.mediaId ?: return
+        if (mediaId == finishedAtQueueEndId) return
+        val duration = durationCache[mediaId]
+            ?: player.duration.takeIf { it != C.TIME_UNSET && it > 0 }
+            ?: return
+        finishedAtQueueEndId = mediaId
+        sendTrackFinishedEvent(mediaId, player.currentPosition / 1000.0, duration / 1000.0)
+    }
+
     private fun sendTrackFinishedEvent(trackId: String, finalPosition: Double, duration: Double) {
         // Notify local listeners
         trackEventListeners.forEach { it.onTrackFinished(trackId, finalPosition, duration) }
@@ -880,6 +901,7 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) finishedAtQueueEndId = null
                 val suppressionReason = player?.playbackSuppressionReason
                 val fields = mapOf(
                     "player.is_playing" to isPlaying,
@@ -1038,6 +1060,11 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
 
                 if (isAutoTransition || isIndexChanged) {
+                    // 播完队列最后一首时已经发过，这里切走它不再重复发
+                    if (lastMediaItem.mediaId == finishedAtQueueEndId) {
+                        finishedAtQueueEndId = null
+                        return
+                    }
                     val duration = durationCache[lastMediaItem.mediaId] ?: return
                     lastTrackFinishedAt = currentTime
 
@@ -1072,6 +1099,7 @@ class OrpheusMusicService : MediaLibraryService() {
                     // 队列最后一首自然播放完毕：清除断点
                     serviceHandler.removeCallbacks(resumeSaveRunnable)
                     player?.currentMediaItem?.let { TrackResumeStorage.clear(it.mediaId) }
+                    sendQueueEndTrackFinished()
                 } else if (playbackState == Player.STATE_IDLE) {
                     serviceHandler.removeCallbacks(resumeSaveRunnable)
                 }

@@ -10,6 +10,8 @@ import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import ExpandableText from '@/components/common/ExpandableText'
 import { usePlaylistSidebar } from '@/components/layout/PlaylistDetailLayout'
+import { ResumeCard } from '@/features/playlist/resume/ResumeCard'
+import type { ResumeCardInfo } from '@/features/playlist/resume/useMultiPageResume'
 import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import toast from '@/utils/toast'
 
@@ -29,6 +31,9 @@ interface PlaylistHeaderProps {
 	secondaryButtonIcon?: string
 	onClickSecondaryButton?: () => void
 	disableSecondaryButton?: boolean
+	/** 有值时在按钮行下面显示多 P 视频的续播卡片 */
+	resumeCard?: ResumeCardInfo
+	onClickResume?: () => void
 	primaryButtonColor?: string
 	primaryButtonTextColor?: string
 	secondaryButtonContainerColor?: string
@@ -56,6 +61,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const router = useRouter()
 	const { isCompact } = useResponsiveLayout()
 	const sidebar = usePlaylistSidebar()
+	const { resumeCard, onClickResume } = props
+	const showResumeCard = !!resumeCard && !!onClickResume
 	const coverSize = sidebar ? 220 : isCompact ? 88 : 120
 	const [showFullTitle, setShowFullTitle] = useState(false)
 
@@ -117,7 +124,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				style={[
 					styles.actionsContainer,
 					sidebar && styles.sidebarActionsContainer,
-					{ marginBottom: description ? 0 : 16 },
+					{ marginBottom: description || showResumeCard ? 0 : 16 },
 				]}
 			>
 				{linkedPlaylistId ? (
@@ -165,6 +172,23 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					</Button>
 				)}
 			</View>
+
+			{resumeCard && onClickResume && (
+				<View
+					style={[
+						styles.resumeCard,
+						sidebar && styles.sidebarResumeCard,
+						{ marginBottom: description ? 0 : 16 },
+					]}
+				>
+					<ResumeCard
+						info={resumeCard}
+						onPress={onClickResume}
+						containerColor={props.secondaryButtonContainerColor}
+						contentColor={secondaryButtonIconColor}
+					/>
+				</View>
+			)}
 
 			{!!description && (
 				<View style={sidebar ? styles.sidebarDescription : styles.description}>
@@ -227,6 +251,13 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'flex-start',
 		marginHorizontal: 16,
+	},
+	resumeCard: {
+		marginTop: 12,
+		marginHorizontal: 16,
+	},
+	sidebarResumeCard: {
+		marginHorizontal: 24,
 	},
 	description: {
 		margin: 16,

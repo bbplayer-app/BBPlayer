@@ -14,11 +14,15 @@ import { TrackListItem } from './PlaylistItem'
 type TrackListItemProps = ComponentProps<typeof TrackListItem>
 
 interface FlashingTrackListItemProps extends TrackListItemProps {
+	/** 为 true 时闪一下，条目挂载时为 true 也会闪 */
 	shouldFlash?: boolean
+	/** shouldFlash 为 true 时，这个值每变一次就再闪一次，比如对同一 P 再点一次续播 */
+	flashKey?: number
 }
 
 export function FlashingTrackListItem({
 	shouldFlash,
+	flashKey,
 	...props
 }: FlashingTrackListItemProps) {
 	const theme = useTheme()
@@ -42,7 +46,7 @@ export function FlashingTrackListItem({
 				),
 			)
 		}
-	}, [shouldFlash, opacity])
+	}, [shouldFlash, flashKey, opacity])
 
 	return (
 		<Animated.View style={[styles.container]}>
