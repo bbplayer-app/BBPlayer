@@ -145,7 +145,15 @@ export default function PlaybackSettingsPage() {
 					</TouchableRipple>
 				)}
 				<View style={styles.settingRow}>
-					<Text>响度均衡（实验性）</Text>
+					<View style={styles.settingDescription}>
+						<Text>响度均衡（实验性）</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							杜比全景声音轨可以直接交给系统或外接设备播放时，为保留全景声不做均衡。
+						</Text>
+					</View>
 					<UniversalSwitch
 						value={enableLoudnessNormalization}
 						onValueChange={() => {

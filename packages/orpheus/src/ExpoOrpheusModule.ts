@@ -96,6 +96,23 @@ export interface AudioQualityInfo {
 	availableQualities?: AudioQuality[]
 }
 
+/**
+ * 设备播放杜比全景声（E-AC-3 JOC）的能力。
+ * - atmos：能直通或有系统 JOC 解码器，可以保留全景声
+ * - dolby：系统能解杜比数字+（E-AC-3），但不保证有全景声效果
+ * - none：只能 FFmpeg 软解（只有 5.1 下混），杜比偏好会按 Hi-Res 请求
+ */
+export type DolbySupportLevel = 'atmos' | 'dolby' | 'none'
+
+export interface DolbySupportInfo {
+	level: DolbySupportLevel
+	jocDecoders: string[]
+	eac3Decoders: string[]
+	/** 当前输出设备能否直通，接上 HDMI 等设备后可能变化 */
+	jocPassthrough: boolean
+	eac3Passthrough: boolean
+}
+
 export interface ReloadAudioQualityResult {
 	reloaded: boolean
 	reason: 'reloaded' | 'downloaded' | 'not_bilibili' | 'no_track'
@@ -488,6 +505,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	getPlaybackSpeed(): Promise<number>
 	getCurrentAudioQuality(): Promise<AudioQualityInfo | null>
 	reloadCurrentTrackForQualityChange(): Promise<ReloadAudioQualityResult>
+	/** 查询设备播放杜比全景声的能力（Android） */
+	getDolbySupport(): Promise<DolbySupportInfo>
 	/**
 	 * 触发原生播放错误路径，用于调试错误处理。
 	 *

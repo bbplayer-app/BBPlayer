@@ -22,6 +22,7 @@ import expo.modules.orpheus.manager.AudioQualityInfo
 import expo.modules.orpheus.manager.AudioQualityStore
 import expo.modules.orpheus.manager.CachedUriManager
 import expo.modules.orpheus.manager.DownloadCache
+import expo.modules.orpheus.manager.DolbySupport
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
 import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.telemetry.LogTags
@@ -132,6 +133,16 @@ object DownloadUtil {
 
     fun clearPinnedPlaybackQualities() {
         pinnedPlaybackQualities.clear()
+    }
+
+    /** 设备没有杜比解码能力时杜比按 Hi-Res 请求，见 [DolbySupport.isDolbyPlayable] */
+    private fun playableQualityOf(preference: String): String {
+        val normalized = AudioQualityStore.normalizePreference(preference)
+        return if (normalized == AudioQualityStore.PREF_DOLBY && !DolbySupport.isDolbyPlayable()) {
+            AudioQualityStore.PREF_HIRES
+        } else {
+            normalized
+        }
     }
 
     private fun qualityParamOf(uri: Uri): String? =
@@ -311,7 +322,7 @@ object DownloadUtil {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
                     val request = AudioQualityStore.requestFor(
-                        qualityParamOf(requestUri) ?: GeneralStorage.getPreferredAudioQuality()
+                        playableQualityOf(qualityParamOf(requestUri) ?: GeneralStorage.getPreferredAudioQuality())
                     )
                     val resolved = BilibiliRepository.resolveAudioUrls(
                         bvid = bvid!!,

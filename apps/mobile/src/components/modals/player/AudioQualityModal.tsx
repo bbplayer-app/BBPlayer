@@ -10,9 +10,11 @@ import {
 	formatActualAudioQuality,
 	formatAudioQualityLabel,
 	getAudioQualityAccessHint,
+	getDolbyOptionNotice,
 	getVisibleAudioQualityOptions,
 	resolveSelectedAudioQualityPreference,
 } from '@/constants/audioQuality'
+import useDolbySupport from '@/hooks/player/useDolbySupport'
 import usePreferredAudioQuality from '@/hooks/player/usePreferredAudioQuality'
 import { useBilibiliAccountAccess } from '@/hooks/queries/bilibili/user'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -195,6 +197,9 @@ const AudioQualityModal = () => {
 
 	const accessHint = getAudioQualityAccessHint(accountAccess.tier)
 
+	const dolbySupport = useDolbySupport()
+	const dolbyNotice = getDolbyOptionNotice(dolbySupport?.level ?? null)
+
 	return (
 		<>
 			<Dialog.Title>音质</Dialog.Title>
@@ -225,6 +230,7 @@ const AudioQualityModal = () => {
 							void switchQuality(next)
 						}}
 						accessHint={accessHint}
+						notices={dolbyNotice ? { dolby: dolbyNotice } : undefined}
 					/>
 				</ScrollView>
 			</Dialog.Content>

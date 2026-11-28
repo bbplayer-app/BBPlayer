@@ -61,6 +61,9 @@ export const styles = StyleSheet.create({
 		alignItems: 'center',
 		gap: 4,
 	},
+	optionDisabled: {
+		opacity: 0.6,
+	},
 	optionText: {
 		flexShrink: 1,
 		flexGrow: 1,

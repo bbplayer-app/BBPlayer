@@ -258,6 +258,7 @@ class ExpoOrpheusModule : Module() {
             LoudnessStorage.initialize(context)
             TrackResumeStorage.initialize(context)
             AudioQualityStore.init(context)
+            expo.modules.orpheus.manager.DolbySupport.init(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
             val sessionToken = SessionToken(
                 context,
@@ -1264,6 +1265,10 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("getCurrentAudioQuality") Coroutine { ->
             withServiceOnMainThread { service -> service?.getCurrentAudioQuality() }
+        }
+
+        AsyncFunction("getDolbySupport") {
+            expo.modules.orpheus.manager.DolbySupport.current().toMap()
         }
 
         AsyncFunction("reloadCurrentTrackForQualityChange") Coroutine { ->

@@ -1,6 +1,7 @@
 import type {
 	AudioQualityInfo,
 	AudioQualityPreference,
+	DolbySupportLevel,
 } from '@bbplayer/orpheus'
 
 export interface AudioQualityOption {
@@ -45,7 +46,7 @@ const AUDIO_QUALITY_BY_PREFERENCE = {
 		label: '杜比全景声',
 		badge: '杜比',
 		description:
-			'B 站杜比全景声音源，需视频本身支持与大会员，不支持时自动降级。',
+			'B 站杜比全景声音源，需视频本身支持与大会员，不支持时自动降级。设备支持杜比全景声才有空间效果；直通播放时不参与响度均衡。',
 	},
 } satisfies Record<AudioQualityPreference, AudioQualityOption>
 
@@ -137,6 +138,30 @@ export function getVisibleAudioQualityOptions(params: {
 	return AUDIO_QUALITY_OPTIONS.filter((option) =>
 		visibleQualities.includes(option.value),
 	)
+}
+
+/**
+ * 设备不能完整播放杜比全景声时给杜比档位的说明。
+ * 返回 disabled 时该档位不可选：只能 FFmpeg 软解，听到的是 5.1 下混，原生层会改按 Hi-Res 请求
+ */
+export function getDolbyOptionNotice(
+	level: DolbySupportLevel | null,
+): { disabled: boolean; text: string } | null {
+	if (level === 'none') {
+		return {
+			disabled: true,
+			text: '此设备不能解码或直通杜比全景声，软解只有普通多声道下混，所以不可选；之前选了杜比的会按 Hi-Res 无损播放。',
+		}
+	}
+
+	if (level === 'dolby') {
+		return {
+			disabled: false,
+			text: '此设备能解码杜比数字+，但没有全景声解码器，空间效果取决于厂商实现，可能只是普通多声道下混。',
+		}
+	}
+
+	return null
 }
 
 /**

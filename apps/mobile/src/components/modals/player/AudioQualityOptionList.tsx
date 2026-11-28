@@ -16,6 +16,10 @@ export interface AudioQualityOptionListProps {
 	selected: AudioQualityPreference
 	onSelect: (preference: AudioQualityPreference) => void
 	accessHint: string | null
+	/** 附在某个档位描述后面的提示，disabled 为 true 时该档位不可选 */
+	notices?: Partial<
+		Record<AudioQualityPreference, { disabled: boolean; text: string }>
+	>
 }
 
 export function AudioQualityOptionList({
@@ -23,6 +27,7 @@ export function AudioQualityOptionList({
 	selected,
 	onSelect,
 	accessHint,
+	notices,
 }: AudioQualityOptionListProps) {
 	const colors = useTheme().colors
 
@@ -43,6 +48,8 @@ export function AudioQualityOptionList({
 			>
 				{options.map((option) => {
 					const isSelected = option.value === selected
+					const notice = notices?.[option.value]
+					const disabled = notice?.disabled === true
 
 					return (
 						<TouchableRipple
@@ -53,7 +60,9 @@ export function AudioQualityOptionList({
 							accessibilityState={{
 								checked: isSelected,
 								selected: isSelected,
+								disabled,
 							}}
+							disabled={disabled}
 							onPress={() => {
 								onSelect(option.value)
 							}}
@@ -64,6 +73,7 @@ export function AudioQualityOptionList({
 										? colors.surfaceVariant
 										: 'transparent',
 								},
+								disabled && styles.optionDisabled,
 							]}
 						>
 							<View style={styles.optionContent}>
@@ -71,6 +81,7 @@ export function AudioQualityOptionList({
 									<RadioButton
 										value={option.value}
 										status={isSelected ? 'checked' : 'unchecked'}
+										disabled={disabled}
 									/>
 								</View>
 								<View style={styles.optionText}>
@@ -89,6 +100,16 @@ export function AudioQualityOptionList({
 									>
 										{option.description}
 									</Text>
+									{notice && (
+										<Text
+											variant='bodySmall'
+											style={{
+												color: disabled ? colors.error : colors.primary,
+											}}
+										>
+											{notice.text}
+										</Text>
+									)}
 								</View>
 							</View>
 						</TouchableRipple>

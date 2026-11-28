@@ -39,6 +39,7 @@ import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.AudioDebugTracker
 import expo.modules.orpheus.manager.AudioQualityInfo
 import expo.modules.orpheus.manager.AudioQualityStore
+import expo.modules.orpheus.manager.DolbySupport
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
@@ -190,6 +191,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
         GeneralStorage.initialize(this)
         AudioQualityStore.init(applicationContext)
+        DolbySupport.init(applicationContext)
         LoudnessStorage.initialize(this)
         TrackResumeStorage.initialize(this)
 
