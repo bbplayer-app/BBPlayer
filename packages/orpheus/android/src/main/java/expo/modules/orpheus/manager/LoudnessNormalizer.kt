@@ -131,9 +131,10 @@ class LoudnessAudioSink(
         processor.onStreamStarted(outputStreamOffsetUs)
     }
 
-    // 开启均衡时拒绝直通：sink 接受压缩格式（AC-3、E-AC-3 等）的话，MediaCodecAudioRenderer
-    // 会把压缩数据原样交给 sink，不经过处理器链，增益就不会生效。拒绝后渲染器会解码成 PCM；
-    // 系统没有对应解码器时由 FfmpegAudioRenderer 解码。渲染器能力在选轨时确定，切换开关后从下一首开始生效
+    // 开启均衡时拒绝直通：sink 接受压缩格式的话，MediaCodecAudioRenderer 会把压缩数据原样交给 sink，
+    // 不经过处理器链，增益就不会生效。拒绝后渲染器会解码成 PCM；系统没有对应解码器时由 FfmpegAudioRenderer 解码。
+    // 杜比格式例外：直通是保留全景声最可靠的路，为了响度均衡放弃它得不偿失，所以杜比音轨照常直通、不做均衡。
+    // 渲染器能力在选轨时确定，切换开关后从下一首开始生效
     override fun supportsFormat(format: Format): Boolean =
         !rejectsPassthrough(format) && super.supportsFormat(format)
 
@@ -141,7 +142,9 @@ class LoudnessAudioSink(
         if (rejectsPassthrough(format)) AudioSink.SINK_FORMAT_UNSUPPORTED else super.getFormatSupport(format)
 
     private fun rejectsPassthrough(format: Format) =
-        format.sampleMimeType != MimeTypes.AUDIO_RAW && GeneralStorage.isLoudnessNormalizationEnabled()
+        format.sampleMimeType != MimeTypes.AUDIO_RAW &&
+            !DolbySupport.isDolbyMimeType(format.sampleMimeType) &&
+            GeneralStorage.isLoudnessNormalizationEnabled()
 }
 
 /**

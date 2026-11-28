@@ -37,6 +37,9 @@ const RELEASE = 0.15
 const AGC_DECAY = 0.99
 const AGC_MIN_PEAK = 0.3
 
+// 直通状态只在换歌、换输出设备时变化，每秒查一次就够
+const PASSTHROUGH_CHECK_INTERVAL = 1000
+
 // 每根条对应的 bin 范围：按对数频率均分，低频不足一个 bin 时顺延，保证每根条至少有一个 bin
 const BAND_EDGES = (() => {
 	const edges = new Int32Array(HALF_COUNT + 1)
@@ -77,6 +80,13 @@ export const SpectrumVisualizer = ({
 	const prevDataRef = useRef(new Float32Array(BAR_COUNT))
 	const bandLevelsRef = useRef(new Float32Array(HALF_COUNT))
 	const agcPeakRef = useRef(AGC_MIN_PEAK)
+	const lastPassthroughCheckRef = useRef(0)
+	const passthroughRef = useRef(false)
+
+	// 直通时压缩音频原样交给系统或外接设备解码，App 拿不到 PCM，频谱没有数据，干脆不画（说明写在频谱开关那里）
+	const [isPassthrough, setIsPassthrough] = useState(() =>
+		Orpheus.isSpectrumPassthrough(),
+	)
 
 	const [isAppActive, setIsAppActive] = useState(
 		AppState.currentState === 'active',
@@ -155,6 +165,22 @@ export const SpectrumVisualizer = ({
 				const newData = new Float32Array(BAR_COUNT)
 				const rawData = bufferRef.current
 				let hasSignal = false
+
+				if (
+					timestamp - lastPassthroughCheckRef.current >=
+					PASSTHROUGH_CHECK_INTERVAL
+				) {
+					lastPassthroughCheckRef.current = timestamp
+					passthroughRef.current = Orpheus.isSpectrumPassthrough()
+					setIsPassthrough(passthroughRef.current)
+				}
+
+				// 直通时没有 PCM，频谱也不显示，只保留上面的轮询，退出直通后再恢复计算
+				if (passthroughRef.current) {
+					if (isPlaying) animationFrameId = requestAnimationFrame(animate)
+
+					return
+				}
 
 				if (isPlaying) {
 					Orpheus.updateSpectrumData(rawData)
@@ -250,16 +276,18 @@ export const SpectrumVisualizer = ({
 				pointerEvents: 'none',
 			}}
 		>
-			<Canvas style={{ flex: 1 }}>
-				<Path
-					path={path}
-					color={color}
-					style='stroke'
-					strokeWidth={4}
-					strokeCap='round'
-					opacity={0.6}
-				/>
-			</Canvas>
+			{!isPassthrough && (
+				<Canvas style={{ flex: 1 }}>
+					<Path
+						path={path}
+						color={color}
+						style='stroke'
+						strokeWidth={4}
+						strokeCap='round'
+						opacity={0.6}
+					/>
+				</Canvas>
+			)}
 		</View>
 	)
 }

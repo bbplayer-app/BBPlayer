@@ -437,5 +437,10 @@ public class ExpoOrpheusModule: Module {
         AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: pointer, count: destination.length)
     }
 
+    // iOS 没有杜比直通这条路径，频谱总能拿到 PCM
+    Function("isSpectrumPassthrough") { () -> Bool in
+      return false
+    }
+
   }
 }

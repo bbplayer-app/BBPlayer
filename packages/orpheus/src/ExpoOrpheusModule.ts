@@ -68,6 +68,56 @@ export type BilibiliCdnPreference =
 	| 'huawei'
 	| 'akamai'
 
+export type AudioQualityPreference =
+	| 'low'
+	| 'standard'
+	| 'high'
+	| 'hires'
+	| 'dolby'
+
+export type AudioQuality = AudioQualityPreference
+
+export type AudioQualityActualKind =
+	| 'dolby'
+	| 'hires'
+	| 'normal'
+	| 'durl'
+	| 'local'
+	| 'unknown'
+
+export interface AudioQualityInfo {
+	preferredQuality: AudioQualityPreference
+	actualKind: AudioQualityActualKind
+	actualStreamId: number | null
+	codecs: string | null
+	bandwidth: number | null
+	isFallback: boolean
+	isFromDownloadCache: boolean
+	availableQualities?: AudioQuality[]
+}
+
+/**
+ * 设备播放杜比全景声（E-AC-3 JOC）的能力。
+ * - atmos：能直通或有系统 JOC 解码器，可以保留全景声
+ * - dolby：系统能解杜比数字+（E-AC-3），但不保证有全景声效果
+ * - none：只能 FFmpeg 软解（只有 5.1 下混），杜比偏好会按 Hi-Res 请求
+ */
+export type DolbySupportLevel = 'atmos' | 'dolby' | 'none'
+
+export interface DolbySupportInfo {
+	level: DolbySupportLevel
+	jocDecoders: string[]
+	eac3Decoders: string[]
+	/** 当前输出设备能否直通，接上 HDMI 等设备后可能变化 */
+	jocPassthrough: boolean
+	eac3Passthrough: boolean
+}
+
+export interface ReloadAudioQualityResult {
+	reloaded: boolean
+	reason: 'reloaded' | 'downloaded' | 'not_bilibili' | 'no_track'
+}
+
 export interface AndroidPlaybackErrorEvent {
 	platform: 'android'
 	errorCode: number
@@ -113,6 +163,7 @@ export type OrpheusEvents = {
 		status: 'success' | 'failed'
 	}): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
+	onAudioQualityChanged(event: AudioQualityInfo): void
 	onExportProgress(event: {
 		progress?: number
 		currentId: string
@@ -162,6 +213,7 @@ export type OrpheusHeadlessEvent =
 declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	/** 优先使用指定服务商的常规节点，再尝试其余常规节点，mcdn 最后兜底。 */
 	preferredBilibiliCdn: BilibiliCdnPreference
+	preferredAudioQuality: AudioQualityPreference
 	/** 原生服务启动时是否恢复上次保存的队列索引和播放位置。 */
 	restorePlaybackPositionEnabled: boolean
 	/** Android 创建播放器时是否应用已保存的响度标准化增益。 */
@@ -451,6 +503,10 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	setPlaybackSpeed(speed: number): Promise<void>
 	/** 返回当前原生播放倍速。 */
 	getPlaybackSpeed(): Promise<number>
+	getCurrentAudioQuality(): Promise<AudioQualityInfo | null>
+	reloadCurrentTrackForQualityChange(): Promise<ReloadAudioQualityResult>
+	/** 查询设备播放杜比全景声的能力（Android） */
+	getDolbySupport(): Promise<DolbySupportInfo>
 	/**
 	 * 触发原生播放错误路径，用于调试错误处理。
 	 *
@@ -463,6 +519,10 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 建议复用长度为 `SPECTRUM_SIZE` 的 `Float32Array`，避免在动画循环中反复分配。
 	 */
 	updateSpectrumData(destination: Float32Array): void
+	/**
+	 * 当前是否在直通播放（压缩音频原样交给外接设备解码）。直通时拿不到 PCM，频谱不会有数据。
+	 */
+	isSpectrumPassthrough(): boolean
 	/**
 	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、网络等），用于调试页展示。
 	 *

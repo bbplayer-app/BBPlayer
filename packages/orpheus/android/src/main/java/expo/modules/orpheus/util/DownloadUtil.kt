@@ -1,19 +1,30 @@
 package expo.modules.orpheus.util
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.ContentMetadata
+import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.scheduler.Requirements
 import expo.modules.orpheus.OrpheusConfig
 import expo.modules.orpheus.bilibili.BilibiliRepository
+import expo.modules.orpheus.manager.AudioQualityInfo
+import expo.modules.orpheus.manager.AudioQualityStore
+import expo.modules.orpheus.manager.CachedUriManager
 import expo.modules.orpheus.manager.DownloadCache
+import expo.modules.orpheus.manager.DolbySupport
+import expo.modules.orpheus.manager.DownloadQualityStore
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
 import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.telemetry.LogTags
@@ -22,6 +33,7 @@ import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.telemetry.PlaybackTracer
 import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import io.sentry.SpanStatus
 
@@ -52,6 +64,12 @@ object DownloadUtil {
             ).apply {
                 maxParallelDownloads = this@DownloadUtil.maxParallelDownloads
                 requirements = Requirements(0)
+                addListener(object : DownloadManager.Listener {
+                    // 所有删除路径（单个、批量、全部、清理未完成）最终都会走到这里
+                    override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
+                        DownloadQualityStore.remove(downloadCacheKeyOf(download.request.uri))
+                    }
+                })
             }
         }
         return downloadManager!!
@@ -78,17 +96,184 @@ object DownloadUtil {
                 .setCache(lruCache)
                 .setUpstreamDataSourceFactory(upstreamFactory)
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                .setCacheKeyFactory { dataSpec ->
+                    if (isBilibiliUri(dataSpec.uri)) {
+                        playbackCacheKeyOf(dataSpec.uri)
+                    } else {
+                        dataSpec.key ?: dataSpec.uri.toString()
+                    }
+                }
 
             val downloadFactory = CacheDataSource.Factory()
                 .setCache(downloadCache)
                 .setUpstreamDataSourceFactory(cacheFactory)
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                 .setCacheWriteDataSinkFactory(null)
+                .setCacheKeyFactory { dataSpec ->
+                    if (isBilibiliUri(dataSpec.uri)) {
+                        downloadCacheKeyOf(dataSpec.uri)
+                    } else {
+                        dataSpec.key ?: dataSpec.uri.toString()
+                    }
+                }
 
-            playerDataSourceFactory = downloadFactory
+            val appContext = context.applicationContext
+            playerDataSourceFactory = DataSource.Factory {
+                DownloadCacheAwareDataSource(
+                    appContext,
+                    downloadFactory.createDataSource(),
+                    cacheFactory.createDataSource(),
+                )
+            }
         }
         return playerDataSourceFactory!!
     }
+
+    const val AUDIO_QUALITY_QUERY_PARAM = "q"
+
+    /** 用户原本选的档位（q 可能因设备不支持杜比被降为 hires），只用于写音质记录 */
+    private const val PREFERRED_QUALITY_QUERY_PARAM = "qp"
+
+    /** 每首歌最近一次打开播放数据源时锁定的音质，key 为不带 q 参数的原始 URI */
+    private val pinnedPlaybackQualities = ConcurrentHashMap<String, String>()
+
+    fun isBilibiliUri(uri: Uri): Boolean = uri.scheme == "orpheus" && uri.host == "bilibili"
+
+    /** 当前（或最近一次）播放这首歌时实际请求的音质；还没打开过则为 null */
+    fun pinnedPlaybackQualityOf(uriString: String): String? = pinnedPlaybackQualities[uriString]
+
+    /** 每首歌最近一次打开播放数据源时选的是不是下载缓存 */
+    private val pinnedPlaybackSources = ConcurrentHashMap<String, Boolean>()
+
+    fun pinnedPlaybackSourceIsDownloadOf(uriString: String): Boolean? = pinnedPlaybackSources[uriString]
+
+    /** 每首歌最近一次打开播放数据源时实际读的 LRU 分区（已按设备能力降级后的 q） */
+    private val pinnedCacheQualities = ConcurrentHashMap<String, String>()
+
+    /** 清空锁定记录，[keep] 里的（通常是正在播放的歌）保留 */
+    fun clearPinnedPlaybackQualities(keep: Set<String> = emptySet()) {
+        pinnedPlaybackQualities.keys.retainAll(keep)
+        pinnedPlaybackSources.keys.retainAll(keep)
+        pinnedCacheQualities.keys.retainAll(keep)
+    }
+
+    /** 设备没有杜比解码能力时杜比按 Hi-Res 请求，见 [DolbySupport.isDolbyPlayable] */
+    private fun playableQualityOf(preference: String): String {
+        val normalized = AudioQualityStore.normalizePreference(preference)
+        return if (normalized == AudioQualityStore.PREF_DOLBY && !DolbySupport.isDolbyPlayable()) {
+            AudioQualityStore.PREF_HIRES
+        } else {
+            normalized
+        }
+    }
+
+    private fun qualityParamOf(uri: Uri): String? =
+        uri.getQueryParameter(AUDIO_QUALITY_QUERY_PARAM)?.let(AudioQualityStore::normalizePreference)
+
+    private fun preferredQualityParamOf(uri: Uri): String? =
+        uri.getQueryParameter(PREFERRED_QUALITY_QUERY_PARAM)?.let(AudioQualityStore::normalizePreference)
+
+    /**
+     * q 写实际请求的档位（已按设备能力降级），解析和缓存 key 都只认它，
+     * 这样同一个 DataSource 前后两次解析不会因为设备能力变化（比如插拔 HDMI）请求到不同的流
+     */
+    private fun withQuality(uri: Uri, preference: String): Uri {
+        val normalized = AudioQualityStore.normalizePreference(preference)
+        val playable = playableQualityOf(normalized)
+        val builder = stripQuality(uri).buildUpon().appendQueryParameter(AUDIO_QUALITY_QUERY_PARAM, playable)
+        if (playable != normalized) builder.appendQueryParameter(PREFERRED_QUALITY_QUERY_PARAM, normalized)
+        return builder.build()
+    }
+
+    /** 去掉 q 参数，得到前端传入的原始 URI（同时也是下载缓存的 key） */
+    fun stripQuality(uri: Uri): Uri {
+        if (!isBilibiliUri(uri)) return uri
+        val names = uri.queryParameterNames
+        if (AUDIO_QUALITY_QUERY_PARAM !in names && PREFERRED_QUALITY_QUERY_PARAM !in names) return uri
+        val builder = uri.buildUpon().clearQuery()
+        for (name in names) {
+            if (name == AUDIO_QUALITY_QUERY_PARAM || name == PREFERRED_QUALITY_QUERY_PARAM) continue
+            for (value in uri.getQueryParameters(name)) {
+                builder.appendQueryParameter(name, value)
+            }
+        }
+        return builder.build()
+    }
+
+    /**
+     * 在线播放缓存（LRU）的 key。不同音质是不同的文件，必须分开缓存；
+     * high 沿用不带后缀的旧 key，升级前缓存的内容（当时都是 high）还能继续命中
+     */
+    fun playbackCacheKeyOf(uriString: String, quality: String): String {
+        val normalized = AudioQualityStore.normalizePreference(quality)
+        return if (normalized == AudioQualityStore.PREF_HIGH) uriString else "$uriString|q=$normalized"
+    }
+
+    private fun playbackCacheKeyOf(uri: Uri): String =
+        playbackCacheKeyOf(
+            stripQuality(uri).toString(),
+            qualityParamOf(uri) ?: playableQualityOf(GeneralStorage.getPreferredAudioQuality()),
+        )
+
+    /**
+     * 现在开始播放这首歌时会读的那一档是否已完整缓存在 LRU 里：
+     * 正在播放（已锁定档位）的直接查锁定时的分区，不再按现在的设备能力重新降级；
+     * 否则按当前默认音质算。
+     * 默认档位整批只算一次：杜比要查设备能力（AudioManager 的 binder 调用），
+     * 逐首查会让大歌单在 JS 线程上卡住
+     */
+    fun filterFullyCachedForPlayback(uriStrings: List<String>): List<String> {
+        val defaultQuality by lazy { playableQualityOf(GeneralStorage.getPreferredAudioQuality()) }
+        return uriStrings.filter { uriString ->
+            val quality = pinnedCacheQualities[uriString] ?: defaultQuality
+            CachedUriManager.isFullyCached(playbackCacheKeyOf(uriString, quality))
+        }
+    }
+
+    /**
+     * 下载请求的 URI 固定记录发起时的音质，恢复下载时沿用同一档位
+     */
+    fun downloadRequestUriOf(url: String): Uri {
+        val uri = url.toUri()
+        if (!isBilibiliUri(uri)) return uri
+        return withQuality(uri, GeneralStorage.getPreferredAudioQuality())
+    }
+
+    /**
+     * 重试下载时原样沿用旧请求里已经定下的 q（和 qp），不再按现在的设备能力降级：
+     * 下载缓存 key 不带档位，换档会把两种流的字节拼进同一个文件。
+     * 升级前创建的下载 URI 里没有 q，那时下载的都是 high
+     */
+    fun downloadRetryUriOf(url: String, previousRequestUri: Uri?): Uri {
+        val uri = url.toUri()
+        if (!isBilibiliUri(uri)) return uri
+        val quality = previousRequestUri?.getQueryParameter(AUDIO_QUALITY_QUERY_PARAM)
+            ?: AudioQualityStore.PREF_HIGH
+        val builder = stripQuality(uri).buildUpon().appendQueryParameter(AUDIO_QUALITY_QUERY_PARAM, quality)
+        previousRequestUri?.getQueryParameter(PREFERRED_QUALITY_QUERY_PARAM)?.let {
+            builder.appendQueryParameter(PREFERRED_QUALITY_QUERY_PARAM, it)
+        }
+        return builder.build()
+    }
+
+    /**
+     * 下载缓存 key：B 站 URI 去掉定档参数后直接使用 URI 本身，保持与既有下载缓存兼容
+     */
+    fun downloadCacheKeyOf(uri: Uri): String = stripQuality(uri).toString()
+
+    fun downloadCacheKeyOf(uriString: String): String = downloadCacheKeyOf(uriString.toUri())
+
+    private fun isFullyCached(cache: Cache, cacheKey: String): Boolean = try {
+        val contentLength = ContentMetadata.getContentLength(cache.getContentMetadata(cacheKey))
+        contentLength != C.LENGTH_UNSET.toLong() &&
+            contentLength > 0L &&
+            cache.getCachedSpans(cacheKey).sumOf { it.length } >= contentLength
+    } catch (e: Exception) {
+        false
+    }
+
+    fun isFullyCachedInDownloadCache(context: Context, uriString: String): Boolean =
+        isFullyCached(DownloadCache.getStableCache(context), downloadCacheKeyOf(uriString))
 
 
     @Synchronized
@@ -130,28 +315,106 @@ object DownloadUtil {
             .createDataSource()
     }
 
+    /**
+     * 播放器为每个 MediaPeriod 创建一个 DataSource，同一首歌的 seek、出错重试都复用它。
+     * 第一次 open 时锁定「读下载缓存还是在线播放」以及在线播放的音质，之后不再看全局设置，
+     * 否则切换音质后已经预加载的歌、或者正在下载完成的歌，会把两个不同文件的字节拼在一起。
+     * 切换音质时由服务 stop + prepare 重建所有 MediaPeriod，新的 DataSource 才会用上新档位。
+     */
+    private class DownloadCacheAwareDataSource(
+        private val context: Context,
+        private val downloadDataSource: DataSource,
+        private val fallbackDataSource: DataSource,
+    ) : DataSource {
+        private var activeDataSource: DataSource = downloadDataSource
+        private var useDownload: Boolean? = null
+        private var pinnedQuality: String? = null
+        private var pinnedRequestUri: Uri? = null
+
+        override fun addTransferListener(transferListener: TransferListener) {
+            downloadDataSource.addTransferListener(transferListener)
+            fallbackDataSource.addTransferListener(transferListener)
+        }
+
+        override fun open(dataSpec: DataSpec): Long {
+            val uri = dataSpec.uri
+            if (!isBilibiliUri(uri)) {
+                activeDataSource = downloadDataSource
+                return downloadDataSource.open(dataSpec)
+            }
+            val baseUri = stripQuality(uri).toString()
+            val download = useDownload
+                ?: isFullyCachedInDownloadCache(context, baseUri).also { useDownload = it }
+            pinnedPlaybackSources[baseUri] = download
+            if (download) {
+                activeDataSource = downloadDataSource
+                return downloadDataSource.open(dataSpec)
+            }
+            val quality = pinnedQuality
+                ?: (qualityParamOf(uri) ?: AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality()))
+                    .also { pinnedQuality = it }
+            pinnedPlaybackQualities[baseUri] = quality
+            // 降级结果也在第一次打开时定下来，之后 seek / 重试即使设备能力变了也读同一个流
+            val requestUri = pinnedRequestUri ?: withQuality(uri, quality).also { pinnedRequestUri = it }
+            qualityParamOf(requestUri)?.let { pinnedCacheQualities[baseUri] = it }
+            activeDataSource = fallbackDataSource
+            return fallbackDataSource.open(dataSpec.buildUpon().setUri(requestUri).build())
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+            activeDataSource.read(buffer, offset, length)
+
+        override fun getUri(): Uri? = activeDataSource.uri
+
+        override fun getResponseHeaders(): Map<String, List<String>> =
+            activeDataSource.responseHeaders
+
+        override fun close() {
+            activeDataSource.close()
+        }
+    }
+
     private class BilibiliResolver(private val forPlayback: Boolean) :
         ResolvingDataSource.Resolver {
         override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
-            val uri = dataSpec.uri
-            if (uri.scheme == "orpheus" && uri.host == "bilibili") {
+            val requestUri = dataSpec.uri
+            if (isBilibiliUri(requestUri)) {
+                // 记录、响度、遥测都按前端传入的原始 URI 存，q 参数只决定请求哪一档
+                val uri = stripQuality(requestUri)
                 val resolveSpan = if (forPlayback) PlaybackTracer.spanForResolve(uri.toString()) else null
                 var resolveStatus = SpanStatus.INTERNAL_ERROR
                 try {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
-                    val quality = uri.getQueryParameter("quality")?.toIntOrNull() ?: 30280
+                    // q 已经是降级后的档位，这里不再按设备能力重新判断，保证和缓存 key 一致
+                    val requested = qualityParamOf(requestUri)
+                        ?: playableQualityOf(GeneralStorage.getPreferredAudioQuality())
+                    val preferred = preferredQualityParamOf(requestUri) ?: requested
+                    val request = AudioQualityStore.requestFor(requested)
                     val resolved = BilibiliRepository.resolveAudioUrls(
                         bvid = bvid!!,
                         cid = cid,
-                        audioQuality = quality,
-                        enableDolby = uri.getQueryParameter("dolby") == "1",
-                        enableHiRes = uri.getQueryParameter("hires") == "1",
+                        audioQuality = request.audioQuality,
+                        enableDolby = request.enableDolby,
+                        enableHiRes = request.enableHiRes,
                         cookie = OrpheusConfig.bilibiliCookie,
                         parent = resolveSpan,
                     )
                     val urls = resolved.urls
-                    // 下载和播放可能是同一首歌，下载取到的流不能覆盖播放的
+                    val qualityInfo = AudioQualityInfo(
+                        preferredQuality = preferred,
+                        actualKind = resolved.kind,
+                        actualStreamId = resolved.streamId,
+                        codecs = resolved.codecs,
+                        bandwidth = resolved.bandwidth,
+                        isFallback = AudioQualityStore.isFallback(preferred, resolved.kind, resolved.streamId),
+                        isFromDownloadCache = false,
+                        availableQualities = resolved.availableQualities,
+                    )
+                    // 下载和播放可能是同一首歌，下载取到的流不能覆盖播放的，各存各的
+                    if (!forPlayback) {
+                        DownloadQualityStore.put(downloadCacheKeyOf(requestUri), qualityInfo)
+                    }
                     if (forPlayback) {
                         OrpheusTelemetry.recordStream(
                             uri.toString(),
@@ -163,6 +426,7 @@ object DownloadUtil {
                                 put("mirrors", urls.size)
                             },
                         )
+                        AudioQualityStore.put(uri.toString(), qualityInfo)
                     }
                     // 在这里保存响度均衡数据，并且直接发一个事件，在 OrpheusMusicService 监听
                     val volume = resolved.volume
@@ -176,8 +440,8 @@ object DownloadUtil {
                                 "audio.true_peak_dbtp" to volume.measuredTp,
                             ),
                         )
-                        LoudnessStorage.setLoudnessData(dataSpec.uri.toString(), volume.measuredI)
-                        volume.measuredTp?.let { LoudnessStorage.setTruePeak(dataSpec.uri.toString(), it) }
+                        LoudnessStorage.setLoudnessData(uri.toString(), volume.measuredI)
+                        volume.measuredTp?.let { LoudnessStorage.setTruePeak(uri.toString(), it) }
                     }
 
                     val headers = HashMap(dataSpec.httpRequestHeaders)

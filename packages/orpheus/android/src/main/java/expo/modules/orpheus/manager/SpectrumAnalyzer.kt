@@ -38,6 +38,15 @@ object SpectrumAnalyzer {
             if (!value) clear()
         }
 
+    /** 当前音频是直通输出（AudioSink 收到的是压缩数据），频谱拿不到 PCM */
+    @Volatile
+    var isPassthrough = false
+        private set
+
+    internal fun onInputEncodingChanged(passthrough: Boolean) {
+        isPassthrough = passthrough
+    }
+
     private val lock = Any()
 
     // 以下字段由 lock 保护
@@ -274,6 +283,7 @@ class SpectrumCaptureAudioSink(sink: AudioSink) : ForwardingAudioSink(sink) {
         }
         channelCount = inputFormat.channelCount
         bufferPending = false
+        SpectrumAnalyzer.onInputEncodingChanged(pcmEncoding == C.ENCODING_INVALID)
         SpectrumAnalyzer.onConfigure(inputFormat.sampleRate)
     }
 
@@ -322,6 +332,7 @@ class SpectrumCaptureAudioSink(sink: AudioSink) : ForwardingAudioSink(sink) {
     override fun reset() {
         super.reset()
         bufferPending = false
+        SpectrumAnalyzer.onInputEncodingChanged(false)
         SpectrumAnalyzer.clear()
     }
 }

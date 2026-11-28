@@ -1,6 +1,9 @@
+import { Platform } from 'react-native'
 import { Divider, List } from 'react-native-paper'
 
+import { formatAudioQualityLabel } from '@/constants/audioQuality'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreferredAudioQuality from '@/hooks/player/usePreferredAudioQuality'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 import {
@@ -18,6 +21,7 @@ export function MusicFunctionalMenu({
 }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const openModal = useModalStore((state) => state.open)
+	const audioQualityLabel = formatAudioQualityLabel(usePreferredAudioQuality())
 
 	return (
 		<>
@@ -38,6 +42,22 @@ export function MusicFunctionalMenu({
 				/>
 				<PlayerDownloadButton onAction={handleAction} />
 			</HighFreqRow>
+			{Platform.OS === 'android' && (
+				<List.Item
+					testID='player-menu-audio-quality'
+					title='默认音质'
+					description={audioQualityLabel}
+					left={(props) => (
+						<List.Icon
+							{...props}
+							icon='music-note'
+						/>
+					)}
+					onPress={() =>
+						handleAction(() => openModal('AudioQuality', undefined))
+					}
+				/>
+			)}
 			<PlayerModeSwitch onAction={handleAction} />
 			<Divider />
 			<SharedTrackActions onAction={handleAction} />

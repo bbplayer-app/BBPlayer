@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
 import expo.modules.orpheus.R
+import expo.modules.orpheus.manager.DownloadQualityStore
 import expo.modules.orpheus.util.DownloadUtil
 
 @UnstableApi
@@ -29,6 +30,9 @@ class OrpheusDownloadService : DownloadService(
     }
 
     override fun getDownloadManager(): DownloadManager {
+        // 系统调度器可能在 App 和播放服务都没起来时单独拉起下载服务，
+        // 不先绑定存储，下载时记下的音质只进内存，进程一退就丢了
+        DownloadQualityStore.init(this)
         return DownloadUtil.getDownloadManager(this)
     }
 

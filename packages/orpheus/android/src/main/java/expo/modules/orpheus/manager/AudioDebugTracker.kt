@@ -36,6 +36,9 @@ class AudioDebugTracker : AnalyticsListener {
     private var decoderInitAtMs = 0L
     private var inputFormat: Format? = null
 
+    @Volatile
+    var onAudioFormatChangedListener: ((Format) -> Unit)? = null
+
     /** 解码器与输入格式属于哪首歌：出错时它可能还是上一首的，不能和当前歌曲混为一谈 */
     private var audioMediaId: String? = null
 
@@ -96,6 +99,7 @@ class AudioDebugTracker : AnalyticsListener {
     ) {
         inputFormat = format
         audioMediaId = mediaIdOf(eventTime)
+        inputFormatMediaId = audioMediaId
         PlaybackTracer.onAudioFormat(audioMediaId, format.sampleMimeType)
         NativeLog.info(
             LogTags.AUDIO,
@@ -107,6 +111,24 @@ class AudioDebugTracker : AnalyticsListener {
         )
         OrpheusTelemetry.update("inputFormat" to Format.toLogString(format), "audioMediaId" to audioMediaId)
         OrpheusTelemetry.setTag("orpheus.mime", format.sampleMimeType)
+        runCatching { onAudioFormatChangedListener?.invoke(format) }
+    }
+
+    fun getCurrentInputFormat(): Format? = inputFormat
+
+    /** 只在格式确实属于 [mediaId] 这首歌时返回；刚切歌时 inputFormat 可能还是上一首的 */
+    fun inputFormatOf(mediaId: String): Format? =
+        inputFormat?.takeIf { inputFormatMediaId != null && inputFormatMediaId == mediaId }
+
+    @Volatile
+    private var inputFormatMediaId: String? = null
+
+    /**
+     * 同一首歌重新加载（换音质）前调用：旧格式不再算这首歌的，
+     * 等新加载的格式回调到了 [inputFormatOf] 才重新返回值
+     */
+    fun invalidateInputFormat() {
+        inputFormatMediaId = null
     }
 
     override fun onAudioTrackInitialized(
@@ -342,6 +364,8 @@ class AudioDebugTracker : AnalyticsListener {
             "已送入 / 已输出 buffer" to counters?.let { "${it.queuedInputBufferCount} / ${it.renderedOutputBufferCount}" },
             "跳过 / 丢弃 buffer" to counters?.let { "${it.skippedOutputBufferCount} / ${it.droppedBufferCount}" },
             "解码器错误" to codecErrorCount.toString(),
+            "解码路径" to decodePath(format, audioTrackConfig),
+            "杜比全景声" to dolbyOutcome(format, audioTrackConfig),
         )
 
         val track = audioTrackConfig
@@ -359,6 +383,19 @@ class AudioDebugTracker : AnalyticsListener {
             } else null,
             "AudioSink 错误" to sinkErrorCount.toString(),
             "最近一次音频错误" to lastAudioError,
+        )
+
+        val dolby = DolbySupport.current()
+        section(
+            "设备杜比支持",
+            "支持程度" to when (dolby.level) {
+                DolbySupport.LEVEL_ATMOS -> "支持全景声"
+                DolbySupport.LEVEL_DOLBY -> "能解杜比数字+，不保证有全景声"
+                else -> "不支持（只能 FFmpeg 软解，杜比音质会按 Hi-Res 请求）"
+            },
+            "系统 E-AC-3 JOC 解码器" to dolby.jocDecoders.joinToString("、").ifEmpty { "无" },
+            "系统 E-AC-3 解码器" to dolby.eac3Decoders.joinToString("、").ifEmpty { "无" },
+            "当前输出可直通 E-AC-3 JOC / E-AC-3" to "${yesNo(dolby.jocPassthrough)} / ${yesNo(dolby.eac3Passthrough)}",
         )
 
         section(
@@ -413,6 +450,34 @@ class AudioDebugTracker : AnalyticsListener {
     }
 
     private fun isPcm(encoding: Int) = Util.isEncodingLinearPcm(encoding)
+
+    private fun isFfmpegDecoder() = decoderName?.startsWith("ffmpeg", ignoreCase = true) == true
+
+    private fun decodePath(format: Format?, track: AudioSink.AudioTrackConfig?): String? {
+        if (track != null && !isPcm(track.encoding)) return "直通（不解码，交给系统或外接设备）"
+        val name = decoderName ?: return null
+        val dolbyInput = DolbySupport.isDolbyMimeType(format?.sampleMimeType)
+        return when {
+            isFfmpegDecoder() -> "FFmpeg 软解"
+            dolbyInput -> "系统杜比解码器（$name）"
+            else -> "系统解码器（$name）"
+        } + (track?.let { "，输出 ${Integer.bitCount(it.channelConfig)} 声道 PCM" } ?: "")
+    }
+
+    /** 只在播放杜比音轨时有意义：说明全景声实际有没有保留下来 */
+    private fun dolbyOutcome(format: Format?, track: AudioSink.AudioTrackConfig?): String? {
+        val mime = format?.sampleMimeType ?: return null
+        if (!DolbySupport.isDolbyMimeType(mime)) return "不是杜比音轨"
+        val joc = mime == androidx.media3.common.MimeTypes.AUDIO_E_AC3_JOC
+        return when {
+            track != null && !isPcm(track.encoding) ->
+                if (track.encoding == C.ENCODING_E_AC3_JOC) "已保留（直通原样输出）" else "直通，但输出端只接收不含 JOC 的 E-AC-3，全景声对象可能被丢弃"
+            isFfmpegDecoder() -> "未保留：FFmpeg 不处理声音对象，只解出 5.1 基础声道再下混"
+            decoderName == null -> null
+            joc -> "交给系统杜比解码器，空间效果取决于厂商实现"
+            else -> "音源不含全景声（普通 E-AC-3 / AC-3）"
+        }
+    }
 
     private fun encodingName(encoding: Int): String = when (encoding) {
         C.ENCODING_PCM_16BIT -> "PCM 16bit"

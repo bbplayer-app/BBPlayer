@@ -11,6 +11,7 @@ import type {
 	BilibiliGarbBenefitResponse,
 	BilibiliGarbSearchResponse,
 	BilibiliGarbSuitDetailResponse,
+	BilibiliNavInfo,
 	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliSmsLoginData,
@@ -533,6 +534,19 @@ export class BilibiliApi {
 	> {
 		return this.client.get<BilibiliUserInfo>({
 			endpoint: '/x/space/myinfo',
+			signal,
+		})
+	}
+
+	/**
+	 * 获取账号导航信息（登录态与大会员状态）
+	 */
+	getNavInfo({ signal }: { signal?: AbortSignal } = {}): ResultAsync<
+		BilibiliNavInfo,
+		BilibiliApiError
+	> {
+		return this.client.get<BilibiliNavInfo>({
+			endpoint: '/x/web-interface/nav',
 			signal,
 		})
 	}
