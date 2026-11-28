@@ -5,6 +5,7 @@ import expo.modules.bbplayernative.telemetry.NativeLog
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -25,12 +26,19 @@ import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.exceptions.CannotWriteException
+import org.jaudiotagger.audio.flac.metadatablock.MetadataBlockDataPicture
 import org.jaudiotagger.audio.mp4.Mp4TagReader
 import org.jaudiotagger.audio.mp4.Mp4TagWriter
 import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.Tag
+import org.jaudiotagger.tag.flac.FlacTag
+import org.jaudiotagger.tag.id3.valuepair.ImageFormats
+import org.jaudiotagger.tag.images.Artwork
 import org.jaudiotagger.tag.images.ArtworkFactory
 import org.jaudiotagger.tag.mp4.Mp4Tag
+import org.jaudiotagger.tag.reference.PictureTypes
 import java.io.File
 
 
@@ -40,6 +48,12 @@ data class ExportOptions(
     val convertToLrc: Boolean,
     val cropCoverArt: Boolean = false,
 )
+
+/** 导出文件的容器格式：Hi-Res 无损取出成 .flac，其余（AAC、杜比 E-AC-3）保留 MP4 容器 */
+private enum class ExportFormat(val extension: String, val mimeType: String) {
+    M4A("m4a", "audio/mp4"),
+    FLAC("flac", "audio/flac"),
+}
 
 private const val PUBLIC_MUSIC_DESTINATION_HOST = "public-music"
 
@@ -111,6 +125,7 @@ private suspend fun exportSingleItem(
     sendEvent: (name: String, payload: Map<String, Any?>) -> Unit,
 ) {
     var tempM4a: File? = null
+    var tempFlac: File? = null
     try {
         val download = downloadIndex.getDownload(id)
         if (download == null || download.state != Download.STATE_COMPLETED) {
@@ -147,26 +162,37 @@ private suspend fun exportSingleItem(
             dataSource.close()
         }
 
-        // 2. 提前解码 TrackRecord（用于文件名，不依赖元数据写入是否成功）
+        // 2. Hi-Res 无损是装在 MP4 里的 FLAC，原样取出成 .flac（不重新编码）；取不出来就照旧导出 m4a
+        tempFlac = File(context.cacheDir, "$id.flac")
+        if (tempFlac.exists()) tempFlac.delete()
+        val isFlac = runCatching { Fmp4FlacExtractor.extractIfFlac(tempM4a, tempFlac) }
+            .onFailure { NativeLog.warning(LogTags.EXPORT, "export.flac.extract_failed", mapOf("track.id" to id), it) }
+            .getOrDefault(false)
+        val format = if (isFlac) ExportFormat.FLAC else ExportFormat.M4A
+        val exportFile = if (isFlac) tempFlac else tempM4a
+
+        // 3. 提前解码 TrackRecord（用于文件名，不依赖元数据写入是否成功）
         val track: TrackRecord? = download.request.data
             .takeIf { it.isNotEmpty() }
             ?.let { runCatching { json.decodeFromString<TrackRecord>(String(it)) }.getOrNull() }
 
-        // 3. 写入元数据（Title / Artist / Cover / Lyrics）
+        // 4. 写入元数据（Title / Artist / Cover / Lyrics）
         writeMetadata(
             id = id,
-            tempM4a = tempM4a,
+            file = exportFile,
+            format = format,
             track = track,
             context = context,
             options = options,
             json = json,
         )
 
-        // 4. 拷贝到 SAF 目标路径
-        val fileName = buildFileName(id, download, track, options.filenamePattern)
+        // 5. 拷贝到 SAF 目标路径
+        val fileName = buildFileName(id, download, track, options.filenamePattern, format)
         writeExportedFile(
             context = context,
-            tempM4a = tempM4a,
+            file = exportFile,
+            format = format,
             fileName = fileName,
             pickedDir = pickedDir,
             isPublicMusic = isPublicMusic,
@@ -194,26 +220,28 @@ private suspend fun exportSingleItem(
         )
     } finally {
         tempM4a?.delete()
+        tempFlac?.delete()
     }
 }
 
 private fun writeExportedFile(
     context: Context,
-    tempM4a: File,
+    file: File,
+    format: ExportFormat,
     fileName: String,
     pickedDir: DocumentFile?,
     isPublicMusic: Boolean,
 ) {
     if (isPublicMusic) {
-        writeToPublicMusic(context, tempM4a, fileName)
+        writeToPublicMusic(context, file, format, fileName)
         return
     }
 
     val targetDir = pickedDir ?: throw Exception("Destination directory is not available")
-    val newFile = targetDir.createFile("audio/mp4", fileName) ?: throw Exception("Failed to create file $fileName in destination")
+    val newFile = targetDir.createFile(format.mimeType, fileName) ?: throw Exception("Failed to create file $fileName in destination")
     try {
         context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
-            tempM4a.inputStream().use { it.copyTo(outputStream) }
+            file.inputStream().use { it.copyTo(outputStream) }
         } ?: throw Exception("Failed to open output stream for $fileName")
     } catch (e: Exception) {
         runCatching { newFile.delete() }
@@ -223,7 +251,8 @@ private fun writeExportedFile(
 
 private fun writeToPublicMusic(
     context: Context,
-    tempM4a: File,
+    file: File,
+    format: ExportFormat,
     fileName: String,
 ) {
     val resolver = context.contentResolver
@@ -238,7 +267,7 @@ private fun writeToPublicMusic(
 
         val targetFile = File(bbplayerDir, fileName)
         try {
-            tempM4a.inputStream().use { input ->
+            file.inputStream().use { input ->
                 targetFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
@@ -253,7 +282,7 @@ private fun writeToPublicMusic(
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "audio/mp4")
+            put(MediaStore.MediaColumns.MIME_TYPE, format.mimeType)
             put(MediaStore.MediaColumns.DATA, targetFile.absolutePath)
         }
 
@@ -273,7 +302,7 @@ private fun writeToPublicMusic(
         collection,
         ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "audio/mp4")
+            put(MediaStore.MediaColumns.MIME_TYPE, format.mimeType)
             put(
                 MediaStore.MediaColumns.RELATIVE_PATH,
                 "${Environment.DIRECTORY_MUSIC}/BBPlayer",
@@ -284,7 +313,7 @@ private fun writeToPublicMusic(
 
     try {
         resolver.openOutputStream(itemUri)?.use { outputStream ->
-            tempM4a.inputStream().use { it.copyTo(outputStream) }
+            file.inputStream().use { it.copyTo(outputStream) }
         } ?: throw Exception("Failed to open public Music output stream for $fileName")
 
         resolver.update(
@@ -308,7 +337,8 @@ private fun writeToPublicMusic(
 @UnstableApi
 private fun writeMetadata(
     id: String,
-    tempM4a: File,
+    file: File,
+    format: ExportFormat,
     track: TrackRecord?,
     context: Context,
     options: ExportOptions,
@@ -317,10 +347,13 @@ private fun writeMetadata(
     if (track == null) return
 
     try {
-        // 不走 AudioFileIO：它会先解析音频头，jaudiotagger 不认识 B 站 Hi-Res 的 fLaC 和杜比的 ec-3，
-        // 读声道数时直接 NPE，导致整段元数据都写不进去。导出的文件都是 MP4 容器，直接读写 ilst 即可
-        val path = tempM4a.toPath()
-        val tag = runCatching { Mp4TagReader().read(path) }.getOrNull() ?: Mp4Tag()
+        // MP4 不走 AudioFileIO：它会先解析音频头，jaudiotagger 不认识 MP4 里杜比的 ec-3，
+        // 读声道数时直接 NPE，导致整段元数据都写不进去，所以直接读写 ilst。FLAC 走 AudioFileIO 没有这个问题
+        val path = file.toPath()
+        val flacFile = if (format == ExportFormat.FLAC) AudioFileIO.read(file) else null
+        val tag: Tag = flacFile?.tagOrCreateAndSetDefault
+            ?: runCatching { Mp4TagReader().read(path) }.getOrNull()
+            ?: Mp4Tag()
 
         tag.setField(FieldKey.TITLE, track.title ?: id)
         tag.setField(FieldKey.ARTIST, track.artist ?: "Unknown")
@@ -352,7 +385,13 @@ private fun writeMetadata(
                 } else {
                     ArtworkFactory.createArtworkFromFile(coverFile)
                 }
-                tag.setField(artwork)
+                if (tag is FlacTag) {
+                    // FlacTag.setField(Artwork) 要用 javax.imageio 读图片尺寸，Android 上没有这个类，
+                    // 会抛 NoClassDefFoundError（是 Error，外面的 catch 接不住，整个 App 直接崩），所以自己拼 PICTURE 块
+                    tag.setField(flacPictureOf(artwork))
+                } else {
+                    tag.setField(artwork)
+                }
             } catch (e: Exception) {
                 NativeLog.warning(LogTags.EXPORT, "export.cover.embed_failed", mapOf("track.id" to id), e)
             }
@@ -365,10 +404,30 @@ private fun writeMetadata(
             writeLyrics(id, tag, options.convertToLrc, context, json)
         }
 
-        writeMp4Tag(tag, path, tempM4a.name, track.title ?: id)
+        if (flacFile != null) {
+            flacFile.commit()
+        } else {
+            writeMp4Tag(tag as Mp4Tag, path, file.name, track.title ?: id)
+        }
     } catch (e: Exception) {
         NativeLog.error(LogTags.EXPORT, "export.metadata.failed", mapOf("track.id" to id), e)
     }
+}
+
+private fun flacPictureOf(artwork: Artwork): MetadataBlockDataPicture {
+    val data = artwork.binaryData
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+    return MetadataBlockDataPicture(
+        data,
+        PictureTypes.DEFAULT_ID,
+        artwork.mimeType ?: ImageFormats.getMimeTypeForBinarySignature(data) ?: "image/jpeg",
+        "",
+        bounds.outWidth.coerceAtLeast(0),
+        bounds.outHeight.coerceAtLeast(0),
+        0,
+        0,
+    )
 }
 
 /**
@@ -391,7 +450,7 @@ private fun writeMp4Tag(tag: Mp4Tag, path: java.nio.file.Path, fileName: String,
 
 private fun writeLyrics(
     id: String,
-    tag: org.jaudiotagger.tag.Tag,
+    tag: Tag,
     convertToLrc: Boolean,
     context: Context,
     json: Json,
@@ -438,6 +497,7 @@ private fun buildFileName(
     download: Download,
     track: TrackRecord?,
     filenamePattern: String?,
+    format: ExportFormat,
 ): String {
     val pattern = filenamePattern?.takeIf { it.isNotBlank() } ?: "{name}"
     var name = pattern
@@ -455,5 +515,6 @@ private fun buildFileName(
     }
 
     val safeName = name.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
-    return if (safeName.isEmpty()) "$id.m4a" else "$safeName.m4a"
+    val baseName = safeName.ifEmpty { id }
+    return "$baseName.${format.extension}"
 }
