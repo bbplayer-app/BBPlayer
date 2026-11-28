@@ -33,6 +33,22 @@ android {
     buildFeatures {
         aidl = true
     }
+    if (rootProject.ext.has("ndkVersion")) {
+        ndkVersion rootProject.ext.ndkVersion
+    }
+    defaultConfig {
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
     lintOptions {
         abortOnError false
     }
@@ -53,7 +69,6 @@ dependencies {
     implementation "org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1"
     implementation "androidx.media3:media3-transformer:1.9.0"
     implementation("androidx.media3:media3-exoplayer-dash:1.9.0")
-    implementation "net.jthink:jaudiotagger:3.0.1"
     implementation "com.squareup.retrofit2:retrofit:2.9.0"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1"
     implementation "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0"

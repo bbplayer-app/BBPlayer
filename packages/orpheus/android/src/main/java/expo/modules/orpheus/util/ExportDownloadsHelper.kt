@@ -26,19 +26,7 @@ import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import org.jaudiotagger.audio.AudioFileIO
-import org.jaudiotagger.audio.exceptions.CannotWriteException
-import org.jaudiotagger.audio.flac.metadatablock.MetadataBlockDataPicture
-import org.jaudiotagger.audio.mp4.Mp4TagReader
-import org.jaudiotagger.audio.mp4.Mp4TagWriter
-import org.jaudiotagger.tag.FieldKey
-import org.jaudiotagger.tag.Tag
-import org.jaudiotagger.tag.flac.FlacTag
-import org.jaudiotagger.tag.id3.valuepair.ImageFormats
-import org.jaudiotagger.tag.images.Artwork
-import org.jaudiotagger.tag.images.ArtworkFactory
-import org.jaudiotagger.tag.mp4.Mp4Tag
-import org.jaudiotagger.tag.reference.PictureTypes
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 
@@ -180,7 +168,6 @@ private suspend fun exportSingleItem(
         writeMetadata(
             id = id,
             file = exportFile,
-            format = format,
             track = track,
             context = context,
             options = options,
@@ -338,7 +325,6 @@ private fun writeToPublicMusic(
 private fun writeMetadata(
     id: String,
     file: File,
-    format: ExportFormat,
     track: TrackRecord?,
     context: Context,
     options: ExportOptions,
@@ -347,100 +333,61 @@ private fun writeMetadata(
     if (track == null) return
 
     try {
-        // MP4 不走 AudioFileIO：它会先解析音频头，jaudiotagger 不认识 MP4 里杜比的 ec-3，
-        // 读声道数时直接 NPE，导致整段元数据都写不进去，所以直接读写 ilst。FLAC 走 AudioFileIO 没有这个问题
-        val path = file.toPath()
-        val flacFile = if (format == ExportFormat.FLAC) AudioFileIO.read(file) else null
-        val tag: Tag = flacFile?.tagOrCreateAndSetDefault
-            ?: runCatching { Mp4TagReader().read(path) }.getOrNull()
-            ?: Mp4Tag()
-
-        tag.setField(FieldKey.TITLE, track.title ?: id)
-        tag.setField(FieldKey.ARTIST, track.artist ?: "Unknown")
-        tag.setField(FieldKey.ALBUM, track.title ?: "")
-
-        // 封面
-        val coverFile = CoverDownloadManager.getCoverFile(context, id)
-        if (coverFile != null && coverFile.exists()) {
-            try {
-                val artwork = if (options.cropCoverArt) {
-                    // 使用 Glide 加载并 centerCrop 裁剪为正方形，
-                    // 能正确处理 WebP / HEIF 等各种格式及 EXIF 旋转。
-                    val squareBitmap = Glide.with(context)
-                        .asBitmap()
-                        .load(coverFile)
-                        .apply(RequestOptions().transform(CenterCrop()))
-                        .submit(1200, 1200)
-                        .get()
-                    val tmpFile = File(context.cacheDir, "${id}_cover_sq.jpg")
-                    try {
-                        tmpFile.outputStream().use {
-                            squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
-                        }
-                        squareBitmap.recycle()
-                        ArtworkFactory.createArtworkFromFile(tmpFile)
-                    } finally {
-                        tmpFile.delete()
-                    }
-                } else {
-                    ArtworkFactory.createArtworkFromFile(coverFile)
-                }
-                if (tag is FlacTag) {
-                    // FlacTag.setField(Artwork) 要用 javax.imageio 读图片尺寸，Android 上没有这个类，
-                    // 会抛 NoClassDefFoundError（是 Error，外面的 catch 接不住，整个 App 直接崩），所以自己拼 PICTURE 块
-                    tag.setField(flacPictureOf(artwork))
-                } else {
-                    tag.setField(artwork)
-                }
-            } catch (e: Exception) {
-                NativeLog.warning(LogTags.EXPORT, "export.cover.embed_failed", mapOf("track.id" to id), e)
-            }
-        } else {
-            NativeLog.warning(LogTags.EXPORT, "export.cover.missing", mapOf("track.id" to id))
-        }
-
+        val properties = linkedMapOf(
+            "TITLE" to (track.title ?: id),
+            "ARTIST" to (track.artist ?: "Unknown"),
+            "ALBUM" to (track.title ?: ""),
+        )
         // 歌词（仅在已缓存且 embedLyrics=true 时写入）
         if (options.embedLyrics) {
-            writeLyrics(id, tag, options.convertToLrc, context, json)
+            readLyrics(id, options.convertToLrc, context, json)?.let { properties["LYRICS"] = it }
         }
 
-        if (flacFile != null) {
-            flacFile.commit()
-        } else {
-            writeMp4Tag(tag as Mp4Tag, path, file.name, track.title ?: id)
+        if (!TagWriter.write(file, properties, readCover(id, context, options))) {
+            NativeLog.error(LogTags.EXPORT, "export.metadata.failed", mapOf("track.id" to id))
         }
     } catch (e: Exception) {
         NativeLog.error(LogTags.EXPORT, "export.metadata.failed", mapOf("track.id" to id), e)
     }
 }
 
-private fun flacPictureOf(artwork: Artwork): MetadataBlockDataPicture {
-    val data = artwork.binaryData
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
-    return MetadataBlockDataPicture(
-        data,
-        PictureTypes.DEFAULT_ID,
-        artwork.mimeType ?: ImageFormats.getMimeTypeForBinarySignature(data) ?: "image/jpeg",
-        "",
-        bounds.outWidth.coerceAtLeast(0),
-        bounds.outHeight.coerceAtLeast(0),
-        0,
-        0,
-    )
-}
-
-/**
- * B 站下发的都是 fragmented MP4（几十组 moof/mdat）。jaudiotagger 写完后会用「mdat 位置是否随 moov 变长而后移」
- * 自检，但它只盯一个 mdat，碰上分片文件必然报 incorrect offsets，实际上标签已经正确写入、音频也没动
- * （moof 内的数据偏移是相对 moof 的）。所以遇到这个异常时重新读回标签核对一遍，读得到才算成功。
- */
-private fun writeMp4Tag(tag: Mp4Tag, path: java.nio.file.Path, fileName: String, expectedTitle: String) {
-    try {
-        Mp4TagWriter(fileName).write(tag, path)
-    } catch (e: CannotWriteException) {
-        val writtenTitle = runCatching { Mp4TagReader().read(path).getFirst(FieldKey.TITLE) }.getOrNull()
-        if (writtenTitle != expectedTitle) throw e
+private fun readCover(id: String, context: Context, options: ExportOptions): TagWriter.Cover? {
+    val coverFile = CoverDownloadManager.getCoverFile(context, id)
+    if (coverFile == null || !coverFile.exists()) {
+        NativeLog.warning(LogTags.EXPORT, "export.cover.missing", mapOf("track.id" to id))
+        return null
+    }
+    return try {
+        if (options.cropCoverArt) {
+            // 使用 Glide 加载并 centerCrop 裁剪为正方形，
+            // 能正确处理 WebP / HEIF 等各种格式及 EXIF 旋转。
+            val squareBitmap = Glide.with(context)
+                .asBitmap()
+                .load(coverFile)
+                .apply(RequestOptions().transform(CenterCrop()))
+                .submit(1200, 1200)
+                .get()
+            val bytes = ByteArrayOutputStream().use {
+                squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                it.toByteArray()
+            }
+            val cover = TagWriter.Cover(bytes, "image/jpeg", squareBitmap.width, squareBitmap.height)
+            squareBitmap.recycle()
+            cover
+        } else {
+            val bytes = coverFile.readBytes()
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            TagWriter.Cover(
+                data = bytes,
+                mimeType = bounds.outMimeType ?: "image/jpeg",
+                width = bounds.outWidth.coerceAtLeast(0),
+                height = bounds.outHeight.coerceAtLeast(0),
+            )
+        }
+    } catch (e: Exception) {
+        NativeLog.warning(LogTags.EXPORT, "export.cover.embed_failed", mapOf("track.id" to id), e)
+        null
     }
 }
 
@@ -448,14 +395,13 @@ private fun writeMp4Tag(tag: Mp4Tag, path: java.nio.file.Path, fileName: String,
 // 歌词写入（文件级私有）
 // ─────────────────────────────────────────────────────────────
 
-private fun writeLyrics(
+private fun readLyrics(
     id: String,
-    tag: Tag,
     convertToLrc: Boolean,
     context: Context,
     json: Json,
-) {
-    try {
+): String? {
+    return try {
         val lyricsDir = File(context.filesDir, "lyrics")
         val lyricFile = File(lyricsDir, "${id.replace("::", "--")}.json")
         NativeLog.debug(
@@ -465,13 +411,13 @@ private fun writeLyrics(
                 "lyrics.file_exists" to lyricFile.exists(),
             ),
         )
-        if (!lyricFile.exists()) return
+        if (!lyricFile.exists()) return null
 
         val lyricJson = lyricFile.readText()
         val lrcContent0 = json.decodeFromString<LyricFileCache>(lyricJson).lrc
         if (lrcContent0 == null) {
             NativeLog.warning(LogTags.EXPORT, "export.lyrics.missing", mapOf("track.id" to id))
-            return
+            return null
         }
         NativeLog.debug(LogTags.EXPORT, "export.lyrics.extracted", mapOf("lyrics.text_length" to lrcContent0.length))
 
@@ -481,9 +427,10 @@ private fun writeLyrics(
             lrcContent = SplConverter.toStandardLrc(lrcContent)
         }
 
-        tag.setField(FieldKey.LYRICS, lrcContent)
+        lrcContent
     } catch (e: Exception) {
         NativeLog.error(LogTags.EXPORT, "export.lyrics.embed_failed", mapOf("track.id" to id), e)
+        null
     }
 }
 
