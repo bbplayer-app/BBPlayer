@@ -91,13 +91,14 @@ const AudioQualityModal = () => {
 
 				if (announce) {
 					markUnconfirmed()
+					showQualityMessage(QUALITY_MESSAGES.recheckStillUnknown)
+				} else {
+					toastAndLogError(
+						QUALITY_MESSAGES.loadFailed.message,
+						error,
+						'Modal.AudioQuality',
+					)
 				}
-
-				toastAndLogError(
-					QUALITY_MESSAGES.loadFailed.message,
-					error,
-					'Modal.AudioQuality',
-				)
 			} finally {
 				if (mountedRef.current) {
 					setQualityLoading(false)

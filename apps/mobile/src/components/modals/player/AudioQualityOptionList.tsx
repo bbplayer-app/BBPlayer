@@ -37,66 +37,64 @@ export function AudioQualityOptionList({
 				</Text>
 			)}
 
-			<RadioButton.Group
-				value={selected}
-				onValueChange={() => {}}
+			<View
+				accessibilityRole='radiogroup'
+				style={styles.optionList}
 			>
-				<View style={styles.optionList}>
-					{options.map((option) => {
-						const isSelected = option.value === selected
+				{options.map((option) => {
+					const isSelected = option.value === selected
 
-						return (
-							<TouchableRipple
-								key={option.value}
-								testID={`audio-quality-option-${option.value}`}
-								borderless
-								accessibilityRole='radio'
-								accessibilityState={{
-									checked: isSelected,
-									selected: isSelected,
-								}}
-								onPress={() => {
-									onSelect(option.value)
-								}}
-								style={[
-									styles.optionRow,
-									{
-										backgroundColor: isSelected
-											? colors.surfaceVariant
-											: 'transparent',
-									},
-								]}
-							>
-								<View style={styles.optionContent}>
-									<View pointerEvents='none'>
-										<RadioButton
-											value={option.value}
-											status={isSelected ? 'checked' : 'unchecked'}
-										/>
-									</View>
-									<View style={styles.optionText}>
-										<View style={styles.optionHeader}>
-											<Text variant='titleSmall'>{option.label}</Text>
-											<Text
-												variant='labelSmall'
-												style={[styles.optionBadge, { color: colors.primary }]}
-											>
-												{option.badge}
-											</Text>
-										</View>
+					return (
+						<TouchableRipple
+							key={option.value}
+							testID={`audio-quality-option-${option.value}`}
+							borderless
+							accessibilityRole='radio'
+							accessibilityState={{
+								checked: isSelected,
+								selected: isSelected,
+							}}
+							onPress={() => {
+								onSelect(option.value)
+							}}
+							style={[
+								styles.optionRow,
+								{
+									backgroundColor: isSelected
+										? colors.surfaceVariant
+										: 'transparent',
+								},
+							]}
+						>
+							<View style={styles.optionContent}>
+								<View pointerEvents='none'>
+									<RadioButton
+										value={option.value}
+										status={isSelected ? 'checked' : 'unchecked'}
+									/>
+								</View>
+								<View style={styles.optionText}>
+									<View style={styles.optionHeader}>
+										<Text variant='titleSmall'>{option.label}</Text>
 										<Text
-											variant='bodySmall'
-											style={{ color: colors.onSurfaceVariant }}
+											variant='labelSmall'
+											style={[styles.optionBadge, { color: colors.primary }]}
 										>
-											{option.description}
+											{option.badge}
 										</Text>
 									</View>
+									<Text
+										variant='bodySmall'
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										{option.description}
+									</Text>
 								</View>
-							</TouchableRipple>
-						)
-					})}
-				</View>
-			</RadioButton.Group>
+							</View>
+						</TouchableRipple>
+					)
+				})}
+			</View>
 		</>
 	)
 }

@@ -120,11 +120,18 @@ object DownloadUtil {
     /**
      * 下载请求的 URI 固定记录发起时的音质，恢复下载时沿用同一档位
      */
-    fun downloadRequestUriOf(url: String): Uri {
+    fun downloadRequestUriOf(
+        url: String,
+        preferredQuality: String? = null,
+    ): Uri {
         val uri = url.toUri()
         if (uri.scheme != "orpheus" || uri.host != "bilibili") return uri
+        val effectiveQuality = preferredQuality ?: GeneralStorage.getPreferredAudioQuality()
         return uri.buildUpon()
-            .appendQueryParameter(AUDIO_QUALITY_QUERY_PARAM, GeneralStorage.getPreferredAudioQuality())
+            .appendQueryParameter(
+                AUDIO_QUALITY_QUERY_PARAM,
+                AudioQualityStore.normalizePreference(effectiveQuality),
+            )
             .build()
     }
 
@@ -132,14 +139,16 @@ object DownloadUtil {
      * 下载缓存 key：B 站 URI 去掉定档参数后直接使用 URI 本身，保持与既有下载缓存兼容
      */
     fun downloadCacheKeyOf(uri: Uri): String {
-        val uriString = uri.toString()
-        if (uri.scheme != "orpheus" || uri.host != "bilibili") return uriString
-        val quality = uri.getQueryParameter(AUDIO_QUALITY_QUERY_PARAM) ?: return uriString
-        val suffix = "&$AUDIO_QUALITY_QUERY_PARAM=$quality"
-        if (uriString.endsWith(suffix)) return uriString.dropLast(suffix.length)
-        val onlyParam = "?$AUDIO_QUALITY_QUERY_PARAM=$quality"
-        if (uriString.endsWith(onlyParam)) return uriString.dropLast(onlyParam.length)
-        return uriString
+        if (uri.scheme != "orpheus" || uri.host != "bilibili") return uri.toString()
+        if (!uri.queryParameterNames.contains(AUDIO_QUALITY_QUERY_PARAM)) return uri.toString()
+        val builder = uri.buildUpon().clearQuery()
+        for (name in uri.queryParameterNames) {
+            if (name == AUDIO_QUALITY_QUERY_PARAM) continue
+            for (value in uri.getQueryParameters(name)) {
+                builder.appendQueryParameter(name, value)
+            }
+        }
+        return builder.build().toString()
     }
 
     fun downloadCacheKeyOf(uriString: String): String = downloadCacheKeyOf(uriString.toUri())

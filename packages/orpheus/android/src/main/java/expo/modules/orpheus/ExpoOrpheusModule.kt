@@ -913,9 +913,17 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("retryDownload") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
+            val previousQuality = runCatching {
+                DownloadUtil.getDownloadManager(context)
+                    .downloadIndex
+                    .getDownload(track.id)
+                    ?.request
+                    ?.uri
+                    ?.getQueryParameter(DownloadUtil.AUDIO_QUALITY_QUERY_PARAM)
+            }.getOrNull()
             val downloadRequest = DownloadRequest.Builder(
                 track.id,
-                DownloadUtil.downloadRequestUriOf(track.url)
+                DownloadUtil.downloadRequestUriOf(track.url, previousQuality)
             )
                 .setCustomCacheKey(DownloadUtil.downloadCacheKeyOf(track.url))
                 .setData(json.encodeToString(track).toByteArray())
