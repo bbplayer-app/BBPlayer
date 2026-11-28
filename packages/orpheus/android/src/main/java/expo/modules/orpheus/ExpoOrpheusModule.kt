@@ -915,13 +915,15 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("retryDownload") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
+            // 沿用原下载的档位，否则续传会把两档的字节拼进同一个下载缓存。
+            // 升级前创建的下载 URI 里没有 q，那时下载的都是 high
             val previousQuality = runCatching {
                 DownloadUtil.getDownloadManager(context)
                     .downloadIndex
                     .getDownload(track.id)
                     ?.request
                     ?.uri
-                    ?.getQueryParameter(DownloadUtil.AUDIO_QUALITY_QUERY_PARAM)
+                    ?.let { it.getQueryParameter(DownloadUtil.AUDIO_QUALITY_QUERY_PARAM) ?: AudioQualityStore.PREF_HIGH }
             }.getOrNull()
             val downloadRequest = DownloadRequest.Builder(
                 track.id,
@@ -990,8 +992,12 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("clearPlaybackCache") Coroutine { ->
             val context = cachedAppContext ?: error("Orpheus application context is unavailable")
             withContext(Dispatchers.IO) { DownloadCache.clearLruCache(context) }
-            AudioQualityStore.clearAll()
-            DownloadUtil.clearPinnedPlaybackQualities()
+            // 正在播放的这首仍在用锁定的数据源，保留它的记录，否则音质面板会变成「未确认」
+            val currentUri = withServiceOnMainThread { service ->
+                service?.player?.currentMediaItem?.localConfiguration?.uri?.toString()
+            }
+            AudioQualityStore.clearAll(keepUri = currentUri)
+            DownloadUtil.clearPinnedPlaybackQualities(keep = setOfNotNull(currentUri))
         }
 
         AsyncFunction("getDownloads") {
@@ -1280,7 +1286,7 @@ class ExpoOrpheusModule : Module() {
 
         Function("getLruCachedUris") { uris: List<String> ->
             try {
-                uris.filter(DownloadUtil::isFullyCachedInAnyPlaybackQuality)
+                uris.filter(DownloadUtil::isFullyCachedForPlayback)
             } catch (e: Exception) {
                 NativeLog.warning(LogTags.PLAYER, "player.cache.list_failed", error = e)
                 emptyList<String>()

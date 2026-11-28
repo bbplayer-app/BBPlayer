@@ -3,6 +3,7 @@ package expo.modules.orpheus.manager
 import android.content.Context
 import android.media.MediaCodecList
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -66,9 +67,11 @@ object DolbySupport {
         val capabilities = appContext?.let {
             runCatching { AudioCapabilities.getCapabilities(it, AudioAttributes.DEFAULT, null) }.getOrNull()
         }
-        val jocPassthrough = capabilities?.isPassthroughPlaybackSupported(
+        // 设备只支持 E-AC-3 直通时，Media3 会把 JOC 退回 E-AC-3 基础层也算「支持」，
+        // 只有实际选出的直通编码是 E_AC3_JOC 才算能直通全景声
+        val jocPassthrough = capabilities?.getEncodingAndChannelConfigForPassthrough(
             dolbyFormat(MimeTypes.AUDIO_E_AC3_JOC), AudioAttributes.DEFAULT
-        ) == true
+        )?.first == C.ENCODING_E_AC3_JOC
         val eac3Passthrough = capabilities?.isPassthroughPlaybackSupported(
             dolbyFormat(MimeTypes.AUDIO_E_AC3), AudioAttributes.DEFAULT
         ) == true

@@ -516,7 +516,10 @@ class OrpheusMusicService : MediaLibraryService() {
             val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
             return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, null, null, false, false)
         }
-        if (DownloadUtil.isFullyCachedInDownloadCache(this, uriString)) {
+        // 以这次播放打开数据源时的选择为准：起播后才下载完的歌这次仍在线播放
+        val fromDownload = DownloadUtil.pinnedPlaybackSourceIsDownloadOf(uriString)
+            ?: DownloadUtil.isFullyCachedInDownloadCache(this, uriString)
+        if (fromDownload) {
             val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
             return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, null, null, false, true)
         }
@@ -527,9 +530,10 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     private fun inferPlaybackQuality(uri: android.net.Uri, preferredQuality: String): AudioQualityInfo? {
-        val currentUri = player?.currentMediaItem?.localConfiguration?.uri?.toString() ?: return null
-        if (currentUri != uri.toString()) return null
-        val format = player?.audioFormat ?: audioDebugTracker?.getCurrentInputFormat() ?: return null
+        val item = player?.currentMediaItem ?: return null
+        if (item.localConfiguration?.uri?.toString() != uri.toString()) return null
+        // player.audioFormat 在切歌后、新格式到达前仍是上一首的，只认确实属于这首歌的格式
+        val format = audioDebugTracker?.inputFormatOf(item.mediaId) ?: return null
         val bitrate = if (format.bitrate > 0) format.bitrate else format.averageBitrate
         return AudioQualityStore.inferFromAudioFormat(preferredQuality, format.sampleMimeType, format.codecs, bitrate)
     }

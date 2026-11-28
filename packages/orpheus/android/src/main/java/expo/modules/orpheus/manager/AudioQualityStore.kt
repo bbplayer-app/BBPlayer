@@ -173,10 +173,12 @@ object AudioQualityStore {
     @Synchronized
     fun get(uri: String, preferredQuality: String): AudioQualityInfo? = infos[cacheKeyOf(uri, preferredQuality)]
 
-    fun clearAll() {
+    /** 清空记录，[keepUri] 这首（通常是正在播放的歌）各档的记录保留，否则它会变成「未确认」 */
+    fun clearAll(keepUri: String? = null) {
+        val keep = keepUri?.let { uri -> ALL_PREFERENCES.map { cacheKeyOf(uri, it) }.toSet() } ?: emptySet()
         synchronized(this) {
-            infos.clear()
-            updatedAts.clear()
+            infos.keys.retainAll(keep)
+            updatedAts.keys.retainAll(keep)
         }
         schedulePersist()
     }

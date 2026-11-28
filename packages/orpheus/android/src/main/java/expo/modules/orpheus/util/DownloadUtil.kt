@@ -123,6 +123,9 @@ object DownloadUtil {
 
     const val AUDIO_QUALITY_QUERY_PARAM = "q"
 
+    /** 用户原本选的档位（q 可能因设备不支持杜比被降为 hires），只用于写音质记录 */
+    private const val PREFERRED_QUALITY_QUERY_PARAM = "qp"
+
     /** 每首歌最近一次打开播放数据源时锁定的音质，key 为不带 q 参数的原始 URI */
     private val pinnedPlaybackQualities = ConcurrentHashMap<String, String>()
 
@@ -131,8 +134,15 @@ object DownloadUtil {
     /** 当前（或最近一次）播放这首歌时实际请求的音质；还没打开过则为 null */
     fun pinnedPlaybackQualityOf(uriString: String): String? = pinnedPlaybackQualities[uriString]
 
-    fun clearPinnedPlaybackQualities() {
-        pinnedPlaybackQualities.clear()
+    /** 每首歌最近一次打开播放数据源时选的是不是下载缓存 */
+    private val pinnedPlaybackSources = ConcurrentHashMap<String, Boolean>()
+
+    fun pinnedPlaybackSourceIsDownloadOf(uriString: String): Boolean? = pinnedPlaybackSources[uriString]
+
+    /** 清空锁定记录，[keep] 里的（通常是正在播放的歌）保留 */
+    fun clearPinnedPlaybackQualities(keep: Set<String> = emptySet()) {
+        pinnedPlaybackQualities.keys.retainAll(keep)
+        pinnedPlaybackSources.keys.retainAll(keep)
     }
 
     /** 设备没有杜比解码能力时杜比按 Hi-Res 请求，见 [DolbySupport.isDolbyPlayable] */
@@ -148,17 +158,29 @@ object DownloadUtil {
     private fun qualityParamOf(uri: Uri): String? =
         uri.getQueryParameter(AUDIO_QUALITY_QUERY_PARAM)?.let(AudioQualityStore::normalizePreference)
 
-    private fun withQuality(uri: Uri, quality: String): Uri =
-        stripQuality(uri).buildUpon()
-            .appendQueryParameter(AUDIO_QUALITY_QUERY_PARAM, AudioQualityStore.normalizePreference(quality))
-            .build()
+    private fun preferredQualityParamOf(uri: Uri): String? =
+        uri.getQueryParameter(PREFERRED_QUALITY_QUERY_PARAM)?.let(AudioQualityStore::normalizePreference)
+
+    /**
+     * q 写实际请求的档位（已按设备能力降级），解析和缓存 key 都只认它，
+     * 这样同一个 DataSource 前后两次解析不会因为设备能力变化（比如插拔 HDMI）请求到不同的流
+     */
+    private fun withQuality(uri: Uri, preference: String): Uri {
+        val normalized = AudioQualityStore.normalizePreference(preference)
+        val playable = playableQualityOf(normalized)
+        val builder = stripQuality(uri).buildUpon().appendQueryParameter(AUDIO_QUALITY_QUERY_PARAM, playable)
+        if (playable != normalized) builder.appendQueryParameter(PREFERRED_QUALITY_QUERY_PARAM, normalized)
+        return builder.build()
+    }
 
     /** 去掉 q 参数，得到前端传入的原始 URI（同时也是下载缓存的 key） */
     fun stripQuality(uri: Uri): Uri {
-        if (!isBilibiliUri(uri) || !uri.queryParameterNames.contains(AUDIO_QUALITY_QUERY_PARAM)) return uri
+        if (!isBilibiliUri(uri)) return uri
+        val names = uri.queryParameterNames
+        if (AUDIO_QUALITY_QUERY_PARAM !in names && PREFERRED_QUALITY_QUERY_PARAM !in names) return uri
         val builder = uri.buildUpon().clearQuery()
-        for (name in uri.queryParameterNames) {
-            if (name == AUDIO_QUALITY_QUERY_PARAM) continue
+        for (name in names) {
+            if (name == AUDIO_QUALITY_QUERY_PARAM || name == PREFERRED_QUALITY_QUERY_PARAM) continue
             for (value in uri.getQueryParameters(name)) {
                 builder.appendQueryParameter(name, value)
             }
@@ -178,14 +200,17 @@ object DownloadUtil {
     private fun playbackCacheKeyOf(uri: Uri): String =
         playbackCacheKeyOf(
             stripQuality(uri).toString(),
-            qualityParamOf(uri) ?: GeneralStorage.getPreferredAudioQuality(),
+            qualityParamOf(uri) ?: playableQualityOf(GeneralStorage.getPreferredAudioQuality()),
         )
 
-    /** 任意一档音质完整缓存在 LRU 里 */
-    fun isFullyCachedInAnyPlaybackQuality(uriString: String): Boolean =
-        AudioQualityStore.ALL_PREFERENCES.any { quality ->
-            CachedUriManager.isFullyCached(playbackCacheKeyOf(uriString, quality))
-        }
+    /**
+     * 现在开始播放这首歌时会读的那一档是否已完整缓存在 LRU 里：
+     * 正在播放（已锁定档位）的按锁定档位算，否则按当前默认音质算
+     */
+    fun isFullyCachedForPlayback(uriString: String): Boolean {
+        val preference = pinnedPlaybackQualities[uriString] ?: GeneralStorage.getPreferredAudioQuality()
+        return CachedUriManager.isFullyCached(playbackCacheKeyOf(uriString, playableQualityOf(preference)))
+    }
 
     /**
      * 下载请求的 URI 固定记录发起时的音质，恢复下载时沿用同一档位
@@ -284,6 +309,7 @@ object DownloadUtil {
             val baseUri = stripQuality(uri).toString()
             val download = useDownload
                 ?: isFullyCachedInDownloadCache(context, baseUri).also { useDownload = it }
+            pinnedPlaybackSources[baseUri] = download
             if (download) {
                 activeDataSource = downloadDataSource
                 return downloadDataSource.open(dataSpec)
@@ -321,9 +347,11 @@ object DownloadUtil {
                 try {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
-                    val request = AudioQualityStore.requestFor(
-                        playableQualityOf(qualityParamOf(requestUri) ?: GeneralStorage.getPreferredAudioQuality())
-                    )
+                    // q 已经是降级后的档位，这里不再按设备能力重新判断，保证和缓存 key 一致
+                    val requested = qualityParamOf(requestUri)
+                        ?: playableQualityOf(GeneralStorage.getPreferredAudioQuality())
+                    val preferred = preferredQualityParamOf(requestUri) ?: requested
+                    val request = AudioQualityStore.requestFor(requested)
                     val resolved = BilibiliRepository.resolveAudioUrls(
                         bvid = bvid!!,
                         cid = cid,
@@ -349,12 +377,12 @@ object DownloadUtil {
                         AudioQualityStore.put(
                             uri.toString(),
                             AudioQualityInfo(
-                                preferredQuality = request.preference,
+                                preferredQuality = preferred,
                                 actualKind = resolved.kind,
                                 actualStreamId = resolved.streamId,
                                 codecs = resolved.codecs,
                                 bandwidth = resolved.bandwidth,
-                                isFallback = AudioQualityStore.isFallback(request.preference, resolved.kind, resolved.streamId),
+                                isFallback = AudioQualityStore.isFallback(preferred, resolved.kind, resolved.streamId),
                                 isFromDownloadCache = false,
                                 availableQualities = resolved.availableQualities,
                             ),

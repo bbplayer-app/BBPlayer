@@ -99,6 +99,7 @@ class AudioDebugTracker : AnalyticsListener {
     ) {
         inputFormat = format
         audioMediaId = mediaIdOf(eventTime)
+        inputFormatMediaId = audioMediaId
         PlaybackTracer.onAudioFormat(audioMediaId, format.sampleMimeType)
         NativeLog.info(
             LogTags.AUDIO,
@@ -114,6 +115,13 @@ class AudioDebugTracker : AnalyticsListener {
     }
 
     fun getCurrentInputFormat(): Format? = inputFormat
+
+    /** 只在格式确实属于 [mediaId] 这首歌时返回；刚切歌时 inputFormat 可能还是上一首的 */
+    fun inputFormatOf(mediaId: String): Format? =
+        inputFormat?.takeIf { inputFormatMediaId != null && inputFormatMediaId == mediaId }
+
+    @Volatile
+    private var inputFormatMediaId: String? = null
 
     override fun onAudioTrackInitialized(
         eventTime: AnalyticsListener.EventTime,

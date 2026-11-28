@@ -81,6 +81,7 @@ export const SpectrumVisualizer = ({
 	const bandLevelsRef = useRef(new Float32Array(HALF_COUNT))
 	const agcPeakRef = useRef(AGC_MIN_PEAK)
 	const lastPassthroughCheckRef = useRef(0)
+	const passthroughRef = useRef(false)
 
 	// 直通时压缩音频原样交给系统或外接设备解码，App 拿不到 PCM，频谱没有数据，干脆不画（说明写在频谱开关那里）
 	const [isPassthrough, setIsPassthrough] = useState(() =>
@@ -170,7 +171,15 @@ export const SpectrumVisualizer = ({
 					PASSTHROUGH_CHECK_INTERVAL
 				) {
 					lastPassthroughCheckRef.current = timestamp
-					setIsPassthrough(Orpheus.isSpectrumPassthrough())
+					passthroughRef.current = Orpheus.isSpectrumPassthrough()
+					setIsPassthrough(passthroughRef.current)
+				}
+
+				// 直通时没有 PCM，频谱也不显示，只保留上面的轮询，退出直通后再恢复计算
+				if (passthroughRef.current) {
+					if (isPlaying) animationFrameId = requestAnimationFrame(animate)
+
+					return
 				}
 
 				if (isPlaying) {
