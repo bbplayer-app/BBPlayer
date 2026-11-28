@@ -566,7 +566,9 @@ export default function EqualizerSettingsPage() {
 
 	const persistCustomPresets = useCallback(
 		async (nextPresets: EqualizerPreset[]) => {
-			if (writingCustomPresetsRef.current) return false
+			if (writingCustomPresetsRef.current) {
+				throw new Error('预设正在保存，请稍后重试')
+			}
 
 			writingCustomPresetsRef.current = true
 
@@ -580,8 +582,6 @@ export default function EqualizerSettingsPage() {
 				customPresetsRef.current = nextPresets
 
 				setCustomPresets(nextPresets)
-
-				return true
 			} finally {
 				writingCustomPresetsRef.current = false
 			}
@@ -928,7 +928,7 @@ export default function EqualizerSettingsPage() {
 				return
 			}
 
-			if (!(await persistCustomPresets(presets))) return
+			await persistCustomPresets(presets)
 
 			toast.success(`已保存「${preset.name}」`)
 
@@ -955,7 +955,7 @@ export default function EqualizerSettingsPage() {
 			if (!preset) return
 
 			try {
-				if (!(await persistCustomPresets(presets))) return
+				await persistCustomPresets(presets)
 
 				toast.success(`已覆盖「${preset.name}」`)
 
@@ -991,11 +991,9 @@ export default function EqualizerSettingsPage() {
 			if (readiness.presets !== 'ready') return
 
 			try {
-				const deleted = await persistCustomPresets(
+				await persistCustomPresets(
 					deleteCustomPreset(customPresetsRef.current, id),
 				)
-
-				if (!deleted) return
 			} catch (error) {
 				toastAndLogError('删除自定义预设失败', error, 'Equalizer')
 

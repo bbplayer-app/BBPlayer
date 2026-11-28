@@ -143,4 +143,22 @@ test('页面守卫：自定义预设先写原生再更新本地，并防止写�
 	assert.ok(refIndex > nativeIndex, '原生成功后才能更新本地列表')
 	assert.ok(stateIndex > nativeIndex, '原生成功后才能更新界面状态')
 	assert.doesNotMatch(block, /persistCustomPresetsWithRollback/)
+	assert.match(block, /throw new Error\('预设正在保存，请稍后重试'\)/)
+	assert.doesNotMatch(block, /return false/)
+})
+
+test('页面守卫：另存与重命名不吞写入错误，交由弹窗捕获', () => {
+	for (const anchor of [
+		'const handleSavePresetAs = useCallback',
+		'const handleRenamePreset = useCallback',
+	]) {
+		const block = extractCallbackCall(PAGE_SOURCE, anchor)
+
+		assert.doesNotMatch(block, /catch\s*\(/, `${anchor} 不应自行吞错`)
+		assert.match(
+			block,
+			/await persistCustomPresets\(/,
+			`${anchor} 必须等待写入`,
+		)
+	}
 })
