@@ -81,6 +81,7 @@ export const styles = StyleSheet.create({
 	},
 	optionBadge: {
 		fontWeight: 'bold',
-		flexShrink: 1,
+		// Android 按常规字重测量宽度、按粗体绘制，徽标又能收缩时最后一个字符会被裁掉（「64k」显示成「64」）
+		flexShrink: 0,
 	},
 })
