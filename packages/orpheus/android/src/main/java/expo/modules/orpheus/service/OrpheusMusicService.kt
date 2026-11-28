@@ -39,7 +39,6 @@ import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.AudioDebugTracker
 import expo.modules.orpheus.manager.AudioQualityInfo
 import expo.modules.orpheus.manager.AudioQualityStore
-import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
@@ -469,8 +468,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private val audioQualityStoreListener: (String, AudioQualityInfo) -> Unit = { uri, info ->
         serviceHandler.post {
             val currentUri = player?.currentMediaItem?.localConfiguration?.uri?.toString()
-            val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
-            if (currentUri == uri && info.preferredQuality == preferred) {
+            if (currentUri == uri && info.preferredQuality == playbackQualityOf(uri)) {
                 broadcastAudioQuality(info)
             }
         }
@@ -491,34 +489,36 @@ class OrpheusMusicService : MediaLibraryService() {
         audioQualityEventListeners.forEach { listener -> listener.onAudioQualityChanged(info) }
     }
 
-    private fun onAudioFormatChanged(format: Format) {
+    /** 当前播放这首歌实际请求的音质：数据源打开时锁定的那一档，还没打开过则是全局设置 */
+    private fun playbackQualityOf(uriString: String): String =
+        AudioQualityStore.normalizePreference(
+            DownloadUtil.pinnedPlaybackQualityOf(uriString) ?: GeneralStorage.getPreferredAudioQuality()
+        )
+
+    /**
+     * 解码器拿到新格式，说明这首歌（或切换音质后重新加载的数据）已经开始播放。
+     * 命中缓存时不会重新解析 playurl，store 不会再发事件，这里补发一次当前的音质信息，
+     * 否则前端切换音质后会一直等不到结果
+     */
+    private fun onAudioFormatChanged(@Suppress("UNUSED_PARAMETER") format: Format) {
         serviceHandler.post {
             val uri = player?.currentMediaItem?.localConfiguration?.uri ?: return@post
-            if (uri.scheme != "orpheus" || uri.host != "bilibili") return@post
-            val uriString = uri.toString()
-            if (DownloadUtil.isFullyCachedInDownloadCache(this, uriString)) return@post
-            val preferred = GeneralStorage.getPreferredAudioQuality()
-            if (AudioQualityStore.get(uriString, preferred) != null) return@post
-            val bitrate = if (format.bitrate > 0) format.bitrate else format.averageBitrate
-            val info = AudioQualityStore.inferFromAudioFormat(
-                preferred,
-                format.sampleMimeType,
-                format.codecs,
-                bitrate,
-            ) ?: return@post
-            broadcastAudioQuality(info)
+            if (!DownloadUtil.isBilibiliUri(uri)) return@post
+            broadcastAudioQuality(currentAudioQualityInfo(uri))
         }
     }
 
-    private fun currentAudioQualityInfo(uri: android.net.Uri, preferredQuality: String): AudioQualityInfo {
-        val preferred = AudioQualityStore.normalizePreference(preferredQuality)
-        if (uri.scheme != "orpheus" || uri.host != "bilibili") {
+    private fun currentAudioQualityInfo(uri: android.net.Uri): AudioQualityInfo {
+        val uriString = uri.toString()
+        if (!DownloadUtil.isBilibiliUri(uri)) {
+            val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
             return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, null, null, false, false)
         }
-        val uriString = uri.toString()
         if (DownloadUtil.isFullyCachedInDownloadCache(this, uriString)) {
+            val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
             return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, null, null, false, true)
         }
+        val preferred = playbackQualityOf(uriString)
         AudioQualityStore.get(uriString, preferred)?.let { return it }
         return inferPlaybackQuality(uri, preferred)
             ?: AudioQualityInfo(preferred, AudioQualityStore.KIND_UNKNOWN, null, null, null, false, false)
@@ -535,7 +535,7 @@ class OrpheusMusicService : MediaLibraryService() {
     fun getCurrentAudioQuality(): Map<String, Any?>? {
         val item = player?.currentMediaItem ?: return null
         val uri = item.localConfiguration?.uri ?: return null
-        return currentAudioQualityInfo(uri, GeneralStorage.getPreferredAudioQuality()).toMap()
+        return currentAudioQualityInfo(uri).toMap()
     }
 
     @OptIn(UnstableApi::class)
@@ -553,64 +553,10 @@ class OrpheusMusicService : MediaLibraryService() {
         val index = player.currentMediaItemIndex
         val position = player.currentPosition.coerceAtLeast(0L)
         val wasPlaying = player.playWhenReady
-        val preferredQuality = GeneralStorage.getPreferredAudioQuality()
-        val refreshCacheKey = DownloadUtil.playbackCacheKey(uriString)
-        val lruFullCached = DownloadUtil.isFullyCachedInLruCache(this, refreshCacheKey)
-        val reloadStrategy =
-            if (item.localConfiguration?.customCacheKey == refreshCacheKey) "stop" else "custom_cache_key"
-        if (reloadStrategy == "stop") {
-            player.stop()
-            if (lruFullCached) {
-                runCatching {
-                    DownloadCache.getLruCache(this).removeResource(refreshCacheKey)
-                }.onFailure { error ->
-                    NativeLog.warning(LogTags.AUDIO, "audio.quality.lru_clear_failed", error = error)
-                }
-            }
-        } else if (lruFullCached) {
-            val cachedInfo = AudioQualityStore.describeCachedQualityInfo(uriString, preferredQuality)
-            if (cachedInfo == null) {
-                NativeLog.info(
-                    LogTags.AUDIO,
-                    "audio.quality.lru_hit_skipped",
-                    mapOf(
-                        "audio.reason" to "no_record",
-                        "audio.preferred_quality" to preferredQuality,
-                        "audio.reload_cache_key" to refreshCacheKey,
-                    ),
-                )
-                broadcastAudioQuality(
-                    AudioQualityInfo(
-                        preferredQuality = AudioQualityStore.normalizePreference(preferredQuality),
-                        actualKind = AudioQualityStore.KIND_UNKNOWN,
-                        actualStreamId = null,
-                        codecs = null,
-                        bandwidth = null,
-                        isFallback = false,
-                        isFromDownloadCache = false,
-                    ),
-                )
-            } else {
-                AudioQualityStore.put(uriString, cachedInfo)
-                NativeLog.info(
-                    LogTags.AUDIO,
-                    "audio.quality.lru_hit_broadcast",
-                    mapOf(
-                        "audio.preferred_quality" to cachedInfo.preferredQuality,
-                        "audio.actual_kind" to cachedInfo.actualKind,
-                        "audio.actual_stream_id" to cachedInfo.actualStreamId,
-                        "audio.is_fallback" to cachedInfo.isFallback,
-                    ),
-                )
-            }
-        }
-        val refreshedItem = MediaItem.Builder()
-            .setMediaId(item.mediaId)
-            .setUri(uri)
-            .setMediaMetadata(item.mediaMetadata)
-            .setCustomCacheKey(refreshCacheKey)
-            .build()
-        player.replaceMediaItem(index, refreshedItem)
+        val preferredQuality = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
+        // stop 会释放所有 MediaPeriod（包括已经预加载的下一首），重新 prepare 时
+        // 每首歌都会新建数据源并锁定新的音质；不同音质的 LRU 缓存 key 不同，互不干扰
+        player.stop()
         player.seekTo(index, position)
         player.prepare()
         if (wasPlaying) player.play()
@@ -619,18 +565,12 @@ class OrpheusMusicService : MediaLibraryService() {
             "audio.quality.reload",
             mapOf(
                 "audio.preferred_quality" to preferredQuality,
-                "audio.reload_strategy" to reloadStrategy,
-                "audio.reload_cache_key" to refreshCacheKey,
-                "audio.reload_lru_full_cached" to lruFullCached,
                 "audio.reload_media_index" to index,
                 "audio.reload_position_ms" to position,
                 "audio.reload_was_playing" to wasPlaying,
             ),
         )
-        OrpheusTelemetry.update(
-            "audioQualityReload" to preferredQuality,
-            "audioQualityReloadStrategy" to reloadStrategy,
-        )
+        OrpheusTelemetry.update("audioQualityReload" to preferredQuality)
         return mapOf("reloaded" to true, "reason" to "reloaded")
     }
 
@@ -969,7 +909,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
                 currentMediaId = mediaId
                 mediaItem?.localConfiguration?.uri?.let { uri ->
-                    broadcastAudioQuality(currentAudioQualityInfo(uri, GeneralStorage.getPreferredAudioQuality()))
+                    broadcastAudioQuality(currentAudioQualityInfo(uri))
                 }
                 OrpheusTelemetry.onMediaItemChanged(mediaId, mediaItem?.localConfiguration?.uri?.toString())
                 // 单曲循环回到开头不算一次起播

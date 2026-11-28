@@ -399,6 +399,20 @@ test('resolveAudioQualityEventOutcome 判定成功、降级与未确认', () => 
 			createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
 			'high',
 		),
+		'fallback',
+	)
+	assert.equal(
+		resolveAudioQualityEventOutcome(
+			createQualityInfo({ actualStreamId: 30299 }),
+			'high',
+		),
+		'fallback',
+	)
+	assert.equal(
+		resolveAudioQualityEventOutcome(
+			createQualityInfo({ actualKind: 'unknown', actualStreamId: null }),
+			'high',
+		),
 		'awaiting',
 	)
 	assert.equal(

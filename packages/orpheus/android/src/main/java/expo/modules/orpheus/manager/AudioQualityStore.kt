@@ -8,8 +8,9 @@ import expo.modules.orpheus.telemetry.LogTags
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 data class AudioQualityInfo(
     val preferredQuality: String,
@@ -62,12 +63,22 @@ object AudioQualityStore {
 
     private val DOLBY_CODEC_TOKENS = listOf("ec-3", "ac-3", "eac3", "ac-4", "mlpa")
 
-    private val preferences = setOf(PREF_LOW, PREF_STANDARD, PREF_HIGH, PREF_HIRES, PREF_DOLBY)
-    private val infos = ConcurrentHashMap<String, AudioQualityInfo>()
+    val ALL_PREFERENCES = listOf(PREF_LOW, PREF_STANDARD, PREF_HIGH, PREF_HIRES, PREF_DOLBY)
+    private val preferences = ALL_PREFERENCES.toSet()
+
+    /** 全部记录常驻内存，按写入时间排序（最旧在前），init 时从 SharedPreferences 读一次 */
+    private val infos = LinkedHashMap<String, AudioQualityInfo>()
+    private val updatedAts = HashMap<String, Long>()
+    private val persistExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "orpheus-audio-quality-store").apply { isDaemon = true }
+    }
+    private val persistScheduled = AtomicBoolean(false)
     private val listeners = CopyOnWriteArrayList<(String, AudioQualityInfo) -> Unit>()
 
     @Volatile
     private var prefs: SharedPreferences? = null
+
+    private data class Entry(val info: AudioQualityInfo, val updatedAt: Long)
 
     fun normalizePreference(value: String?): String {
         return if (value != null && preferences.contains(value)) value else PREF_HIGH
@@ -94,17 +105,53 @@ object AudioQualityStore {
 
     fun cacheKeyOf(uri: String, preferredQuality: String): String = "$uri|q=${normalizePreference(preferredQuality)}"
 
+    /** 模块和服务都会调用，只有第一次生效 */
     @Synchronized
     fun init(context: Context) {
-        prefs = runCatching {
+        if (prefs != null) return
+        val store = runCatching {
             context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        }.getOrNull()
+        }.getOrNull() ?: return
+        prefs = store
+        runCatching {
+            val entries = JSONObject(store.getString(PREFS_KEY_ENTRIES, null) ?: "{}")
+            val restored = entries.keys().asSequence()
+                .mapNotNull { key -> entries.optJSONObject(key)?.let { raw -> Triple(key, raw.optLong("updatedAt", 0L), raw) } }
+                .sortedBy { it.second }
+                .mapNotNull { (key, updatedAt, raw) -> decode(raw)?.let { key to Entry(it, updatedAt) } }
+                .toList()
+            // 内存里已有的（init 之前写入的）更新，不能被旧数据覆盖
+            val pending = LinkedHashMap(infos)
+            val pendingUpdatedAts = HashMap(updatedAts)
+            infos.clear()
+            restored.forEach { (key, entry) ->
+                infos[key] = entry.info
+                updatedAts[key] = entry.updatedAt
+            }
+            pending.forEach { (key, info) ->
+                infos.remove(key)
+                infos[key] = info
+                updatedAts[key] = pendingUpdatedAts[key] ?: System.currentTimeMillis()
+            }
+            if (pending.isNotEmpty()) schedulePersist()
+        }.onFailure { error ->
+            NativeLog.warning(LogTags.STORAGE, "storage.audio_quality.restore_failed", error = error)
+        }
     }
 
     fun put(uri: String, info: AudioQualityInfo) {
         val key = cacheKeyOf(uri, info.preferredQuality)
-        infos[key] = info
-        persist(key, info)
+        synchronized(this) {
+            infos.remove(key)
+            infos[key] = info
+            updatedAts[key] = System.currentTimeMillis()
+            while (infos.size > MAX_PERSISTED_ENTRIES) {
+                val eldest = infos.keys.first()
+                infos.remove(eldest)
+                updatedAts.remove(eldest)
+            }
+        }
+        schedulePersist()
         NativeLog.info(
             LogTags.STORAGE,
             "audio.quality.resolved",
@@ -123,20 +170,15 @@ object AudioQualityStore {
         }
     }
 
-    fun get(uri: String, preferredQuality: String): AudioQualityInfo? {
-        val key = cacheKeyOf(uri, preferredQuality)
-        infos[key]?.let { return it }
-        val restored = restore(key) ?: return null
-        infos[key] = restored
-        return restored
-    }
-
-    fun describeCachedQualityInfo(uri: String, preference: String): AudioQualityInfo? =
-        get(uri, normalizePreference(preference))
+    @Synchronized
+    fun get(uri: String, preferredQuality: String): AudioQualityInfo? = infos[cacheKeyOf(uri, preferredQuality)]
 
     fun clearAll() {
-        infos.clear()
-        runCatching { prefs?.edit()?.clear()?.apply() }
+        synchronized(this) {
+            infos.clear()
+            updatedAts.clear()
+        }
+        schedulePersist()
     }
 
     fun inferFromAudioFormat(
@@ -164,29 +206,29 @@ object AudioQualityStore {
         )
     }
 
-    @Synchronized
-    private fun persist(key: String, info: AudioQualityInfo) {
-        val store = prefs ?: return
-        runCatching {
-            val entries = readEntries(store)
-            entries.put(key, encode(info))
-            trim(entries)
-            store.edit().putString(PREFS_KEY_ENTRIES, entries.toString()).apply()
+    /** 合并短时间内的多次写入，在后台线程把整份快照写回 */
+    private fun schedulePersist() {
+        if (prefs == null) return
+        if (!persistScheduled.compareAndSet(false, true)) return
+        persistExecutor.execute {
+            persistScheduled.set(false)
+            val store = prefs ?: return@execute
+            runCatching {
+                val snapshot = JSONObject()
+                synchronized(this) {
+                    infos.forEach { (key, info) ->
+                        snapshot.put(key, encode(info, updatedAts[key] ?: 0L))
+                    }
+                }
+                store.edit().putString(PREFS_KEY_ENTRIES, snapshot.toString()).apply()
+            }.onFailure { error ->
+                NativeLog.warning(LogTags.STORAGE, "storage.audio_quality.persist_failed", error = error)
+            }
         }
     }
 
-    @Synchronized
-    private fun restore(key: String): AudioQualityInfo? {
-        val store = prefs ?: return null
-        return runCatching { readEntries(store).optJSONObject(key)?.let(::decode) }.getOrNull()
-    }
-
-    private fun readEntries(store: SharedPreferences): JSONObject = runCatching {
-        JSONObject(store.getString(PREFS_KEY_ENTRIES, null) ?: "{}")
-    }.getOrDefault(JSONObject())
-
-    private fun encode(info: AudioQualityInfo): JSONObject = JSONObject().apply {
-        put("updatedAt", System.currentTimeMillis())
+    private fun encode(info: AudioQualityInfo, updatedAt: Long): JSONObject = JSONObject().apply {
+        put("updatedAt", updatedAt)
         put("preferredQuality", info.preferredQuality)
         put("actualKind", info.actualKind)
         put("actualStreamId", info.actualStreamId ?: JSONObject.NULL)
@@ -211,18 +253,6 @@ object AudioQualityStore {
             }.orEmpty(),
         )
     }.getOrNull()
-
-    private fun trim(entries: JSONObject) {
-        if (entries.length() <= MAX_PERSISTED_ENTRIES) return
-        val stale = entries.keys().asSequence()
-            .sortedBy { key -> entries.optJSONObject(key)?.optLong("updatedAt", 0L) ?: 0L }
-            .take(entries.length() - MAX_PERSISTED_ENTRIES)
-            .toList()
-        stale.forEach { key ->
-            entries.remove(key)
-            infos.remove(key)
-        }
-    }
 
     fun addListener(listener: (String, AudioQualityInfo) -> Unit) {
         listeners.add(listener)

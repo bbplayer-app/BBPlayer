@@ -11,6 +11,7 @@ import {
 	resolveAudioQualityEventOutcome,
 	shouldSkipAudioQualitySwitch,
 } from '@/constants/audioQuality'
+import { setPreferredAudioQuality } from '@/hooks/player/usePreferredAudioQuality'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
@@ -27,13 +28,8 @@ const SWITCH_IN_PROGRESS_MESSAGE = {
 	description: '当前切换还未结束，完成后可以再选择其他档位',
 }
 
-function applyPreferredAudioQuality(preference: AudioQualityPreference) {
-	Orpheus.preferredAudioQuality = preference
-}
-
 export interface UseAudioQualitySwitchOptions {
 	preference: AudioQualityPreference
-	setPreference: (preference: AudioQualityPreference) => void
 	actualQuality: AudioQualityInfo | null
 }
 
@@ -48,7 +44,6 @@ export interface UseAudioQualitySwitchResult {
 
 export function useAudioQualitySwitch({
 	preference,
-	setPreference,
 	actualQuality,
 }: UseAudioQualitySwitchOptions): UseAudioQualitySwitchResult {
 	const [pendingTarget, setPendingTarget] =
@@ -171,7 +166,7 @@ export function useAudioQualitySwitch({
 		enterPendingSwitch(next)
 
 		try {
-			applyPreferredAudioQuality(next)
+			setPreferredAudioQuality(next)
 		} catch (error) {
 			clearPendingSwitch()
 			toastAndLogError(
@@ -182,8 +177,6 @@ export function useAudioQualitySwitch({
 
 			return
 		}
-
-		setPreference(next)
 
 		try {
 			const result = await Orpheus.reloadCurrentTrackForQualityChange()

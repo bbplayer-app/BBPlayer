@@ -1,6 +1,6 @@
-import { Orpheus, type AudioQualityPreference } from '@bbplayer/orpheus'
-import { useFocusEffect, useRouter } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { Orpheus } from '@bbplayer/orpheus'
+import { useRouter } from 'expo-router'
+import { useState } from 'react'
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
@@ -21,6 +21,7 @@ import {
 	getAudioQualityOption,
 } from '@/constants/audioQuality'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreferredAudioQuality from '@/hooks/player/usePreferredAudioQuality'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
@@ -39,27 +40,8 @@ export default function PlaybackSettingsPage() {
 	)
 
 	const openModal = useModalStore((state) => state.open)
-	const openedModalCount = useModalStore((state) => state.modals.length)
 	const canConfigureAudioQuality = Platform.OS === 'android'
-
-	const [audioQuality, setAudioQuality] = useState<AudioQualityPreference>(
-		() => (canConfigureAudioQuality ? Orpheus.preferredAudioQuality : 'high'),
-	)
-
-	const syncAudioQuality = useCallback(() => {
-		if (!canConfigureAudioQuality) return
-		setAudioQuality(Orpheus.preferredAudioQuality)
-	}, [canConfigureAudioQuality])
-
-	useFocusEffect(
-		useCallback(() => {
-			syncAudioQuality()
-		}, [syncAudioQuality]),
-	)
-
-	useEffect(() => {
-		syncAudioQuality()
-	}, [openedModalCount, syncAudioQuality])
+	const audioQuality = usePreferredAudioQuality()
 
 	const defaultPlayerMode = useAppStore(
 		(state) => state.settings.defaultPlayerMode,

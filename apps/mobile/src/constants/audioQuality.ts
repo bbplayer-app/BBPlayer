@@ -339,11 +339,21 @@ export function resolveAudioQualityEventOutcome(
 ): AudioQualityEventOutcome {
 	const actualPreference = resolveActualAudioQualityPreference(info)
 
-	if (actualPreference === null) {
+	if (actualPreference !== null) {
+		return actualPreference === pending ? 'applied' : 'fallback'
+	}
+
+	// 还没拿到解析结果（unknown）或者读的是离线文件（local）时继续等；
+	// durl、未知音轨 id 之类拿到了结果却对不上任何档位的，按降级处理，不然会一直等到超时
+	if (
+		info.isFromDownloadCache ||
+		info.actualKind === 'unknown' ||
+		info.actualKind === 'local'
+	) {
 		return 'awaiting'
 	}
 
-	return actualPreference === pending ? 'applied' : 'fallback'
+	return 'fallback'
 }
 
 export function resolveSelectedAudioQualityPreference(

@@ -1,10 +1,9 @@
-import { Orpheus } from '@bbplayer/orpheus'
-import { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { Divider, List } from 'react-native-paper'
 
 import { formatAudioQualityLabel } from '@/constants/audioQuality'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreferredAudioQuality from '@/hooks/player/usePreferredAudioQuality'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 import {
@@ -22,21 +21,7 @@ export function MusicFunctionalMenu({
 }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const openModal = useModalStore((state) => state.open)
-	const openedModalCount = useModalStore((state) => state.modals.length)
-
-	const [audioQualityLabel, setAudioQualityLabel] = useState(() =>
-		formatAudioQualityLabel(
-			Platform.OS === 'android' ? Orpheus.preferredAudioQuality : 'high',
-		),
-	)
-
-	useEffect(() => {
-		setAudioQualityLabel(
-			formatAudioQualityLabel(
-				Platform.OS === 'android' ? Orpheus.preferredAudioQuality : 'high',
-			),
-		)
-	}, [openedModalCount])
+	const audioQualityLabel = formatAudioQualityLabel(usePreferredAudioQuality())
 
 	return (
 		<>

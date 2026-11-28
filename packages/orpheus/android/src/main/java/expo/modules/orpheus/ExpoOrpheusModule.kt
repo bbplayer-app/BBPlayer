@@ -257,6 +257,7 @@ class ExpoOrpheusModule : Module() {
             updateSpectrumCapture()
             LoudnessStorage.initialize(context)
             TrackResumeStorage.initialize(context)
+            AudioQualityStore.init(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
             val sessionToken = SessionToken(
                 context,
@@ -989,6 +990,7 @@ class ExpoOrpheusModule : Module() {
             val context = cachedAppContext ?: error("Orpheus application context is unavailable")
             withContext(Dispatchers.IO) { DownloadCache.clearLruCache(context) }
             AudioQualityStore.clearAll()
+            DownloadUtil.clearPinnedPlaybackQualities()
         }
 
         AsyncFunction("getDownloads") {
@@ -1273,9 +1275,7 @@ class ExpoOrpheusModule : Module() {
 
         Function("getLruCachedUris") { uris: List<String> ->
             try {
-                uris.filter { uri ->
-                    expo.modules.orpheus.manager.CachedUriManager.isFullyCached(DownloadUtil.playbackCacheKey(uri))
-                }
+                uris.filter(DownloadUtil::isFullyCachedInAnyPlaybackQuality)
             } catch (e: Exception) {
                 NativeLog.warning(LogTags.PLAYER, "player.cache.list_failed", error = e)
                 emptyList<String>()

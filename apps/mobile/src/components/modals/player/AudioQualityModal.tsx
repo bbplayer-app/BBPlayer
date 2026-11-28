@@ -1,10 +1,7 @@
 import { Orpheus } from '@bbplayer/orpheus'
-import type {
-	AudioQualityInfo,
-	AudioQualityPreference,
-} from '@bbplayer/orpheus'
+import type { AudioQualityInfo } from '@bbplayer/orpheus'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Platform, ScrollView } from 'react-native'
+import { ScrollView } from 'react-native'
 import { Dialog } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
@@ -16,6 +13,7 @@ import {
 	getVisibleAudioQualityOptions,
 	resolveSelectedAudioQualityPreference,
 } from '@/constants/audioQuality'
+import usePreferredAudioQuality from '@/hooks/player/usePreferredAudioQuality'
 import { useBilibiliAccountAccess } from '@/hooks/queries/bilibili/user'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -30,9 +28,7 @@ import { useAudioQualitySwitch } from './useAudioQualitySwitch'
 const AudioQualityModal = () => {
 	const close = useModalStore((state) => state.close)
 
-	const [preference, setPreference] = useState<AudioQualityPreference>(() =>
-		Platform.OS === 'android' ? Orpheus.preferredAudioQuality : 'high',
-	)
+	const preference = usePreferredAudioQuality()
 
 	const [actualQuality, setActualQuality] = useState<AudioQualityInfo | null>(
 		null,
@@ -52,7 +48,7 @@ const AudioQualityModal = () => {
 		applyReadQuality,
 		markUnconfirmed,
 		switchQuality,
-	} = useAudioQualitySwitch({ preference, setPreference, actualQuality })
+	} = useAudioQualitySwitch({ preference, actualQuality })
 
 	const loadCurrentQuality = useCallback(
 		async (announce: boolean) => {
