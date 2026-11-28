@@ -218,12 +218,16 @@ object DownloadUtil {
     /**
      * 现在开始播放这首歌时会读的那一档是否已完整缓存在 LRU 里：
      * 正在播放（已锁定档位）的直接查锁定时的分区，不再按现在的设备能力重新降级；
-     * 否则按当前默认音质算
+     * 否则按当前默认音质算。
+     * 默认档位整批只算一次：杜比要查设备能力（AudioManager 的 binder 调用），
+     * 逐首查会让大歌单在 JS 线程上卡住
      */
-    fun isFullyCachedForPlayback(uriString: String): Boolean {
-        val quality = pinnedCacheQualities[uriString]
-            ?: playableQualityOf(GeneralStorage.getPreferredAudioQuality())
-        return CachedUriManager.isFullyCached(playbackCacheKeyOf(uriString, quality))
+    fun filterFullyCachedForPlayback(uriStrings: List<String>): List<String> {
+        val defaultQuality by lazy { playableQualityOf(GeneralStorage.getPreferredAudioQuality()) }
+        return uriStrings.filter { uriString ->
+            val quality = pinnedCacheQualities[uriString] ?: defaultQuality
+            CachedUriManager.isFullyCached(playbackCacheKeyOf(uriString, quality))
+        }
     }
 
     /**

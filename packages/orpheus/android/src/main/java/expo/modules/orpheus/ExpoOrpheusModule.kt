@@ -1290,7 +1290,7 @@ class ExpoOrpheusModule : Module() {
 
         Function("getLruCachedUris") { uris: List<String> ->
             try {
-                uris.filter(DownloadUtil::isFullyCachedForPlayback)
+                DownloadUtil.filterFullyCachedForPlayback(uris)
             } catch (e: Exception) {
                 NativeLog.warning(LogTags.PLAYER, "player.cache.list_failed", error = e)
                 emptyList<String>()
