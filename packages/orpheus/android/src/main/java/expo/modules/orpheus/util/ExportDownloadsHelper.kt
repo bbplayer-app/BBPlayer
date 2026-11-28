@@ -25,9 +25,12 @@ import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.audio.exceptions.CannotWriteException
+import org.jaudiotagger.audio.mp4.Mp4TagReader
+import org.jaudiotagger.audio.mp4.Mp4TagWriter
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.images.ArtworkFactory
+import org.jaudiotagger.tag.mp4.Mp4Tag
 import java.io.File
 
 
@@ -314,8 +317,10 @@ private fun writeMetadata(
     if (track == null) return
 
     try {
-        val audioFile = AudioFileIO.read(tempM4a)
-        val tag = audioFile.tagOrCreateAndSetDefault
+        // 不走 AudioFileIO：它会先解析音频头，jaudiotagger 不认识 B 站 Hi-Res 的 fLaC 和杜比的 ec-3，
+        // 读声道数时直接 NPE，导致整段元数据都写不进去。导出的文件都是 MP4 容器，直接读写 ilst 即可
+        val path = tempM4a.toPath()
+        val tag = runCatching { Mp4TagReader().read(path) }.getOrNull() ?: Mp4Tag()
 
         tag.setField(FieldKey.TITLE, track.title ?: id)
         tag.setField(FieldKey.ARTIST, track.artist ?: "Unknown")
@@ -360,9 +365,23 @@ private fun writeMetadata(
             writeLyrics(id, tag, options.convertToLrc, context, json)
         }
 
-        audioFile.commit()
+        writeMp4Tag(tag, path, tempM4a.name, track.title ?: id)
     } catch (e: Exception) {
         NativeLog.error(LogTags.EXPORT, "export.metadata.failed", mapOf("track.id" to id), e)
+    }
+}
+
+/**
+ * B 站下发的都是 fragmented MP4（几十组 moof/mdat）。jaudiotagger 写完后会用「mdat 位置是否随 moov 变长而后移」
+ * 自检，但它只盯一个 mdat，碰上分片文件必然报 incorrect offsets，实际上标签已经正确写入、音频也没动
+ * （moof 内的数据偏移是相对 moof 的）。所以遇到这个异常时重新读回标签核对一遍，读得到才算成功。
+ */
+private fun writeMp4Tag(tag: Mp4Tag, path: java.nio.file.Path, fileName: String, expectedTitle: String) {
+    try {
+        Mp4TagWriter(fileName).write(tag, path)
+    } catch (e: CannotWriteException) {
+        val writtenTitle = runCatching { Mp4TagReader().read(path).getFirst(FieldKey.TITLE) }.getOrNull()
+        if (writtenTitle != expectedTitle) throw e
     }
 }
 
