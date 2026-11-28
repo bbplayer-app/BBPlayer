@@ -86,6 +86,9 @@ export const useBilibiliAccountAccess = () => {
 			returnOrThrowAsync(bilibiliApi.withTrace(span).getNavInfo({ signal })),
 		enabled: hasCookie,
 		staleTime: 10 * 60 * 1000,
+		// 开通 / 过期大会员后要能马上反映到音质选项上：每次打开音质面板都重新拉一次，
+		// 拉取期间先用缓存里的旧结果
+		refetchOnMount: 'always',
 		retry: 1,
 	})
 
