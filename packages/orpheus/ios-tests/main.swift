@@ -845,6 +845,40 @@ test("a reload that comes back after a failover is dropped") {
     check(f.player.count("replace:\(hlsPlaylist)") == 1, "the reload must not replace the mirror")
 }
 
+test("the spectrum turned on during a reload moves to the MP4 even if the reload fails") {
+    let f = playingHlsA()
+    GeneralStorage.shared.preferredAudioQuality = .hires
+    _ = f.manager.reloadCurrentTrackForQualityChange()
+    setSpectrum(f, true)
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [true], "the move should wait for the reload")
+    BilibiliApi.shared.answerStream(.failure(offline))
+    pump()
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [false], "the MP4 should be fetched once the reload has failed")
+}
+
+test("the spectrum turned on during a reload moves to the MP4 when a failover drops the reload") {
+    let f = playingHlsA(mirrors: 1)
+    _ = f.manager.reloadCurrentTrackForQualityChange()
+    setSpectrum(f, true)
+    f.player.failItem(offline)
+    pump()
+    answerHls("A")
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [false], "the MP4 should be fetched for the mirror")
+}
+
+test("a lookup a failure started during a reload doesn't replace the reloaded stream") {
+    let f = playingHlsA()
+    GeneralStorage.shared.preferredAudioQuality = .hires
+    _ = f.manager.reloadCurrentTrackForQualityChange()
+    f.player.failItem(offline)
+    pump()
+    check(BilibiliApi.shared.streamRequests.map(\.audioOnly) == [true, false], "the reload and the MP4 fallback should both be on their way")
+    answerHls("A")
+    check(f.player.currentItem?.url == hlsPlaylist, "the reloaded stream should be loaded")
+    answer("A")
+    check(f.player.currentItem?.url == hlsPlaylist, "the older MP4 lookup must not replace it")
+}
+
 test("with the spectrum on, a new choice is kept for when it is off") {
     GeneralStorage.shared.isSpectrumVisualizerEnabled = true
     let f = playingA()

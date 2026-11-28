@@ -851,7 +851,7 @@ class OrpheusPlayerManager: NSObject {
     /// The HLS item keeps playing while the MP4 is fetched and its tracks load, so the swap only
     /// waits for the MP4 to buffer at the position playback has reached by then.
     private func startTapSwitch() {
-        // A reload for a new quality choice loads an item of its own, and starts this move after it if still needed.
+        // A reload for a new quality choice goes first, and starts this move once it is done, loaded or not.
         guard tapSwitch == nil, qualitySwitch == nil, pendingLookup == nil, !loadedTrackFinished,
               let load = currentLoad, load.segmentBase != nil, let source = load.source,
               let trackId = loadedTrackId, trackId == load.trackId,
@@ -954,6 +954,14 @@ class OrpheusPlayerManager: NSObject {
         return (true, "reloaded")
     }
 
+    /// A move to the MP4 that the spectrum asked for during a quality reload waits for the
+    /// reload's item. When the reload loads nothing, the move starts here instead.
+    private func resumeSpectrumMove() {
+        if GeneralStorage.shared.isSpectrumVisualizerEnabled {
+            startTapSwitch()
+        }
+    }
+
     /// The track keeps playing while its new stream is looked up. The swap happens at the
     /// position playback has reached by then, as with the move to the MP4.
     private func startQualitySwitch(trackId: String, source: BilibiliSource, quality: AudioQualityPreference) {
@@ -965,20 +973,27 @@ class OrpheusPlayerManager: NSObject {
             DispatchQueue.main.async {
                 guard let self = self, self.qualitySwitch == token else { return }
                 self.qualitySwitch = nil
-                // A skip, a failover or the end of the track replaced the item meanwhile.
-                guard let item = item, self.player.currentItem === item, self.loadedTrackId == trackId, !self.loadedTrackFinished else { return }
+                // A failover or the end of the track replaced the item meanwhile.
+                guard let item = item, self.player.currentItem === item, self.loadedTrackId == trackId, !self.loadedTrackFinished else {
+                    self.resumeSpectrumMove()
+                    return
+                }
                 switch result {
                 case .success(let stream) where !stream.urls.isEmpty:
                     let position = self.currentEntryPosition()
                     NSLog("[OrpheusPlayer] reloading for quality %@ at %.1fs", quality.rawValue, position)
+                    // A refresh or the MP4 fallback that a failure started meanwhile must not land on top of this.
+                    self.pendingLookup = nil
                     // Nothing is audible until the new stream has buffered, as at a failover.
                     self.beginTransitionTask()
                     self.loadResolvedStream(stream, source: source, trackId: trackId, startPosition: position, audioOnly: true, forSpectrum: false,
                                             quality: quality)
                 case .success:
                     NSLog("[OrpheusPlayer] the stream for quality %@ has no links, keeping the current one", quality.rawValue)
+                    self.resumeSpectrumMove()
                 case .failure(let error):
                     NSLog("[OrpheusPlayer] couldn't reload for quality %@: %@", quality.rawValue, Self.describe(error))
+                    self.resumeSpectrumMove()
                 }
             }
         }
