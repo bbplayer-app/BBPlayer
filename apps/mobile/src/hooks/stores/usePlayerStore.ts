@@ -1,4 +1,8 @@
-import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
+import {
+	Orpheus,
+	PlaybackState,
+	type Track as OrpheusTrack,
+} from '@bbplayer/orpheus'
 import { create } from 'zustand'
 
 import { trackService } from '@/lib/services/trackService'
@@ -14,6 +18,11 @@ interface PlayerState {
 	orpheusTrack: OrpheusTrack | null
 	internalTrack: Track | null
 	currentIndex: number
+	/**
+	 * 最近一次收到的播放状态。原生层没有读取它的接口，只能从启动起一直订阅；
+	 * usePlaybackState 在组件挂载后才开始收，会错过挂载前的状态，比如已经播完
+	 */
+	playbackState: PlaybackState
 
 	initialize: () => void
 	sync: () => Promise<void>
@@ -23,6 +32,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 	orpheusTrack: null,
 	internalTrack: null,
 	currentIndex: -1,
+	playbackState: PlaybackState.IDLE,
 
 	initialize: () => {
 		if (initialized) return
@@ -34,6 +44,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 		})
 		Orpheus.addListener('onQueueChanged', async () => {
 			await get().sync()
+		})
+		Orpheus.addListener('onPlaybackStateChanged', ({ state }) => {
+			set({ playbackState: state })
 		})
 	},
 

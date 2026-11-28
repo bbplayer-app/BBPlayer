@@ -1,9 +1,4 @@
-import {
-	Orpheus,
-	PlaybackState,
-	useIsPlaying,
-	usePlaybackState,
-} from '@bbplayer/orpheus'
+import { Orpheus, PlaybackState, useIsPlaying } from '@bbplayer/orpheus'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -33,6 +28,7 @@ import {
 import { useLastPlayRecordOfVideo } from '@/hooks/queries/db/track'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { useSettledValue } from '@/hooks/utils/useSettledValue'
@@ -143,12 +139,17 @@ export default function MultipagePage() {
 
 	const currentTrackId = useCurrentTrackId()
 	const isPlaying = useIsPlaying()
-	const playbackState = usePlaybackState()
+	const playbackState = usePlayerStore((state) => state.playbackState)
 	const { data: lastPlayRecord } = useLastPlayRecordOfVideo(bvid)
+
+	// 播完以后播放器里还留着刚放完的那一 P，这时要按播放记录续（听完了就续下一 P），
+	// 不能再把它当成正在放或暂停着的那一 P
+	const partInPlayer =
+		playbackState === PlaybackState.ENDED ? undefined : currentTrackId
 
 	const resumeIndex = findResumePartIndex(
 		tracksData,
-		currentTrackId,
+		partInPlayer,
 		lastPlayRecord,
 	)
 
@@ -158,7 +159,7 @@ export default function MultipagePage() {
 	// 也算正在放。放着别的歌时照样显示，点了就切回这个视频
 	const listeningHere =
 		resumePart !== undefined &&
-		resumePart.uniqueKey === currentTrackId &&
+		resumePart.uniqueKey === partInPlayer &&
 		(isPlaying || playbackState === PlaybackState.BUFFERING)
 
 	// 切换曲目时当前曲目和播放状态会连着变好几次，按钮内容稳定一会儿再显示，免得闪一下
@@ -168,20 +169,29 @@ export default function MultipagePage() {
 			: undefined,
 	)
 
+	const scrollToPart = useCallback((index: number) => {
+		void listRef.current?.scrollToIndex({
+			index,
+			animated: true,
+			viewPosition: 0.5,
+		})
+	}, [])
+
 	const handleResume = useCallback(() => {
 		if (!resumePart) return
 
 		// 播放器里暂停着的就是这一 P：接着放，不再加进队列
-		if (resumePart.uniqueKey === currentTrackId) {
+		if (resumePart.uniqueKey === partInPlayer) {
 			void Orpheus.play()
-
-			return
+		} else {
+			void playTrack(resumePart)
 		}
 
-		void playTrack(resumePart)
-		// 和从播放器跳过来时一样，滚到这一 P 并闪一下
+		// 和从播放器跳过来时一样，滚到这一 P 并闪一下。直接滚而不等 cid 变化：
+		// 再次续播同一 P 时 cid 不变，下面定位的 effect 不会重新执行
+		scrollToPart(resumeIndex)
 		router.setParams({ cid: String(resumePart.id) })
-	}, [resumePart, currentTrackId, playTrack, router])
+	}, [resumePart, resumeIndex, partInPlayer, playTrack, scrollToPart, router])
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
@@ -214,20 +224,14 @@ export default function MultipagePage() {
 
 			if (index !== -1) {
 				// 给一点延时给列表渲染
-				const timer = setTimeout(() => {
-					void listRef.current?.scrollToIndex({
-						index,
-						animated: true,
-						viewPosition: 0.5,
-					})
-				}, 500)
+				const timer = setTimeout(() => scrollToPart(index), 500)
 
 				return () => {
 					clearTimeout(timer)
 				}
 			}
 		}
-	}, [cid, tracksData, isListReady])
+	}, [cid, tracksData, isListReady, scrollToPart])
 
 	const renderCustomItem = useCallback(
 		({
