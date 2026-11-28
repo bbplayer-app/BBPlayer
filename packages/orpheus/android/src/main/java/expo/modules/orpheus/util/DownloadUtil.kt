@@ -147,10 +147,14 @@ object DownloadUtil {
 
     fun pinnedPlaybackSourceIsDownloadOf(uriString: String): Boolean? = pinnedPlaybackSources[uriString]
 
+    /** 每首歌最近一次打开播放数据源时实际读的 LRU 分区（已按设备能力降级后的 q） */
+    private val pinnedCacheQualities = ConcurrentHashMap<String, String>()
+
     /** 清空锁定记录，[keep] 里的（通常是正在播放的歌）保留 */
     fun clearPinnedPlaybackQualities(keep: Set<String> = emptySet()) {
         pinnedPlaybackQualities.keys.retainAll(keep)
         pinnedPlaybackSources.keys.retainAll(keep)
+        pinnedCacheQualities.keys.retainAll(keep)
     }
 
     /** 设备没有杜比解码能力时杜比按 Hi-Res 请求，见 [DolbySupport.isDolbyPlayable] */
@@ -213,20 +217,39 @@ object DownloadUtil {
 
     /**
      * 现在开始播放这首歌时会读的那一档是否已完整缓存在 LRU 里：
-     * 正在播放（已锁定档位）的按锁定档位算，否则按当前默认音质算
+     * 正在播放（已锁定档位）的直接查锁定时的分区，不再按现在的设备能力重新降级；
+     * 否则按当前默认音质算
      */
     fun isFullyCachedForPlayback(uriString: String): Boolean {
-        val preference = pinnedPlaybackQualities[uriString] ?: GeneralStorage.getPreferredAudioQuality()
-        return CachedUriManager.isFullyCached(playbackCacheKeyOf(uriString, playableQualityOf(preference)))
+        val quality = pinnedCacheQualities[uriString]
+            ?: playableQualityOf(GeneralStorage.getPreferredAudioQuality())
+        return CachedUriManager.isFullyCached(playbackCacheKeyOf(uriString, quality))
     }
 
     /**
      * 下载请求的 URI 固定记录发起时的音质，恢复下载时沿用同一档位
      */
-    fun downloadRequestUriOf(url: String, preferredQuality: String? = null): Uri {
+    fun downloadRequestUriOf(url: String): Uri {
         val uri = url.toUri()
         if (!isBilibiliUri(uri)) return uri
-        return withQuality(uri, preferredQuality ?: GeneralStorage.getPreferredAudioQuality())
+        return withQuality(uri, GeneralStorage.getPreferredAudioQuality())
+    }
+
+    /**
+     * 重试下载时原样沿用旧请求里已经定下的 q（和 qp），不再按现在的设备能力降级：
+     * 下载缓存 key 不带档位，换档会把两种流的字节拼进同一个文件。
+     * 升级前创建的下载 URI 里没有 q，那时下载的都是 high
+     */
+    fun downloadRetryUriOf(url: String, previousRequestUri: Uri?): Uri {
+        val uri = url.toUri()
+        if (!isBilibiliUri(uri)) return uri
+        val quality = previousRequestUri?.getQueryParameter(AUDIO_QUALITY_QUERY_PARAM)
+            ?: AudioQualityStore.PREF_HIGH
+        val builder = stripQuality(uri).buildUpon().appendQueryParameter(AUDIO_QUALITY_QUERY_PARAM, quality)
+        previousRequestUri?.getQueryParameter(PREFERRED_QUALITY_QUERY_PARAM)?.let {
+            builder.appendQueryParameter(PREFERRED_QUALITY_QUERY_PARAM, it)
+        }
+        return builder.build()
     }
 
     /**
@@ -302,6 +325,7 @@ object DownloadUtil {
         private var activeDataSource: DataSource = downloadDataSource
         private var useDownload: Boolean? = null
         private var pinnedQuality: String? = null
+        private var pinnedRequestUri: Uri? = null
 
         override fun addTransferListener(transferListener: TransferListener) {
             downloadDataSource.addTransferListener(transferListener)
@@ -326,8 +350,11 @@ object DownloadUtil {
                 ?: (qualityParamOf(uri) ?: AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality()))
                     .also { pinnedQuality = it }
             pinnedPlaybackQualities[baseUri] = quality
+            // 降级结果也在第一次打开时定下来，之后 seek / 重试即使设备能力变了也读同一个流
+            val requestUri = pinnedRequestUri ?: withQuality(uri, quality).also { pinnedRequestUri = it }
+            qualityParamOf(requestUri)?.let { pinnedCacheQualities[baseUri] = it }
             activeDataSource = fallbackDataSource
-            return fallbackDataSource.open(dataSpec.buildUpon().setUri(withQuality(uri, quality)).build())
+            return fallbackDataSource.open(dataSpec.buildUpon().setUri(requestUri).build())
         }
 
         override fun read(buffer: ByteArray, offset: Int, length: Int): Int =

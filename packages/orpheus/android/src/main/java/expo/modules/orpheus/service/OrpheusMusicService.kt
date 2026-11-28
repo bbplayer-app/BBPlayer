@@ -574,6 +574,8 @@ class OrpheusMusicService : MediaLibraryService() {
         val preferredQuality = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
         // stop 会释放所有 MediaPeriod（包括已经预加载的下一首），重新 prepare 时
         // 每首歌都会新建数据源并锁定新的音质；不同音质的 LRU 缓存 key 不同，互不干扰
+        // 重新加载后格式回调到达前，tracker 里还是上次加载的格式，不能拿来推断这次的音质
+        audioDebugTracker?.invalidateInputFormat()
         player.stop()
         player.seekTo(index, position)
         player.prepare()

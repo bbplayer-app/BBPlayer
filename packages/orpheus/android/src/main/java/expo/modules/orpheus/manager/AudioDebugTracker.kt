@@ -123,6 +123,14 @@ class AudioDebugTracker : AnalyticsListener {
     @Volatile
     private var inputFormatMediaId: String? = null
 
+    /**
+     * 同一首歌重新加载（换音质）前调用：旧格式不再算这首歌的，
+     * 等新加载的格式回调到了 [inputFormatOf] 才重新返回值
+     */
+    fun invalidateInputFormat() {
+        inputFormatMediaId = null
+    }
+
     override fun onAudioTrackInitialized(
         eventTime: AnalyticsListener.EventTime,
         audioTrackConfig: AudioSink.AudioTrackConfig

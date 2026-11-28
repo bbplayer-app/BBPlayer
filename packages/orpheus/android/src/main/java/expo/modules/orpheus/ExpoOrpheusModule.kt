@@ -916,20 +916,16 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("retryDownload") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
-            // 沿用原下载的档位，否则续传会把两档的字节拼进同一个下载缓存。
-            // 升级前创建的下载 URI 里没有 q，那时下载的都是 high
-            val previousQuality = runCatching {
-                DownloadUtil.getDownloadManager(context)
-                    .downloadIndex
-                    .getDownload(track.id)
-                    ?.request
-                    ?.uri
-                    ?.let { it.getQueryParameter(DownloadUtil.AUDIO_QUALITY_QUERY_PARAM) ?: AudioQualityStore.PREF_HIGH }
+            // 沿用原下载的档位，否则续传会把两档的字节拼进同一个下载缓存
+            val previousRequest = runCatching {
+                DownloadUtil.getDownloadManager(context).downloadIndex.getDownload(track.id)?.request
             }.getOrNull()
-            val downloadRequest = DownloadRequest.Builder(
-                track.id,
-                DownloadUtil.downloadRequestUriOf(track.url, previousQuality)
-            )
+            val requestUri = if (previousRequest != null) {
+                DownloadUtil.downloadRetryUriOf(track.url, previousRequest.uri)
+            } else {
+                DownloadUtil.downloadRequestUriOf(track.url)
+            }
+            val downloadRequest = DownloadRequest.Builder(track.id, requestUri)
                 .setCustomCacheKey(DownloadUtil.downloadCacheKeyOf(track.url))
                 .setData(json.encodeToString(track).toByteArray())
                 .build()
@@ -993,12 +989,19 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("clearPlaybackCache") Coroutine { ->
             val context = cachedAppContext ?: error("Orpheus application context is unavailable")
             withContext(Dispatchers.IO) { DownloadCache.clearLruCache(context) }
-            // 正在播放的这首仍在用锁定的数据源，保留它的记录，否则音质面板会变成「未确认」
-            val currentUri = withServiceOnMainThread { service ->
-                service?.player?.currentMediaItem?.localConfiguration?.uri?.toString()
+            // 正在播放的这首和已经预加载的下一首仍在用锁定的数据源，保留它们的记录，
+            // 否则切到它们时音质面板会变成「未确认」
+            val keepUris = withServiceOnMainThread { service ->
+                val player = service?.player ?: return@withServiceOnMainThread emptySet()
+                val next = player.nextMediaItemIndex
+                setOfNotNull(
+                    player.currentMediaItem?.localConfiguration?.uri?.toString(),
+                    next.takeIf { it != C.INDEX_UNSET }
+                        ?.let { player.getMediaItemAt(it).localConfiguration?.uri?.toString() },
+                )
             }
-            AudioQualityStore.clearAll(keepUri = currentUri)
-            DownloadUtil.clearPinnedPlaybackQualities(keep = setOfNotNull(currentUri))
+            AudioQualityStore.clearAll(keepUris = keepUris)
+            DownloadUtil.clearPinnedPlaybackQualities(keep = keepUris)
         }
 
         AsyncFunction("getDownloads") {
