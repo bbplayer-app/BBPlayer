@@ -2,8 +2,7 @@ import { Orpheus, SPECTRUM_SIZE } from '@bbplayer/orpheus'
 import { Canvas, Path, Skia } from '@shopify/react-native-skia'
 import { useIsFocused } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { AppState, StyleSheet, View } from 'react-native'
-import { Text } from 'react-native-paper'
+import { AppState, View } from 'react-native'
 import { useDerivedValue, useSharedValue } from 'react-native-reanimated'
 
 interface SpectrumVisualizerProps {
@@ -83,7 +82,7 @@ export const SpectrumVisualizer = ({
 	const agcPeakRef = useRef(AGC_MIN_PEAK)
 	const lastPassthroughCheckRef = useRef(0)
 
-	// 直通时压缩音频原样交给外接设备解码，App 拿不到 PCM，频谱没有数据，只能显示说明
+	// 直通时压缩音频原样交给系统或外接设备解码，App 拿不到 PCM，频谱没有数据，干脆不画（说明写在频谱开关那里）
 	const [isPassthrough, setIsPassthrough] = useState(() =>
 		Orpheus.isSpectrumPassthrough(),
 	)
@@ -268,37 +267,18 @@ export const SpectrumVisualizer = ({
 				pointerEvents: 'none',
 			}}
 		>
-			<Canvas style={{ flex: 1 }}>
-				<Path
-					path={path}
-					color={color}
-					style='stroke'
-					strokeWidth={4}
-					strokeCap='round'
-					opacity={0.6}
-				/>
-			</Canvas>
-			{isPassthrough && (
-				<View style={[styles.notice, { height: MAX_BAR_HEIGHT }]}>
-					<Text
-						variant='labelSmall'
-						style={{ color }}
-					>
-						直通播放中，无法显示频谱
-					</Text>
-				</View>
+			{!isPassthrough && (
+				<Canvas style={{ flex: 1 }}>
+					<Path
+						path={path}
+						color={color}
+						style='stroke'
+						strokeWidth={4}
+						strokeCap='round'
+						opacity={0.6}
+					/>
+				</Canvas>
 			)}
 		</View>
 	)
 }
-
-const styles = StyleSheet.create({
-	notice: {
-		position: 'absolute',
-		left: 0,
-		right: 0,
-		bottom: 0,
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-})
