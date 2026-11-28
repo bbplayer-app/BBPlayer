@@ -291,21 +291,6 @@ export function resolveActualAudioQualityPreference(
 	return NORMAL_STREAM_PREFERENCES.get(info.actualStreamId) ?? null
 }
 
-export type AudioQualitySwitchOutcome = 'applied' | 'fallback' | 'unknown'
-
-export function resolveAudioQualitySwitchOutcome(
-	info: AudioQualityInfo,
-	target: AudioQualityPreference,
-): AudioQualitySwitchOutcome {
-	const actualPreference = resolveActualAudioQualityPreference(info)
-
-	if (actualPreference === null) {
-		return 'unknown'
-	}
-
-	return actualPreference === target ? 'applied' : 'fallback'
-}
-
 export interface AudioQualityReadVersion {
 	begin: () => number
 	invalidate: () => void
@@ -352,9 +337,13 @@ export function resolveAudioQualityEventOutcome(
 	info: AudioQualityInfo,
 	pending: AudioQualityPreference,
 ): AudioQualityEventOutcome {
-	const outcome = resolveAudioQualitySwitchOutcome(info, pending)
+	const actualPreference = resolveActualAudioQualityPreference(info)
 
-	return outcome === 'unknown' ? 'awaiting' : outcome
+	if (actualPreference === null) {
+		return 'awaiting'
+	}
+
+	return actualPreference === pending ? 'applied' : 'fallback'
 }
 
 export function resolveSelectedAudioQualityPreference(

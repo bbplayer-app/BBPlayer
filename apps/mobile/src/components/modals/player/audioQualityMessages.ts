@@ -19,19 +19,11 @@ export const QUALITY_MESSAGES = {
 		message: '切换结果未确认',
 		description: '卡片已标记为未确认，可点「重新检查」重新读取实际音质',
 	},
-	unknownActual: {
-		message: '未能确认实际音质',
-		description: '可点「重新检查」重新读取播放器当前音质',
-	},
 	recheckOk: {
 		message: '已重新读取当前音质',
 	},
 	recheckStillUnknown: {
 		message: '仍未能确认实际音质',
-	},
-	recheckTimeout: {
-		message: '检查音质超时',
-		description: '未能读取到实际音质，可稍后再试',
 	},
 	alreadyCurrent: (label: string): AudioQualityMessage => ({
 		message: `当前已经是 ${label}`,

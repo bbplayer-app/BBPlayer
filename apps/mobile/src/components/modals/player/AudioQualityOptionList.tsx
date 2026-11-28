@@ -26,16 +26,6 @@ export function AudioQualityOptionList({
 }: AudioQualityOptionListProps) {
 	const colors = useTheme().colors
 
-	const handleGroupChange = (value: string) => {
-		const option = options.find((item) => item.value === value)
-
-		if (!option) {
-			return
-		}
-
-		onSelect(option.value)
-	}
-
 	return (
 		<>
 			{accessHint !== null && (
@@ -49,7 +39,7 @@ export function AudioQualityOptionList({
 
 			<RadioButton.Group
 				value={selected}
-				onValueChange={handleGroupChange}
+				onValueChange={() => {}}
 			>
 				<View style={styles.optionList}>
 					{options.map((option) => {

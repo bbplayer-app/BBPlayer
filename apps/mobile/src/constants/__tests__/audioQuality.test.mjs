@@ -10,7 +10,6 @@ import {
 	getVisibleAudioQualityOptions,
 	resolveActualAudioQualityPreference,
 	resolveAudioQualityEventOutcome,
-	resolveAudioQualitySwitchOutcome,
 	resolveBilibiliAccountTier,
 	resolveSelectedAudioQualityPreference,
 	shouldSkipAudioQualitySwitch,
@@ -357,23 +356,23 @@ test('resolveActualAudioQualityPreference 把实际音轨映射为档位', () =>
 	assert.equal(resolveActualAudioQualityPreference(null), null)
 })
 
-test('resolveAudioQualitySwitchOutcome 判定成功、降级与未知', () => {
+test('resolveAudioQualityEventOutcome 判定成功、降级与未确认', () => {
 	assert.equal(
-		resolveAudioQualitySwitchOutcome(
+		resolveAudioQualityEventOutcome(
 			createQualityInfo({ preferredQuality: 'hires', actualKind: 'hires' }),
 			'hires',
 		),
 		'applied',
 	)
 	assert.equal(
-		resolveAudioQualitySwitchOutcome(
+		resolveAudioQualityEventOutcome(
 			createQualityInfo({ preferredQuality: 'high', actualStreamId: 30280 }),
 			'high',
 		),
 		'applied',
 	)
 	assert.equal(
-		resolveAudioQualitySwitchOutcome(
+		resolveAudioQualityEventOutcome(
 			createQualityInfo({
 				preferredQuality: 'hires',
 				actualKind: 'normal',
@@ -385,7 +384,7 @@ test('resolveAudioQualitySwitchOutcome 判定成功、降级与未知', () => {
 		'fallback',
 	)
 	assert.equal(
-		resolveAudioQualitySwitchOutcome(
+		resolveAudioQualityEventOutcome(
 			createQualityInfo({
 				preferredQuality: 'low',
 				actualStreamId: 30232,
@@ -396,18 +395,18 @@ test('resolveAudioQualitySwitchOutcome 判定成功、降级与未知', () => {
 		'fallback',
 	)
 	assert.equal(
-		resolveAudioQualitySwitchOutcome(
+		resolveAudioQualityEventOutcome(
 			createQualityInfo({ actualKind: 'durl', actualStreamId: null }),
 			'high',
 		),
-		'unknown',
+		'awaiting',
 	)
 	assert.equal(
-		resolveAudioQualitySwitchOutcome(
+		resolveAudioQualityEventOutcome(
 			createQualityInfo({ isFromDownloadCache: true }),
 			'high',
 		),
-		'unknown',
+		'awaiting',
 	)
 })
 
@@ -440,13 +439,13 @@ test('formatAudioQualityLabel 与 getAudioQualityOption 处理未知档位', () 
 	assert.equal(getAudioQualityOption('low').value, 'low')
 })
 
-test('resolveAudioQualitySwitchOutcome 对 unknown 实际格式返回 unknown', () => {
+test('resolveAudioQualityEventOutcome 对 unknown 实际格式返回 awaiting', () => {
 	assert.equal(
-		resolveAudioQualitySwitchOutcome(
+		resolveAudioQualityEventOutcome(
 			createQualityInfo({ actualKind: 'unknown', actualStreamId: null }),
 			'high',
 		),
-		'unknown',
+		'awaiting',
 	)
 	assert.equal(
 		formatActualAudioQuality(createQualityInfo({ actualKind: 'unknown' }))

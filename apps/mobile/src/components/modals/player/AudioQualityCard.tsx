@@ -6,14 +6,8 @@ import Button from '@/components/common/Button'
 
 import { styles } from './audioQualityModalStyles'
 
-export type AudioQualityCardIndicator =
-	| 'pending'
-	| 'unconfirmed'
-	| 'actual'
-	| 'none'
-
 export interface AudioQualityCardProps {
-	indicatorKind: AudioQualityCardIndicator
+	showPendingIndicator: boolean
 	titleText: string
 	subtitleText: string | undefined
 	showSpinner: boolean
@@ -23,7 +17,7 @@ export interface AudioQualityCardProps {
 }
 
 export function AudioQualityCard({
-	indicatorKind,
+	showPendingIndicator,
 	titleText,
 	subtitleText,
 	showSpinner,
@@ -52,7 +46,7 @@ export function AudioQualityCard({
 					当前实际播放音质
 				</Text>
 				<View style={styles.actualStatus}>
-					{indicatorKind === 'pending' && (
+					{showPendingIndicator && (
 						<Text
 							variant='labelSmall'
 							style={{ color: colors.onSecondaryContainer }}

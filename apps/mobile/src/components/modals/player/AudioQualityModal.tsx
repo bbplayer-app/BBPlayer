@@ -22,16 +22,10 @@ import { toastAndLogError } from '@/utils/error-handling'
 
 import { AudioQualityCard } from './AudioQualityCard'
 import { QUALITY_MESSAGES, showQualityMessage } from './audioQualityMessages'
-import {
-	resolveAudioQualityCardState,
-	withQualityTimeout,
-} from './audioQualityModalState'
+import { resolveAudioQualityCardState } from './audioQualityModalState'
 import { styles } from './audioQualityModalStyles'
 import { AudioQualityOptionList } from './AudioQualityOptionList'
-import {
-	QUALITY_CONFIRM_TIMEOUT_MS,
-	useAudioQualitySwitch,
-} from './useAudioQualitySwitch'
+import { useAudioQualitySwitch } from './useAudioQualitySwitch'
 
 const AudioQualityModal = () => {
 	const close = useModalStore((state) => state.close)
@@ -72,10 +66,7 @@ const AudioQualityModal = () => {
 			}
 
 			try {
-				const info = await withQualityTimeout(
-					Orpheus.getCurrentAudioQuality(),
-					QUALITY_CONFIRM_TIMEOUT_MS,
-				)
+				const info = await Orpheus.getCurrentAudioQuality()
 
 				if (!mountedRef.current || !readVersion.isCurrent(readToken)) {
 					return
@@ -100,14 +91,13 @@ const AudioQualityModal = () => {
 
 				if (announce) {
 					markUnconfirmed()
-					showQualityMessage(QUALITY_MESSAGES.recheckTimeout)
-				} else {
-					toastAndLogError(
-						QUALITY_MESSAGES.loadFailed.message,
-						error,
-						'Modal.AudioQuality',
-					)
 				}
+
+				toastAndLogError(
+					QUALITY_MESSAGES.loadFailed.message,
+					error,
+					'Modal.AudioQuality',
+				)
 			} finally {
 				if (mountedRef.current) {
 					setQualityLoading(false)
@@ -218,7 +208,7 @@ const AudioQualityModal = () => {
 					showsVerticalScrollIndicator={false}
 				>
 					<AudioQualityCard
-						indicatorKind={pendingTarget !== null ? 'pending' : 'none'}
+						showPendingIndicator={pendingTarget !== null}
 						titleText={actualTitleText}
 						subtitleText={actualSubtitleText}
 						showSpinner={pendingTarget !== null}

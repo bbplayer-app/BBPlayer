@@ -104,22 +104,3 @@ export function createPendingSwitchTimer(
 
 	return { start, settle, dispose }
 }
-
-export function withQualityTimeout<T>(
-	promise: Promise<T>,
-	timeoutMs: number,
-): Promise<T> {
-	let timeoutId: ReturnType<typeof setTimeout> | null = null
-
-	const timeout = new Promise<never>((_resolve, reject) => {
-		timeoutId = setTimeout(() => {
-			reject(new Error('读取音质超时'))
-		}, timeoutMs)
-	})
-
-	return Promise.race([promise, timeout]).finally(() => {
-		if (timeoutId !== null) {
-			clearTimeout(timeoutId)
-		}
-	})
-}
