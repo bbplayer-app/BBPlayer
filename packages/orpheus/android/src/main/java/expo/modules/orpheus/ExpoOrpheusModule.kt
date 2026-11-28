@@ -27,10 +27,12 @@ import com.facebook.react.common.LifecycleState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
+import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.typedarray.Float32Array
+import java.io.IOException
 import expo.modules.orpheus.util.DirectoryPickerContract
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.AudioQualityInfo
@@ -917,9 +919,12 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("retryDownload") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
             // 沿用原下载的档位，否则续传会把两档的字节拼进同一个下载缓存
-            val previousRequest = runCatching {
+            // 读索引失败时不能当成「没有旧任务」去用当前音质，直接报错，旧缓存原样留着
+            val previousRequest = try {
                 DownloadUtil.getDownloadManager(context).downloadIndex.getDownload(track.id)?.request
-            }.getOrNull()
+            } catch (e: IOException) {
+                throw CodedException("ERR_DOWNLOAD_INDEX", "读取原下载任务失败，请稍后重试", e)
+            }
             val requestUri = if (previousRequest != null) {
                 DownloadUtil.downloadRetryUriOf(track.url, previousRequest.uri)
             } else {
@@ -992,13 +997,7 @@ class ExpoOrpheusModule : Module() {
             // 正在播放的这首和已经预加载的下一首仍在用锁定的数据源，保留它们的记录，
             // 否则切到它们时音质面板会变成「未确认」
             val keepUris = withServiceOnMainThread { service ->
-                val player = service?.player ?: return@withServiceOnMainThread emptySet()
-                val next = player.nextMediaItemIndex
-                setOfNotNull(
-                    player.currentMediaItem?.localConfiguration?.uri?.toString(),
-                    next.takeIf { it != C.INDEX_UNSET }
-                        ?.let { player.getMediaItemAt(it).localConfiguration?.uri?.toString() },
-                )
+                service?.activePlaybackUris() ?: emptySet()
             }
             AudioQualityStore.clearAll(keepUris = keepUris)
             DownloadUtil.clearPinnedPlaybackQualities(keep = keepUris)

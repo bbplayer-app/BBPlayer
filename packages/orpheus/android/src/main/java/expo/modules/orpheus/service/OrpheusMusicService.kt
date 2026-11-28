@@ -556,6 +556,17 @@ class OrpheusMusicService : MediaLibraryService() {
         return currentAudioQualityInfo(uri).toMap()
     }
 
+    /** 正在播放和预加载的下一首的 URI，播放器还持有它们的数据源 */
+    fun activePlaybackUris(): Set<String> {
+        val player = player ?: return emptySet()
+        val next = player.nextMediaItemIndex
+        return setOfNotNull(
+            player.currentMediaItem?.localConfiguration?.uri?.toString(),
+            next.takeIf { it != C.INDEX_UNSET }
+                ?.let { player.getMediaItemAt(it).localConfiguration?.uri?.toString() },
+        )
+    }
+
     @OptIn(UnstableApi::class)
     fun reloadCurrentTrackForQualityChange(): Map<String, Any> {
         val player = player ?: return mapOf("reloaded" to false, "reason" to "no_track")
@@ -902,6 +913,9 @@ class OrpheusMusicService : MediaLibraryService() {
                 mediaItem: androidx.media3.common.MediaItem?,
                 reason: Int
             ) {
+                // 锁定的档位只对还活着的数据源（正在播的和预加载的下一首）有意义，
+                // 其余的下次播放会按那时的默认音质重新锁定
+                DownloadUtil.clearPinnedPlaybackQualities(keep = activePlaybackUris())
                 val mediaId = mediaItem?.mediaId
                 val reasonStr = when (reason) {
                     Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
@@ -974,6 +988,7 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                DownloadUtil.clearPinnedPlaybackQualities(keep = activePlaybackUris())
                 // 超大队列是 OOM 的嫌疑之一：队列整体序列化成 JSON 存取，所以要在保存之前记下
                 player?.let { OrpheusTelemetry.update("queueSize" to it.mediaItemCount) }
                 saveCurrentQueue()

@@ -12,6 +12,7 @@ import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { orpheusQueryKeys, useDownloadTasks } from '@/hooks/queries/orpheus'
 import { queryClient } from '@/lib/config/queryClient'
+import { toastAndLogError } from '@/utils/error-handling'
 
 const canRetryDownloadTask = (task: DownloadTask) =>
 	!!task.track &&
@@ -89,7 +90,18 @@ export default function DownloadPage() {
 						})
 						.filter(Boolean) as Promise<void>[]
 
-					await Promise.all(promises)
+					const failed = (await Promise.allSettled(promises)).find(
+						(result) => result.status === 'rejected',
+					)
+
+					if (failed) {
+						toastAndLogError(
+							'部分任务重新下载失败',
+							failed.reason,
+							'UI.Download',
+						)
+					}
+
 					await queryClient.invalidateQueries({
 						queryKey: orpheusQueryKeys.downloadTasks(),
 					})
