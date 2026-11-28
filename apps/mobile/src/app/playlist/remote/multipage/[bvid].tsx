@@ -177,6 +177,10 @@ export default function MultipagePage() {
 		})
 	}, [])
 
+	// 点续播时要闪的分 P。seq 每点一次加一，对同一 P 再点一次续播也会重新闪；
+	// 带上 id 是为了只让目标条目闪，不受 cid 什么时候更新的影响
+	const [resumeFlash, setResumeFlash] = useState<{ id: string; seq: number }>()
+
 	const handleResume = useCallback(() => {
 		if (!resumePart) return
 
@@ -187,9 +191,13 @@ export default function MultipagePage() {
 			void playTrack(resumePart)
 		}
 
-		// 和从播放器跳过来时一样，滚到这一 P 并闪一下。直接滚而不等 cid 变化：
-		// 再次续播同一 P 时 cid 不变，下面定位的 effect 不会重新执行
+		// 和从播放器跳过来时一样，滚到这一 P 并闪一下。直接滚、单独发闪烁信号，而不等 cid 变化：
+		// 再次续播同一 P 时 cid 不变，下面定位的 effect 不会重新执行，条目也不会再闪
 		scrollToPart(resumeIndex)
+		setResumeFlash((prev) => ({
+			id: String(resumePart.id),
+			seq: (prev?.seq ?? 0) + 1,
+		}))
 		router.setParams({ cid: String(resumePart.id) })
 	}, [resumePart, resumeIndex, partInPlayer, playTrack, scrollToPart, router])
 
@@ -248,11 +256,15 @@ export default function MultipagePage() {
 				showItemCover,
 			} = extraData
 
-			const shouldFlash = String(item.id) === cid
+			const itemId = String(item.id)
+
+			const resumeFlashKey =
+				resumeFlash?.id === itemId ? resumeFlash.seq : undefined
 
 			return (
 				<FlashingTrackListItem
-					shouldFlash={shouldFlash}
+					shouldFlash={itemId === cid || resumeFlashKey !== undefined}
+					flashKey={resumeFlashKey}
 					index={index}
 					onTrackPress={() => play(item)}
 					menuItems={_trackMenuItems(item)}
@@ -279,7 +291,7 @@ export default function MultipagePage() {
 				/>
 			)
 		},
-		[cid, selection],
+		[cid, resumeFlash, selection],
 	)
 
 	useEffect(() => {
