@@ -131,9 +131,13 @@ class LoudnessAudioSink(
         processor.onStreamStarted(outputStreamOffsetUs)
     }
 
-    // 开启均衡时拒绝直通：sink 接受压缩格式（AC-3、E-AC-3 等）的话，MediaCodecAudioRenderer
-    // 会把压缩数据原样交给 sink，不经过处理器链，增益就不会生效。拒绝后渲染器会解码成 PCM；
-    // 系统没有对应解码器时由 FfmpegAudioRenderer 解码。渲染器能力在选轨时确定，切换开关后从下一首开始生效
+    // 响度归一化或均衡器任一开启时拒绝直通：sink 若接受压缩格式（AC-3、E-AC-3 等），
+    // MediaCodecAudioRenderer 会把压缩数据原样交给 sink，不经过处理器链，响度增益与均衡器都不会生效。
+    // 拒绝后渲染器改解码成 PCM；系统无对应解码器时由 FfmpegAudioRenderer 解码。
+    //
+    // 注意渲染器能力是在选轨时确定的：若当前曲目正以直通方式播放（即选轨时响度归一化与均衡器都关闭），
+    // 播放中打开均衡器或响度归一化都不会立刻生效，需要换曲后才走 PCM 处理链。
+    // 已在 PCM 处理链上的曲目（包括响度归一化已开启时的压缩格式曲目）切换开关立即生效。
     override fun supportsFormat(format: Format): Boolean =
         !rejectsPassthrough(format) && super.supportsFormat(format)
 
@@ -141,7 +145,8 @@ class LoudnessAudioSink(
         if (rejectsPassthrough(format)) AudioSink.SINK_FORMAT_UNSUPPORTED else super.getFormatSupport(format)
 
     private fun rejectsPassthrough(format: Format) =
-        format.sampleMimeType != MimeTypes.AUDIO_RAW && GeneralStorage.isLoudnessNormalizationEnabled()
+        format.sampleMimeType != MimeTypes.AUDIO_RAW &&
+        (GeneralStorage.isLoudnessNormalizationEnabled() || GeneralStorage.isEqualizerEnabled())
 }
 
 /**

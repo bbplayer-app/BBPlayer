@@ -11,3 +11,5 @@ export * from './useAdjacentTracks'
 export * from './useOrpheus'
 
 export * from './useSpectrumVisualizerEnabled'
+
+export * from './useEqualizerEnabled'

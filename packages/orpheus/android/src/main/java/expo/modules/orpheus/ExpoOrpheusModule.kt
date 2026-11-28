@@ -34,6 +34,9 @@ import expo.modules.kotlin.typedarray.Float32Array
 import expo.modules.orpheus.util.DirectoryPickerContract
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
+import expo.modules.orpheus.manager.EQ_BAND_COUNT
+import expo.modules.orpheus.manager.EqualizerConfigHolder
+import expo.modules.orpheus.manager.EqualizerState
 import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
@@ -91,6 +94,9 @@ class ExpoOrpheusModule : Module() {
     private var isAppInForeground = true
 
     private var tempBuffer: FloatArray? = null
+
+    /** EQ 的 holder 与 MMKV 是两份状态，读改写必须在同一把锁内完成 */
+    private val equalizerLock = GeneralStorage.equalizerConfigLock
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -218,6 +224,53 @@ class ExpoOrpheusModule : Module() {
         SpectrumAnalyzer.isCapturing = GeneralStorage.isSpectrumVisualizerEnabled()
     }
 
+    private fun buildEqualizerSettingsMap(): Map<String, Any?> =
+        synchronized(equalizerLock) {
+            val state = EqualizerConfigHolder.get()
+            mapOf<String, Any?>(
+                "enabled" to state.enabled,
+                "preampDb" to state.preampDb.toDouble(),
+                "limiterEnabled" to state.limiterEnabled,
+                "gainsDb" to state.copyOfGains().map { it.toDouble() },
+                "activePresetId" to GeneralStorage.getEqualizerActivePresetId(),
+            )
+        }
+
+    private fun toEqualizerGains(gainsDb: List<Double>): FloatArray =
+        FloatArray(EQ_BAND_COUNT) { index -> gainsDb.getOrElse(index) { 0.0 }.toFloat() }
+
+    private class EqualizerUpdate(
+        val enabled: Boolean,
+        val preampDb: Float,
+        val limiterEnabled: Boolean,
+        val gainsDb: FloatArray,
+        val activePresetId: String?
+    )
+
+    /**
+     * 以当前状态为基准写入一次 EQ 变更：读当前状态、更新 holder、落盘、生成快照与发送事件都在锁内，
+     * 保证并发提交时事件顺序与状态提交顺序一致
+     */
+    private fun applyEqualizerSettings(update: (EqualizerState) -> EqualizerUpdate): Map<String, Any?> =
+        synchronized(equalizerLock) {
+            val state = EqualizerConfigHolder.get()
+            val next = update(state)
+            EqualizerConfigHolder.update(
+                enabled = next.enabled,
+                preampDb = next.preampDb,
+                limiterEnabled = next.limiterEnabled,
+                gainsDb = next.gainsDb,
+            )
+            GeneralStorage.setEqualizerEnabled(next.enabled)
+            GeneralStorage.setEqualizerPreampDb(next.preampDb)
+            GeneralStorage.setEqualizerLimiterEnabled(next.limiterEnabled)
+            GeneralStorage.setEqualizerGains(next.gainsDb)
+            GeneralStorage.setEqualizerActivePresetId(next.activePresetId)
+            buildEqualizerSettingsMap().also { settings ->
+                runCatching { sendEvent("onEqualizerChanged", settings) }
+            }
+        }
+
     @OptIn(UnstableApi::class)
     override fun definition() = ModuleDefinition {
         Name("Orpheus")
@@ -236,7 +289,8 @@ class ExpoOrpheusModule : Module() {
             "onStatusBarLyricsStatusChanged",
             "onSpectrumVisualizerEnabledChanged",
             "onRequestClearLyrics",
-            "onQueueChanged"
+            "onQueueChanged",
+            "onEqualizerChanged"
         )
 
         RegisterActivityContracts {
@@ -249,6 +303,7 @@ class ExpoOrpheusModule : Module() {
             // 模块可能在 Activity 已经退到后台时才创建，这时不会再补发后台事件
             isAppInForeground = (context as? ReactContext)?.let { it.lifecycleState == LifecycleState.RESUMED } ?: true
             GeneralStorage.initialize(context)
+            GeneralStorage.restoreEqualizerConfigToHolder()
             updateSpectrumCapture()
             LoudnessStorage.initialize(context)
             TrackResumeStorage.initialize(context)
@@ -403,6 +458,9 @@ class ExpoOrpheusModule : Module() {
                     )
                 }
             }
+
+        Property("isEqualizerEnabled")
+            .get { GeneralStorage.isEqualizerEnabled() }
 
         Property("isDesktopLyricsShown")
             .get { GeneralStorage.isDesktopLyricsShown() }
@@ -1234,6 +1292,93 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
+        AsyncFunction("getEqualizerSettings") {
+            buildEqualizerSettingsMap()
+        }
+
+        AsyncFunction("setEqualizerSettings") {
+                enabled: Boolean,
+                preampDb: Double,
+                limiterEnabled: Boolean,
+                gainsDb: List<Double>,
+                activePresetId: String? ->
+            applyEqualizerSettings {
+                EqualizerUpdate(
+                    enabled = enabled,
+                    preampDb = preampDb.toFloat(),
+                    limiterEnabled = limiterEnabled,
+                    gainsDb = toEqualizerGains(gainsDb),
+                    activePresetId = activePresetId,
+                )
+            }
+        }
+
+        AsyncFunction("setEqualizerBandGain") { bandIndex: Int, gainDb: Double ->
+            if (bandIndex !in 0 until EQ_BAND_COUNT) {
+                buildEqualizerSettingsMap()
+            } else {
+                applyEqualizerSettings { state ->
+                    val gains = state.copyOfGains()
+                    gains[bandIndex] = gainDb.toFloat()
+                    EqualizerUpdate(
+                        enabled = state.enabled,
+                        preampDb = state.preampDb,
+                        limiterEnabled = state.limiterEnabled,
+                        gainsDb = gains,
+                        activePresetId = null,
+                    )
+                }
+            }
+        }
+
+        AsyncFunction("setEqualizerPreamp") { preampDb: Double ->
+            applyEqualizerSettings { state ->
+                EqualizerUpdate(
+                    enabled = state.enabled,
+                    preampDb = preampDb.toFloat(),
+                    limiterEnabled = state.limiterEnabled,
+                    gainsDb = state.copyOfGains(),
+                    activePresetId = GeneralStorage.getEqualizerActivePresetId(),
+                )
+            }
+        }
+
+        AsyncFunction("setEqualizerLimiterEnabled") { enabled: Boolean ->
+            applyEqualizerSettings { state ->
+                EqualizerUpdate(
+                    enabled = state.enabled,
+                    preampDb = state.preampDb,
+                    limiterEnabled = enabled,
+                    gainsDb = state.copyOfGains(),
+                    activePresetId = GeneralStorage.getEqualizerActivePresetId(),
+                )
+            }
+        }
+
+        AsyncFunction("resetEqualizer") {
+            applyEqualizerSettings { state ->
+                EqualizerUpdate(
+                    enabled = state.enabled,
+                    preampDb = 0f,
+                    limiterEnabled = state.limiterEnabled,
+                    gainsDb = FloatArray(EQ_BAND_COUNT),
+                    activePresetId = "flat",
+                )
+            }
+        }
+
+        AsyncFunction("getCustomEqualizerPresetsJson") {
+            GeneralStorage.getCustomEqualizerPresetsJson()
+        }
+
+        AsyncFunction("setCustomEqualizerPresetsJson") { presetsJson: String ->
+            synchronized(equalizerLock) {
+                GeneralStorage.setCustomEqualizerPresetsJson(presetsJson)
+                runCatching { sendEvent("onEqualizerChanged", buildEqualizerSettingsMap()) }
+                Unit
+            }
+        }
+
         Function("updateSpectrumData") { destination: Float32Array ->
             val size = destination.length
             if (tempBuffer == null || tempBuffer!!.size != size) {
@@ -1248,7 +1393,7 @@ class ExpoOrpheusModule : Module() {
         }
 
         Function("exportData") {
-            val playerQueue = GeneralStorage.exportConfig()
+            val playerQueue = synchronized(equalizerLock) { GeneralStorage.exportConfig() }
             val loudness = LoudnessStorage.exportAll()
             val loudnessTruePeak = LoudnessStorage.exportTruePeaks()
             mapOf("playerQueue" to playerQueue, "loudness" to loudness, "loudnessTruePeak" to loudnessTruePeak)
@@ -1258,7 +1403,10 @@ class ExpoOrpheusModule : Module() {
         Function("importData") { data: Map<String, Any> ->
             val playerQueue = (data["playerQueue"] as? Map<String, Any>) ?: emptyMap()
             val loudness = (data["loudness"] as? Map<String, Any>) ?: emptyMap()
-            GeneralStorage.importConfig(playerQueue)
+            synchronized(equalizerLock) {
+                GeneralStorage.importConfig(playerQueue)
+                runCatching { sendEvent("onEqualizerChanged", buildEqualizerSettingsMap()) }
+            }
             loudness.forEach { (key, value) ->
                 LoudnessStorage.setLoudnessData(key, (value as Number).toDouble())
             }

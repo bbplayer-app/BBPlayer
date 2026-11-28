@@ -15,6 +15,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -36,6 +37,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.AudioDebugTracker
+import expo.modules.orpheus.manager.EqualizerAudioProcessor
+import expo.modules.orpheus.manager.EqualizerConfigHolder
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
@@ -186,6 +189,7 @@ class OrpheusMusicService : MediaLibraryService() {
         NativeLog.info(LogTags.SERVICE, "player.service.created")
 
         GeneralStorage.initialize(this)
+        GeneralStorage.restoreEqualizerConfigToHolder()
         LoudnessStorage.initialize(this)
         TrackResumeStorage.initialize(this)
 
@@ -307,10 +311,11 @@ class OrpheusMusicService : MediaLibraryService() {
                 this.enableAudioOutputPlaybackParams = enableAudioOutputPlaybackParams
                 // 响度均衡在 audioProcessorChain 里做，开启 float 输出会绕过这条链，见 LoudnessGainProcessor
                 val loudnessProcessor = LoudnessGainProcessor(loudnessTracker)
+                val equalizerProcessor = EqualizerAudioProcessor(EqualizerConfigHolder)
                 val audioSink = DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                    .setAudioProcessors(arrayOf(loudnessProcessor))
+                    .setAudioProcessors(arrayOf<AudioProcessor>(loudnessProcessor, equalizerProcessor))
                     .build()
                 // 包一层，让频谱可以直接拿到播放器自己的 PCM
                 return SpectrumCaptureAudioSink(LoudnessAudioSink(audioSink, loudnessProcessor))

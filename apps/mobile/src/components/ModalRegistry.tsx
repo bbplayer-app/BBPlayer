@@ -53,6 +53,10 @@ const PlaybackSpeedModal = lazy(
 	() => import('./modals/player/PlaybackSpeedModal'),
 )
 
+const EqPresetNameModal = lazy(
+	() => import('./modals/equalizer/EqPresetNameModal'),
+)
+
 const LyricsSelectionModal = lazy(
 	() => import('./modals/player/LyricsSelectionModal'),
 )
@@ -103,6 +107,7 @@ type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
 export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	PlaybackSpeed: PlaybackSpeedModal,
+	EqPresetName: EqPresetNameModal,
 	AddVideoToBilibiliFavorite: AddToFavoriteListsModal,
 	EditPlaylistMetadata: EditPlaylistMetadataModal,
 	EditTrackMetadata: EditTrackMetadataModal,

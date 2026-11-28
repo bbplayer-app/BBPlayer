@@ -1,8 +1,18 @@
-import { Orpheus } from '@bbplayer/orpheus'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Text, useTheme } from 'react-native-paper'
+import {
+	BUILTIN_EQ_PRESETS,
+	Orpheus,
+	useEqualizerEnabled,
+} from '@bbplayer/orpheus'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { useCallback, useState } from 'react'
+import { Platform, ScrollView, StyleSheet, View } from 'react-native'
+import {
+	Appbar,
+	Icon,
+	Text,
+	TouchableRipple,
+	useTheme,
+} from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MenuView } from '@/components/common/FunctionalMenu'
@@ -10,9 +20,14 @@ import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
+import {
+	findPresetDisplayName,
+	parseCustomPresetsJson,
+} from '@/features/equalizer/utils/customPresets'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
+import { LIST_ITEM_BORDER_RADIUS } from '@/theme/dimensions'
 import { toastAndLogError } from '@/utils/error-handling'
 
 export default function PlaybackSettingsPage() {
@@ -24,6 +39,48 @@ export default function PlaybackSettingsPage() {
 
 	const allowSimultaneousPlayback = useAppStore(
 		(state) => state.settings.allowSimultaneousPlayback,
+	)
+
+	const canConfigureEqualizer = Platform.OS === 'android'
+	const equalizerEnabled = useEqualizerEnabled()
+
+	const [equalizerPresetName, setEqualizerPresetName] = useState<string | null>(
+		null,
+	)
+
+	useFocusEffect(
+		useCallback(() => {
+			if (!canConfigureEqualizer) return
+
+			let cancelled = false
+
+			void (async () => {
+				try {
+					const [nativeSettings, customPresetsJson] = await Promise.all([
+						Orpheus.getEqualizerSettings(),
+						Orpheus.getCustomEqualizerPresetsJson(),
+					])
+
+					if (cancelled) return
+
+					setEqualizerPresetName(
+						findPresetDisplayName(
+							nativeSettings.activePresetId,
+							BUILTIN_EQ_PRESETS,
+							parseCustomPresetsJson(customPresetsJson),
+						),
+					)
+				} catch (error) {
+					if (!cancelled) {
+						toastAndLogError('读取均衡器状态失败', error, 'Settings')
+					}
+				}
+			})()
+
+			return () => {
+				cancelled = true
+			}
+		}, [canConfigureEqualizer]),
 	)
 
 	const defaultPlayerMode = useAppStore(
@@ -90,6 +147,34 @@ export default function PlaybackSettingsPage() {
 						/>
 					</MenuView>
 				</View>
+				{canConfigureEqualizer && (
+					<TouchableRipple
+						testID='playback-equalizer'
+						borderless
+						style={styles.eqRow}
+						onPress={() => router.push('/settings/equalizer')}
+					>
+						<View style={styles.eqRowContent}>
+							<View style={styles.settingDescription}>
+								<Text>均衡器（EQ）</Text>
+								<Text
+									variant='bodySmall'
+									style={{ color: colors.onSurfaceVariant }}
+								>
+									{equalizerEnabled
+										? `已开启${equalizerPresetName ? ` · ${equalizerPresetName}` : ''}`
+										: '已关闭'}
+								</Text>
+							</View>
+							<View style={styles.eqRowValue}>
+								<Icon
+									source='chevron-right'
+									size={20}
+								/>
+							</View>
+						</View>
+					</TouchableRipple>
+				)}
 				<View style={styles.settingRow}>
 					<Text>响度均衡（实验性）</Text>
 					<UniversalSwitch
@@ -174,5 +259,28 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginTop: 16,
+	},
+	settingDescription: {
+		flex: 1,
+		flexShrink: 1,
+		marginEnd: 12,
+	},
+	eqRow: {
+		marginTop: 16,
+		marginHorizontal: -12,
+		borderRadius: LIST_ITEM_BORDER_RADIUS,
+		paddingHorizontal: 12,
+		paddingVertical: 10,
+	},
+	eqRowContent: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	eqRowValue: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		flexShrink: 0,
+		gap: 2,
 	},
 })
