@@ -259,8 +259,13 @@ function describeActualKind(info: AudioQualityInfo): ActualKindDescription {
 	return { title: 'B 站普通音轨', detail: bandwidth }
 }
 
+/**
+ * @param currentPreference 当前的音质偏好。音质按曲目固定在开始加载时的偏好上，
+ * 在设置页改了默认档位后，正在播放的这首仍是旧档位，需要说明一下
+ */
 export function formatActualAudioQuality(
 	info: AudioQualityInfo | null,
+	currentPreference?: AudioQualityPreference,
 ): ActualAudioQualityDescription | null {
 	if (info === null) {
 		return null
@@ -282,6 +287,15 @@ export function formatActualAudioQuality(
 
 	if (info.isFallback) {
 		notes.push(FALLBACK_HINT)
+	}
+
+	if (
+		currentPreference !== undefined &&
+		info.preferredQuality !== currentPreference
+	) {
+		notes.push(
+			`这首按之前的「${getAudioQualityOption(info.preferredQuality).label}」加载，「${getAudioQualityOption(currentPreference).label}」从下一首起生效`,
+		)
 	}
 
 	return {

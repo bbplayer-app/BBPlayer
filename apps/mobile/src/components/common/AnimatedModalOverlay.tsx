@@ -104,6 +104,8 @@ const styles = StyleSheet.create({
 		maxHeight: '85%',
 	},
 	contentInner: {
+		// 外层只限制了 maxHeight，内层不收缩的话内容会溢出被裁掉，弹窗里的 ScrollView 也滚不起来
+		flexShrink: 1,
 		paddingTop: 10,
 		elevation: 24,
 		borderRadius: 32,

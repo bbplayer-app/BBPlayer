@@ -133,7 +133,11 @@ const AudioQualityModal = () => {
 		}
 	}, [handleQualityEvent, loadCurrentQuality, readVersion])
 
-	const actual = formatActualAudioQuality(actualQuality)
+	// 切换中偏好已经变了但曲目还没重新加载，这时不提示「下一首起生效」
+	const actual = formatActualAudioQuality(
+		actualQuality,
+		pendingTarget === null ? preference : undefined,
+	)
 
 	const hasConfirmedActual =
 		actualQuality !== null && actualQuality.actualKind !== 'unknown'
