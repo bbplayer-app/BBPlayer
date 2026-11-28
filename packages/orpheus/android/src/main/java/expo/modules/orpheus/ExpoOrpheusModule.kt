@@ -1295,6 +1295,10 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
+        Function("isSpectrumPassthrough") {
+            SpectrumAnalyzer.isPassthrough
+        }
+
         Function("updateSpectrumData") { destination: Float32Array ->
             val size = destination.length
             if (tempBuffer == null || tempBuffer!!.size != size) {

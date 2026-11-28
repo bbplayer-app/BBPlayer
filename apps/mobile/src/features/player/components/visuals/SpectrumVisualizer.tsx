@@ -2,7 +2,8 @@ import { Orpheus, SPECTRUM_SIZE } from '@bbplayer/orpheus'
 import { Canvas, Path, Skia } from '@shopify/react-native-skia'
 import { useIsFocused } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { AppState, View } from 'react-native'
+import { AppState, StyleSheet, View } from 'react-native'
+import { Text } from 'react-native-paper'
 import { useDerivedValue, useSharedValue } from 'react-native-reanimated'
 
 interface SpectrumVisualizerProps {
@@ -36,6 +37,9 @@ const RELEASE = 0.15
 // 自动增益：按最近的峰值归一化，安静的歌也能撑满。峰值每帧衰减一点，换歌后几秒内适应
 const AGC_DECAY = 0.99
 const AGC_MIN_PEAK = 0.3
+
+// 直通状态只在换歌、换输出设备时变化，每秒查一次就够
+const PASSTHROUGH_CHECK_INTERVAL = 1000
 
 // 每根条对应的 bin 范围：按对数频率均分，低频不足一个 bin 时顺延，保证每根条至少有一个 bin
 const BAND_EDGES = (() => {
@@ -77,6 +81,12 @@ export const SpectrumVisualizer = ({
 	const prevDataRef = useRef(new Float32Array(BAR_COUNT))
 	const bandLevelsRef = useRef(new Float32Array(HALF_COUNT))
 	const agcPeakRef = useRef(AGC_MIN_PEAK)
+	const lastPassthroughCheckRef = useRef(0)
+
+	// 直通时压缩音频原样交给外接设备解码，App 拿不到 PCM，频谱没有数据，只能显示说明
+	const [isPassthrough, setIsPassthrough] = useState(() =>
+		Orpheus.isSpectrumPassthrough(),
+	)
 
 	const [isAppActive, setIsAppActive] = useState(
 		AppState.currentState === 'active',
@@ -155,6 +165,14 @@ export const SpectrumVisualizer = ({
 				const newData = new Float32Array(BAR_COUNT)
 				const rawData = bufferRef.current
 				let hasSignal = false
+
+				if (
+					timestamp - lastPassthroughCheckRef.current >=
+					PASSTHROUGH_CHECK_INTERVAL
+				) {
+					lastPassthroughCheckRef.current = timestamp
+					setIsPassthrough(Orpheus.isSpectrumPassthrough())
+				}
 
 				if (isPlaying) {
 					Orpheus.updateSpectrumData(rawData)
@@ -260,6 +278,27 @@ export const SpectrumVisualizer = ({
 					opacity={0.6}
 				/>
 			</Canvas>
+			{isPassthrough && (
+				<View style={[styles.notice, { height: MAX_BAR_HEIGHT }]}>
+					<Text
+						variant='labelSmall'
+						style={{ color }}
+					>
+						直通播放中，无法显示频谱
+					</Text>
+				</View>
+			)}
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	notice: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		bottom: 0,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+})

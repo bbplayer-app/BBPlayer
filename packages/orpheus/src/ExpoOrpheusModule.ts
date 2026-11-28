@@ -520,6 +520,10 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	updateSpectrumData(destination: Float32Array): void
 	/**
+	 * 当前是否在直通播放（压缩音频原样交给外接设备解码）。直通时拿不到 PCM，频谱不会有数据。
+	 */
+	isSpectrumPassthrough(): boolean
+	/**
 	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、网络等），用于调试页展示。
 	 *
 	 * 返回按分组整理好的字符串；iOS 暂未实现，返回空数组。
