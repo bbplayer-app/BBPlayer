@@ -47,6 +47,7 @@ import {
 	PLAYLIST_SORT_OPTIONS,
 	sortTracks,
 } from '@/features/playlist/local/sort'
+import { useMultiPageResume } from '@/features/playlist/resume/useMultiPageResume'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
@@ -344,12 +345,16 @@ function LocalPlaylistContent({
 	const [sort, setSort] = usePlaylistSort(Number(id))
 	const isSorted = !isCustomSort(sort)
 
-	// 非自定义顺序时需要整个歌单才能正确排序，此时不再走分页
+	/** 从多 P 视频同步来的播放列表，可以续播 */
+	const isMultiPage = playlistMetadata.type === 'multi_page'
+
+	// 非自定义顺序时需要整个歌单才能正确排序，此时不再走分页。
+	// 多 P 视频续播也要按完整的分 P 顺序找下一 P
 	const {
 		data: allPlaylistTracks,
 		isError: isAllPlaylistTracksError,
 		error: allPlaylistTracksError,
-	} = usePlaylistContents(Number(id), isSorted)
+	} = usePlaylistContents(Number(id), isSorted || isMultiPage)
 
 	/** 完整歌单已就绪，可以展示排序结果 */
 	const isSortedReady = isSorted && !!allPlaylistTracks
@@ -372,7 +377,8 @@ function LocalPlaylistContent({
 	// 完整歌单加载失败时回退到可继续分页的自定义顺序，避免只能看到部分歌曲。
 	// 若仍有上次成功的缓存，则继续按缓存排序展示，只记录错误
 	useEffect(() => {
-		if (!isAllPlaylistTracksError) return
+		// 只为续播加载的完整歌单失败时不打扰，没有续播按钮而已
+		if (!isAllPlaylistTracksError || !isSorted) return
 		toastAndLogError(
 			isSortFallback
 				? '加载完整歌单失败，暂按自定义顺序显示'
@@ -380,7 +386,12 @@ function LocalPlaylistContent({
 			allPlaylistTracksError,
 			SCOPE,
 		)
-	}, [isAllPlaylistTracksError, allPlaylistTracksError, isSortFallback])
+	}, [
+		isAllPlaylistTracksError,
+		allPlaylistTracksError,
+		isSortFallback,
+		isSorted,
+	])
 
 	const sortedAllTracks = useMemo(
 		() => (isSorted ? sortTracks(allPlaylistTracks ?? [], sort) : []),
@@ -682,6 +693,45 @@ function LocalPlaylistContent({
 		playableOfflineKeys,
 		effectiveSort,
 	)
+
+	// 完整歌单是自定义顺序，也就是同步时的分 P 顺序，按它数第几 P、找下一 P，不受页面排序影响
+	const multiPageParts = useMemo(
+		() =>
+			isMultiPage
+				? (allPlaylistTracks ?? []).filter(
+						(track) => track.source === 'bilibili',
+					)
+				: [],
+		[isMultiPage, allPlaylistTracks],
+	)
+
+	const { resumePart, isResumePartInPlayer, resumeCard } = useMultiPageResume(
+		multiPageParts[0]?.bilibiliMetadata.bvid,
+		multiPageParts,
+	)
+
+	/** 点了续播、等它成为当前曲目后再定位过去 */
+	const [pendingLocateKey, setPendingLocateKey] = useState<string>()
+
+	useEffect(() => {
+		if (!pendingLocateKey || pendingLocateKey !== currentTrackKey) return
+		setPendingLocateKey(undefined)
+		locateCurrentTrack()
+	}, [pendingLocateKey, currentTrackKey, locateCurrentTrack])
+
+	const handleResume = useCallback(() => {
+		if (!resumePart) return
+
+		// 播放器里暂停着的就是这一 P：接着放，不再重新加队列
+		if (isResumePartInPlayer) {
+			void Orpheus.play()
+		} else {
+			// 和播放全部一样把整个列表放进队列，从这一 P 开始，后面的分 P 接着放
+			void playAll(resumePart.uniqueKey)
+		}
+
+		setPendingLocateKey(resumePart.uniqueKey)
+	}, [resumePart, isResumePartInPlayer, playAll])
 
 	const pullingIcon = useMemo(
 		() => () => (
@@ -1252,6 +1302,8 @@ function LocalPlaylistContent({
 			playlist={playlistMetadata}
 			totalDuration={playlistMetadata.totalDuration}
 			onClickPlayAll={playAll}
+			resumeCard={resumeCard}
+			onClickResume={handleResume}
 			onClickSync={handleSync}
 			onClickCopyToLocalPlaylist={() =>
 				openModal('DuplicateLocalPlaylist', {

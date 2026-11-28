@@ -1,4 +1,4 @@
-import { Orpheus, PlaybackState, useIsPlaying } from '@bbplayer/orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -17,21 +17,17 @@ import useCheckLinkedToPlaylist from '@/features/playlist/remote/hooks/useCheckL
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
-import { findResumePartIndex } from '@/features/playlist/remote/resumePart'
+import { useMultiPageResume } from '@/features/playlist/resume/useMultiPageResume'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
-import { useCurrentTrackId } from '@/hooks/player/useCurrentTrackId'
 import {
 	useGetMultiPageList,
 	useGetVideoDetails,
 } from '@/hooks/queries/bilibili/video'
-import { useLastPlayRecordOfVideo } from '@/hooks/queries/db/track'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
-import { useSettledValue } from '@/hooks/utils/useSettledValue'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
 	BilibiliMultipageVideo,
@@ -137,37 +133,8 @@ export default function MultipagePage() {
 	const listRef = useRef<LegendListRef>(null)
 	const { handleDoubleTap } = useDoubleTapScrollToTop(listRef)
 
-	const currentTrackId = useCurrentTrackId()
-	const isPlaying = useIsPlaying()
-	const playbackState = usePlayerStore((state) => state.playbackState)
-	const { data: lastPlayRecord } = useLastPlayRecordOfVideo(bvid)
-
-	// 播完以后播放器里还留着刚放完的那一 P，这时要按播放记录续（听完了就续下一 P），
-	// 不能再把它当成正在放或暂停着的那一 P
-	const partInPlayer =
-		playbackState === PlaybackState.ENDED ? undefined : currentTrackId
-
-	const resumeIndex = findResumePartIndex(
-		tracksData,
-		partInPlayer,
-		lastPlayRecord,
-	)
-
-	const resumePart = resumeIndex === -1 ? undefined : tracksData[resumeIndex]
-
-	// 续播的目标就是当前曲目、并且正在放时不需要续播；切换曲目和取音频地址时报告的是缓冲，
-	// 也算正在放。放着别的歌时照样显示，点了就切回这个视频
-	const listeningHere =
-		resumePart !== undefined &&
-		resumePart.uniqueKey === partInPlayer &&
-		(isPlaying || playbackState === PlaybackState.BUFFERING)
-
-	// 切换曲目时当前曲目和播放状态会连着变好几次，按钮内容稳定一会儿再显示，免得闪一下
-	const resumeButtonText = useSettledValue(
-		resumePart !== undefined && !listeningHere
-			? `续播 P${resumeIndex + 1}`
-			: undefined,
-	)
+	const { resumeIndex, resumePart, isResumePartInPlayer, resumeCard } =
+		useMultiPageResume(bvid, tracksData)
 
 	const scrollToPart = useCallback((index: number) => {
 		void listRef.current?.scrollToIndex({
@@ -185,7 +152,7 @@ export default function MultipagePage() {
 		if (!resumePart) return
 
 		// 播放器里暂停着的就是这一 P：接着放，不再加进队列
-		if (resumePart.uniqueKey === partInPlayer) {
+		if (isResumePartInPlayer) {
 			void Orpheus.play()
 		} else {
 			void playTrack(resumePart)
@@ -199,7 +166,14 @@ export default function MultipagePage() {
 			seq: (prev?.seq ?? 0) + 1,
 		}))
 		router.setParams({ cid: String(resumePart.id) })
-	}, [resumePart, resumeIndex, partInPlayer, playTrack, scrollToPart, router])
+	}, [
+		resumePart,
+		resumeIndex,
+		isResumePartInPlayer,
+		playTrack,
+		scrollToPart,
+		router,
+	])
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
@@ -384,8 +358,8 @@ export default function MultipagePage() {
 						description={videoData.desc}
 						onClickMainButton={handleSync}
 						mainButtonIcon={'sync'}
-						resumeButtonText={resumeButtonText}
-						onClickResumeButton={handleResume}
+						resumeCard={resumeCard}
+						onClickResume={handleResume}
 						secondaryButtonText='打开原视频'
 						secondaryButtonIcon='open-in-new'
 						onClickSecondaryButton={() =>

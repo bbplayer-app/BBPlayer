@@ -18,6 +18,8 @@ import ExpandableText from '@/components/common/ExpandableText'
 import IconButton from '@/components/common/IconButton'
 import { usePlaylistSidebar } from '@/components/layout/PlaylistDetailLayout'
 import { alert } from '@/components/modals/AlertModal'
+import { ResumeCard } from '@/features/playlist/resume/ResumeCard'
+import type { ResumeCardInfo } from '@/features/playlist/resume/useMultiPageResume'
 import type { SharedPlaylistMember } from '@/hooks/queries/sharedPlaylistMembers'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
@@ -33,6 +35,9 @@ interface PlaylistHeaderProps {
 	playlist: Playlist & { validTrackCount: number }
 	totalDuration?: number
 	onClickPlayAll: () => void
+	/** 多 P 视频的续播卡片内容，没有时不显示卡片 */
+	resumeCard?: ResumeCardInfo
+	onClickResume?: () => void
 	onClickSync: () => void
 	onClickCopyToLocalPlaylist: () => void
 	/** 当作者为 bilibili 时触发。可选，未提供时仅视觉提示不响应 */
@@ -97,6 +102,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	playlist,
 	totalDuration,
 	onClickPlayAll,
+	resumeCard,
+	onClickResume,
 	onClickSync,
 	onClickCopyToLocalPlaylist,
 	onPressAuthor,
@@ -109,6 +116,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	secondaryButtonIconColor,
 }: PlaylistHeaderProps) {
 	const sidebar = usePlaylistSidebar()
+	const showResumeCard = !!resumeCard && !!onClickResume
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
 	const { isCompact } = useResponsiveLayout()
@@ -378,7 +386,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				style={[
 					styles.actionsContainer,
 					sidebar && styles.sidebarActionsContainer,
-					{ marginBottom: playlist.description ? 0 : 16 },
+					{ marginBottom: playlist.description || showResumeCard ? 0 : 16 },
 				]}
 			>
 				<View
@@ -443,6 +451,23 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					/>
 				</View>
 			</View>
+
+			{resumeCard && onClickResume && (
+				<View
+					style={[
+						styles.resumeCard,
+						sidebar && styles.sidebarResumeCard,
+						{ marginBottom: playlist.description ? 0 : 16 },
+					]}
+				>
+					<ResumeCard
+						info={resumeCard}
+						onPress={onClickResume}
+						containerColor={secondaryButtonContainerColor}
+						contentColor={secondaryButtonIconColor}
+					/>
+				</View>
+			)}
 
 			{/* 描述 */}
 			{!!playlist.description && (
@@ -526,6 +551,13 @@ const styles = StyleSheet.create({
 	sidebarActionButtons: {
 		flex: 1,
 		justifyContent: 'center',
+	},
+	resumeCard: {
+		marginTop: 12,
+		marginHorizontal: 16,
+	},
+	sidebarResumeCard: {
+		marginHorizontal: 24,
 	},
 	sidebarPlayAll: {
 		width: '100%',

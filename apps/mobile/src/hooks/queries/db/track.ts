@@ -67,20 +67,22 @@ export function usePlayCountHistoryPaginated(
 	})
 }
 
-export function useLastPlayRecordOfVideo(bvid: string) {
+/** bvid 为空时不查询（例如本地播放列表还没加载出来） */
+export function useLastPlayRecordOfVideo(bvid: string | undefined) {
 	return useTracedQuery({
 		span: { name: 'play_history.last_record_of_video' },
-		queryKey: trackKeys.lastPlayRecordOfVideo(bvid),
+		queryKey: trackKeys.lastPlayRecordOfVideo(bvid ?? ''),
 		queryFn: async ({ span }) => {
 			const result = await trackService
 				.withTrace(span)
-				.getLastPlayRecordOfVideo(bvid)
+				.getLastPlayRecordOfVideo(bvid ?? '')
 
 			if (result.isErr()) throw result.error
 
 			// 没有播放记录时返回 null，这是正常结果；returnOrThrowAsync 会把 null 当成错误抛出
 			return result.value
 		},
+		enabled: !!bvid,
 	})
 }
 
