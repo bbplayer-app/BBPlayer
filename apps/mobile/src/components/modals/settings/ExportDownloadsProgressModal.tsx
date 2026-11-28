@@ -271,7 +271,7 @@ const ExportDownloadsProgressModal = memo(
 										{!filenamePattern.trim()
 											? '为空时使用默认模板 {name}'
 											: patternHasVariable(filenamePattern)
-												? `预览：${buildPreviewFilename(filenamePattern)}`
+												? `预览：${buildPreviewFilename(filenamePattern)}（Hi-Res 无损为 .flac）`
 												: '模板中未包含任何变量，将自动替换为 {name}'}
 									</HelperText>
 									{/* 可用变量说明 */}

@@ -27,6 +27,7 @@ data class ResolvedAudio(
     val streamId: Int?,
     val codecs: String?,
     val bandwidth: Long?,
+    val availableQualities: List<String> = emptyList(),
 )
 
 object BilibiliRepository {
@@ -226,12 +227,14 @@ object BilibiliRepository {
             return ResolvedAudio(streamUrls(durl[0].url, durl[0].backupUrl), volume, "durl", null, null, null)
         }
 
+        val availableQualities = collectAvailableQualities(dash)
+
         if (enableDolby && dash.dolby?.audio?.isNotEmpty() == true) {
-            return selected(bvid, "dolby", dash.dolby.audio[0], volume)
+            return selected(bvid, "dolby", dash.dolby.audio[0], volume, availableQualities)
         }
 
         if (enableHiRes && dash.flac?.audio != null) {
-            return selected(bvid, "hires", dash.flac.audio, volume)
+            return selected(bvid, "hires", dash.flac.audio, volume, availableQualities)
         }
 
         if (dash.audio.isNullOrEmpty()) {
@@ -250,10 +253,39 @@ object BilibiliRepository {
                 ),
             )
         }
-        return selected(bvid, "normal", targetAudio ?: dash.audio[0], volume)
+        return selected(
+            bvid,
+            "normal",
+            targetAudio ?: selectClosestAudio(dash.audio, audioQuality),
+            volume,
+            availableQualities,
+        )
     }
 
-    private fun selected(bvid: String, kind: String, audio: DashAudioItem, volume: VolumeData?): ResolvedAudio {
+    private fun collectAvailableQualities(dash: DashData): List<String> {
+        val audioIds = dash.audio.orEmpty().mapTo(mutableSetOf()) { it.id }
+        val qualities = mutableListOf<String>()
+        if (audioIds.contains(BilibiliAudioQualityId.LOW)) qualities += "low"
+        if (audioIds.contains(BilibiliAudioQualityId.STANDARD)) qualities += "standard"
+        if (audioIds.contains(BilibiliAudioQualityId.HIGH)) qualities += "high"
+        if (dash.flac?.audio != null) qualities += "hires"
+        if (dash.dolby?.audio?.isNotEmpty() == true) qualities += "dolby"
+        return qualities
+    }
+
+    private fun selectClosestAudio(streams: List<DashAudioItem>, audioQuality: Int): DashAudioItem {
+        return streams.filter { it.id <= audioQuality }.maxByOrNull { it.id }
+            ?: streams.minByOrNull { it.id }
+            ?: throw IOException("AudioStreamError: 未找到有效的音频流数据")
+    }
+
+    private fun selected(
+        bvid: String,
+        kind: String,
+        audio: DashAudioItem,
+        volume: VolumeData?,
+        availableQualities: List<String>,
+    ): ResolvedAudio {
         val urls = streamUrls(audio.baseUrl, audio.backupUrl)
         NativeLog.info(
             LogTags.STREAM,
@@ -267,7 +299,7 @@ object BilibiliRepository {
                 "stream.hosts" to urls.joinToString { Uri.parse(it).host.orEmpty() },
             ),
         )
-        return ResolvedAudio(urls, volume, kind, audio.id, audio.codecs, audio.bandwidth)
+        return ResolvedAudio(urls, volume, kind, audio.id, audio.codecs, audio.bandwidth, availableQualities)
     }
 
     private fun streamUrls(primary: String, backups: List<String>?): List<String> {

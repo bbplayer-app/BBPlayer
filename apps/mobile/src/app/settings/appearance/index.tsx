@@ -105,7 +105,7 @@ export default function AppearanceSettingsPage() {
 							variant='bodySmall'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							在播放器封面周围显示实时音频频谱。
+							在播放器封面周围显示实时音频频谱。杜比全景声音轨直接交给系统或外接设备播放时拿不到音频数据，不显示频谱。
 						</Text>
 					</View>
 					<UniversalSwitch

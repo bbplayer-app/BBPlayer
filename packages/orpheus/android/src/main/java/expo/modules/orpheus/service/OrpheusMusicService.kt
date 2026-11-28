@@ -11,6 +11,7 @@ import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -36,6 +37,10 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.AudioDebugTracker
+import expo.modules.orpheus.manager.AudioQualityInfo
+import expo.modules.orpheus.manager.AudioQualityStore
+import expo.modules.orpheus.manager.DolbySupport
+import expo.modules.orpheus.manager.DownloadQualityStore
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
@@ -186,6 +191,9 @@ class OrpheusMusicService : MediaLibraryService() {
         NativeLog.info(LogTags.SERVICE, "player.service.created")
 
         GeneralStorage.initialize(this)
+        AudioQualityStore.init(applicationContext)
+        DownloadQualityStore.init(applicationContext)
+        DolbySupport.init(applicationContext)
         LoudnessStorage.initialize(this)
         TrackResumeStorage.initialize(this)
 
@@ -372,6 +380,7 @@ class OrpheusMusicService : MediaLibraryService() {
             .build()
 
         audioDebugTracker = AudioDebugTracker().also { tracker ->
+            tracker.onAudioFormatChangedListener = ::onAudioFormatChanged
             player?.addAnalyticsListener(tracker)
         }
 
@@ -397,6 +406,8 @@ class OrpheusMusicService : MediaLibraryService() {
         )
 
         setupListeners()
+        AudioQualityStore.removeListener(audioQualityStoreListener)
+        AudioQualityStore.addListener(audioQualityStoreListener)
 
         var launchIntent = packageManager.getLaunchIntentForPackage(packageName)
 
@@ -444,6 +455,157 @@ class OrpheusMusicService : MediaLibraryService() {
         return player!!
     }
 
+    interface AudioQualityEventListener {
+        fun onAudioQualityChanged(info: AudioQualityInfo)
+    }
+
+    private val audioQualityEventListeners = CopyOnWriteArrayList<AudioQualityEventListener>()
+
+    fun addAudioQualityEventListener(listener: AudioQualityEventListener) {
+        audioQualityEventListeners.add(listener)
+    }
+
+    fun removeAudioQualityEventListener(listener: AudioQualityEventListener) {
+        audioQualityEventListeners.remove(listener)
+    }
+
+    private val audioQualityStoreListener: (String, AudioQualityInfo) -> Unit = { uri, info ->
+        serviceHandler.post {
+            val currentUri = player?.currentMediaItem?.localConfiguration?.uri?.toString()
+            if (currentUri == uri && info.preferredQuality == playbackQualityOf(uri)) {
+                broadcastAudioQuality(info)
+            }
+        }
+    }
+
+    private fun broadcastAudioQuality(info: AudioQualityInfo) {
+        NativeLog.info(
+            LogTags.AUDIO,
+            "audio.quality.broadcast",
+            mapOf(
+                "audio.preferred_quality" to info.preferredQuality,
+                "audio.actual_kind" to info.actualKind,
+                "audio.actual_stream_id" to info.actualStreamId,
+                "audio.is_fallback" to info.isFallback,
+                "audio.listener_count" to audioQualityEventListeners.size,
+            ),
+        )
+        audioQualityEventListeners.forEach { listener -> listener.onAudioQualityChanged(info) }
+    }
+
+    /** 当前播放这首歌实际请求的音质：数据源打开时锁定的那一档，还没打开过则是全局设置 */
+    private fun playbackQualityOf(uriString: String): String =
+        AudioQualityStore.normalizePreference(
+            DownloadUtil.pinnedPlaybackQualityOf(uriString) ?: GeneralStorage.getPreferredAudioQuality()
+        )
+
+    /**
+     * 解码器拿到新格式，说明这首歌（或切换音质后重新加载的数据）已经开始播放。
+     * 命中缓存时不会重新解析 playurl，store 不会再发事件，这里补发一次当前的音质信息，
+     * 否则前端切换音质后会一直等不到结果
+     */
+    private fun onAudioFormatChanged(@Suppress("UNUSED_PARAMETER") format: Format) {
+        serviceHandler.post {
+            val uri = player?.currentMediaItem?.localConfiguration?.uri ?: return@post
+            if (!DownloadUtil.isBilibiliUri(uri)) return@post
+            broadcastAudioQuality(currentAudioQualityInfo(uri))
+        }
+    }
+
+    private fun currentAudioQualityInfo(uri: android.net.Uri): AudioQualityInfo {
+        val uriString = uri.toString()
+        if (!DownloadUtil.isBilibiliUri(uri)) {
+            val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
+            return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, null, null, false, false)
+        }
+        // 以这次播放打开数据源时的选择为准：起播后才下载完的歌这次仍在线播放
+        val fromDownload = DownloadUtil.pinnedPlaybackSourceIsDownloadOf(uriString)
+            ?: DownloadUtil.isFullyCachedInDownloadCache(this, uriString)
+        if (fromDownload) {
+            // 下载时记下的实际音轨；升级前下好的没有记录，只能从解码格式认出 Hi-Res / 杜比
+            DownloadQualityStore.get(DownloadUtil.downloadCacheKeyOf(uriString))?.let { return it }
+            val preferred = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
+            // 下载的歌不受偏好影响，谈不上降级
+            inferPlaybackQuality(uri, preferred)?.let { return it.copy(isFallback = false, isFromDownloadCache = true) }
+            // AAC 的三档从格式上分不出来，只带上编码，界面显示「已下载 · AAC」
+            val codecs = currentInputFormatOf(uri)?.let { it.codecs?.takeIf(String::isNotBlank) ?: it.sampleMimeType }
+            return AudioQualityInfo(preferred, AudioQualityStore.KIND_LOCAL, null, codecs, null, false, true)
+        }
+        val preferred = playbackQualityOf(uriString)
+        AudioQualityStore.get(uriString, preferred)?.let { return it }
+        return inferPlaybackQuality(uri, preferred)
+            ?: AudioQualityInfo(preferred, AudioQualityStore.KIND_UNKNOWN, null, null, null, false, false)
+    }
+
+    private fun currentInputFormatOf(uri: android.net.Uri): Format? {
+        val item = player?.currentMediaItem ?: return null
+        if (item.localConfiguration?.uri?.toString() != uri.toString()) return null
+        // player.audioFormat 在切歌后、新格式到达前仍是上一首的，只认确实属于这首歌的格式
+        return audioDebugTracker?.inputFormatOf(item.mediaId)
+    }
+
+    private fun inferPlaybackQuality(uri: android.net.Uri, preferredQuality: String): AudioQualityInfo? {
+        val format = currentInputFormatOf(uri) ?: return null
+        val bitrate = if (format.bitrate > 0) format.bitrate else format.averageBitrate
+        return AudioQualityStore.inferFromAudioFormat(preferredQuality, format.sampleMimeType, format.codecs, bitrate)
+    }
+
+    fun getCurrentAudioQuality(): Map<String, Any?>? {
+        val item = player?.currentMediaItem ?: return null
+        val uri = item.localConfiguration?.uri ?: return null
+        return currentAudioQualityInfo(uri).toMap()
+    }
+
+    /** 正在播放和预加载的下一首的 URI，播放器还持有它们的数据源 */
+    fun activePlaybackUris(): Set<String> {
+        val player = player ?: return emptySet()
+        val next = player.nextMediaItemIndex
+        return setOfNotNull(
+            player.currentMediaItem?.localConfiguration?.uri?.toString(),
+            next.takeIf { it != C.INDEX_UNSET }
+                ?.let { player.getMediaItemAt(it).localConfiguration?.uri?.toString() },
+        )
+    }
+
+    @OptIn(UnstableApi::class)
+    fun reloadCurrentTrackForQualityChange(): Map<String, Any> {
+        val player = player ?: return mapOf("reloaded" to false, "reason" to "no_track")
+        val item = player.currentMediaItem ?: return mapOf("reloaded" to false, "reason" to "no_track")
+        val uri = item.localConfiguration?.uri ?: return mapOf("reloaded" to false, "reason" to "not_bilibili")
+        val uriString = uri.toString()
+        if (uri.scheme != "orpheus" || uri.host != "bilibili") {
+            return mapOf("reloaded" to false, "reason" to "not_bilibili")
+        }
+        if (DownloadUtil.isFullyCachedInDownloadCache(this, uriString)) {
+            return mapOf("reloaded" to false, "reason" to "downloaded")
+        }
+        val index = player.currentMediaItemIndex
+        val position = player.currentPosition.coerceAtLeast(0L)
+        val wasPlaying = player.playWhenReady
+        val preferredQuality = AudioQualityStore.normalizePreference(GeneralStorage.getPreferredAudioQuality())
+        // stop 会释放所有 MediaPeriod（包括已经预加载的下一首），重新 prepare 时
+        // 每首歌都会新建数据源并锁定新的音质；不同音质的 LRU 缓存 key 不同，互不干扰
+        // 重新加载后格式回调到达前，tracker 里还是上次加载的格式，不能拿来推断这次的音质
+        audioDebugTracker?.invalidateInputFormat()
+        player.stop()
+        player.seekTo(index, position)
+        player.prepare()
+        if (wasPlaying) player.play()
+        NativeLog.info(
+            LogTags.AUDIO,
+            "audio.quality.reload",
+            mapOf(
+                "audio.preferred_quality" to preferredQuality,
+                "audio.reload_media_index" to index,
+                "audio.reload_position_ms" to position,
+                "audio.reload_was_playing" to wasPlaying,
+            ),
+        )
+        OrpheusTelemetry.update("audioQualityReload" to preferredQuality)
+        return mapOf("reloaded" to true, "reason" to "reloaded")
+    }
+
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
     }
@@ -456,6 +618,8 @@ class OrpheusMusicService : MediaLibraryService() {
         saveCurrentResumeRecord()
         floatingLyricsManager.hide()
         statusBarLyricsManager.destroy()
+        AudioQualityStore.removeListener(audioQualityStoreListener)
+        audioDebugTracker?.onAudioFormatChangedListener = null
         instance = null
 
         mediaSession?.run {
@@ -749,6 +913,9 @@ class OrpheusMusicService : MediaLibraryService() {
                 mediaItem: androidx.media3.common.MediaItem?,
                 reason: Int
             ) {
+                // 锁定的档位只对还活着的数据源（正在播的和预加载的下一首）有意义，
+                // 其余的下次播放会按那时的默认音质重新锁定
+                DownloadUtil.clearPinnedPlaybackQualities(keep = activePlaybackUris())
                 val mediaId = mediaItem?.mediaId
                 val reasonStr = when (reason) {
                     Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
@@ -775,6 +942,9 @@ class OrpheusMusicService : MediaLibraryService() {
                     return
                 }
                 currentMediaId = mediaId
+                mediaItem?.localConfiguration?.uri?.let { uri ->
+                    broadcastAudioQuality(currentAudioQualityInfo(uri))
+                }
                 OrpheusTelemetry.onMediaItemChanged(mediaId, mediaItem?.localConfiguration?.uri?.toString())
                 // 单曲循环回到开头不算一次起播
                 if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
@@ -818,6 +988,7 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                DownloadUtil.clearPinnedPlaybackQualities(keep = activePlaybackUris())
                 // 超大队列是 OOM 的嫌疑之一：队列整体序列化成 JSON 存取，所以要在保存之前记下
                 player?.let { OrpheusTelemetry.update("queueSize" to it.mediaItemCount) }
                 saveCurrentQueue()

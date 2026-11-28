@@ -183,6 +183,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					usesCleartextTraffic: true,
 					enableMinifyInReleaseBuilds: false,
 					enableShrinkResourcesInReleaseBuilds: false,
+					// 在 APK 里压缩 .so。GitHub Release 原样下发 APK，不会像 Play 那样二次压缩，
+					// 不压缩时 arm64 包里 .so 有 53 MB，压缩后约 19 MB；代价是安装时要解压一份到存储
+					useLegacyPackaging: true,
 					minSdkVersion: 26,
 					packagingOptions: {
 						pickFirst: ['lib/*/libNitroModules.so'],
